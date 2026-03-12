@@ -8,7 +8,7 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "https://github.com/heznpc/github-stats-card"
+      "destination": "https://github.com/heznpc/profilekit"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
-  "name": "github-stats-card",
+  "name": "profilekit",
   "version": "1.0.0",
   "private": true,
-  "description": "GitHub stats cards for your README — just the numbers, no ratings",
+  "description": "All-in-one GitHub profile cards — stats, languages, activity, contributions, repos, typing, quotes, social, leetcode",
   "engines": {
     "node": ">=18"
   },
