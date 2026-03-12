@@ -20,6 +20,8 @@ module.exports = async (req, res) => {
   const hideBar = parseBoolean(params.get("hide_bar"));
   const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
   const title = params.get("title");
+  const layout = params.get("layout");
+  const cardWidth = params.has("card_width") ? parseIntSafe(params.get("card_width"), 495) : undefined;
 
   const colors = getTheme(theme, {
     bg: params.get("bg_color"),
@@ -42,7 +44,7 @@ module.exports = async (req, res) => {
     if (!token) throw new Error("GITHUB_TOKEN not configured");
 
     const stats = await fetchStats(username, token);
-    const svg = renderStatsCard(stats, { colors, hide, hideBorder, hideTitle, hideBar, borderRadius, title });
+    const svg = renderStatsCard(stats, { colors, hide, hideBorder, hideTitle, hideBar, borderRadius, title, layout, cardWidth });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);

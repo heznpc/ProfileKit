@@ -8,11 +8,13 @@ One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywher
 
 <p>
   <img src="https://profilekit.vercel.app/api/stats?username=heznpc" alt="Stats" />
+  <img src="https://profilekit.vercel.app/api/stats?username=heznpc&layout=compact" alt="Stats Compact" />
 </p>
 
 <p>
   <img src="https://profilekit.vercel.app/api/languages?username=heznpc" alt="Languages" />
-  <img src="https://profilekit.vercel.app/api/languages?username=heznpc&compact=true" alt="Languages Compact" />
+  <img src="https://profilekit.vercel.app/api/languages?username=heznpc&layout=compact" alt="Languages Compact" />
+  <img src="https://profilekit.vercel.app/api/languages?username=heznpc&layout=donut" alt="Languages Donut" />
 </p>
 
 <p>
@@ -89,6 +91,7 @@ These work on all endpoints (where applicable):
 | `accent_color` | Accent color — overrides gradient bar + stat/icon colors |
 | `hide_bar` | `true` to remove gradient accent bar |
 | `border_radius` | Border radius in px (default: 6) |
+| `card_width` | Card width in px |
 
 ## Endpoint-Specific Options
 
@@ -96,6 +99,7 @@ These work on all endpoints (where applicable):
 | Param | Description |
 |-------|-------------|
 | `hide` | Comma-separated: `commits,prs,issues,stars,repos,contributed` |
+| `layout` | `default` (vertical list) / `compact` (2-column grid) |
 
 ### /api/languages
 | Param | Description |
@@ -103,6 +107,7 @@ These work on all endpoints (where applicable):
 | `langs_count` | Number of languages (default: 6, max: 10) |
 | `hide` | Comma-separated language names to exclude |
 | `compact` | `true` for stacked bar layout |
+| `layout` | `default` / `compact` / `donut` (pie chart) |
 
 ### /api/reviews
 | Param | Description |

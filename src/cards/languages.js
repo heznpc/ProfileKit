@@ -1,19 +1,22 @@
 const { renderCard } = require("../common/card");
 const { escapeHtml } = require("../common/utils");
 
-function renderLanguagesCard(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, compact }) {
+function renderLanguagesCard(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, compact, layout, cardWidth }) {
   const cardTitle = title || "Top Languages";
+  const opts = { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth };
 
-  if (compact) {
-    return renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle });
-  }
-  return renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle });
+  if (layout === "donut") return renderDonut(languages, opts);
+  if (compact || layout === "compact") return renderCompact(languages, opts);
+  return renderDefault(languages, opts);
 }
 
-function renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle }) {
+function renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth }) {
+  const width = cardWidth || 495;
   const rowHeight = 32;
   const startY = hideTitle ? 25 : 55;
-  const barWidth = 185;
+  const barWidth = Math.min(185, width - 310);
+  const barX = width - barWidth - 90;
+  const pctX = width - 75;
   const height = startY + languages.length * rowHeight + 15;
 
   const rows = languages
@@ -24,28 +27,19 @@ function renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, bord
       return `<g transform="translate(25, ${y})" class="stagger" style="animation-delay: ${delay}ms">
       <circle cx="5" cy="7" r="5" fill="${lang.color}"/>
       <text x="18" y="11" class="lang-name">${escapeHtml(lang.name)}</text>
-      <rect x="220" y="1" width="${barWidth}" height="12" rx="6" fill="${colors.border}" opacity="0.4"/>
-      <rect x="220" y="1" width="${fillWidth}" height="12" rx="6" fill="${lang.color}"/>
-      <text x="420" y="11" class="lang-pct">${lang.percentage}%</text>
+      <rect x="${barX}" y="1" width="${barWidth}" height="12" rx="6" fill="${colors.border}" opacity="0.4"/>
+      <rect x="${barX}" y="1" width="${fillWidth}" height="12" rx="6" fill="${lang.color}"/>
+      <text x="${pctX}" y="11" class="lang-pct">${lang.percentage}%</text>
     </g>`;
     })
     .join("\n  ");
 
-  return renderCard({
-    width: 495,
-    height,
-    title: cardTitle,
-    colors,
-    hideBorder,
-    hideTitle,
-    hideBar,
-    borderRadius,
-    body: rows,
-  });
+  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: rows });
 }
 
-function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle }) {
-  const barWidth = 445;
+function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth }) {
+  const width = cardWidth || 495;
+  const barWidth = width - 50;
   const startY = hideTitle ? 25 : 55;
 
   const totalPct = languages.reduce((sum, l) => sum + l.percentage, 0);
@@ -69,8 +63,8 @@ function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, bord
     ${barSegments}
   </g>`;
 
+  const colWidth = Math.floor((width - 50) / 4);
   const legendY = startY + 24;
-  const colWidth = 110;
   const legendItems = languages
     .map((lang, i) => {
       const col = i % 4;
@@ -87,17 +81,59 @@ function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, bord
   const legendRows = Math.ceil(languages.length / 4);
   const totalHeight = startY + 24 + legendRows * 20 + 12;
 
-  return renderCard({
-    width: 495,
-    height: totalHeight,
-    title: cardTitle,
-    colors,
-    hideBorder,
-    hideTitle,
-    hideBar,
-    borderRadius,
-    body: `${barGroup}\n  ${legendItems}`,
-  });
+  return renderCard({ width, height: totalHeight, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: `${barGroup}\n  ${legendItems}` });
+}
+
+function renderDonut(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth }) {
+  const width = cardWidth || 400;
+  const startY = hideTitle ? 15 : 45;
+  const r = 55;
+  const cx = 90;
+  const cy = startY + r + 10;
+  const circumference = 2 * Math.PI * r;
+  const strokeWidth = 18;
+
+  // Donut segments
+  const totalPct = languages.reduce((sum, l) => sum + l.percentage, 0);
+  let cumulative = 0;
+  const segments = languages
+    .map((lang) => {
+      const pct = lang.percentage / totalPct;
+      const segLen = circumference * pct;
+      const gap = 2;
+      const dashLen = Math.max(segLen - gap, 1);
+      const offset = -(cumulative * circumference) + circumference * 0.25;
+      cumulative += pct;
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+        stroke="${lang.color}" stroke-width="${strokeWidth}"
+        stroke-dasharray="${dashLen} ${circumference - dashLen}"
+        stroke-dashoffset="${offset}"/>`;
+    })
+    .join("\n    ");
+
+  // Legend on the right
+  const legendX = cx + r + 50;
+  const legendStartY = startY + 15;
+  const legendItems = languages
+    .map((lang, i) => {
+      const y = legendStartY + i * 24;
+      return `<g transform="translate(${legendX}, ${y})" class="stagger" style="animation-delay: ${i * 100}ms">
+      <circle cx="5" cy="6" r="5" fill="${lang.color}"/>
+      <text x="16" y="10" class="lang-name">${escapeHtml(lang.name)}</text>
+      <text x="${width - legendX - 15}" y="10" class="stat-value" text-anchor="end" fill="${lang.color}">${lang.percentage}%</text>
+    </g>`;
+    })
+    .join("\n    ");
+
+  const contentHeight = Math.max((cy + r + 15) - startY, languages.length * 24 + 10);
+  const height = startY + contentHeight + 10;
+
+  const body = `
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors.border}" stroke-width="${strokeWidth}" opacity="0.3"/>
+    ${segments}
+    ${legendItems}`;
+
+  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body });
 }
 
 module.exports = { renderLanguagesCard };

@@ -23,6 +23,8 @@ module.exports = async (req, res) => {
   const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
   const title = params.get("title");
   const compact = parseBoolean(params.get("compact"));
+  const layout = params.get("layout");
+  const cardWidth = params.has("card_width") ? parseIntSafe(params.get("card_width"), 495) : undefined;
 
   const colors = getTheme(theme, {
     bg: params.get("bg_color"),
@@ -66,6 +68,8 @@ module.exports = async (req, res) => {
       borderRadius,
       title,
       compact,
+      layout,
+      cardWidth,
     });
 
     res.setHeader("Cache-Control", cacheHeaders());
