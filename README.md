@@ -16,6 +16,10 @@ One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywher
 </p>
 
 <p>
+  <img src="https://profilekit.vercel.app/api/reviews?username=heznpc" alt="Reviews" />
+</p>
+
+<p>
   <img src="https://profilekit.vercel.app/api/typing?lines=ProfileKit,All-in-one+GitHub+profile+cards&color=58a6ff&align=center&width=500&height=40" alt="Typing" />
 </p>
 
@@ -33,6 +37,7 @@ One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywher
 |----------|-------------|---------|
 | `/api/stats` | GitHub stats — commits, PRs, issues, stars, repos | `?username=heznpc` |
 | `/api/languages` | Top languages with percentage bars | `?username=heznpc` |
+| `/api/reviews` | Code review stats — approval rate, review count | `?username=heznpc` |
 | `/api/typing` | Typing animation | `?lines=Hello,World&color=58a6ff` |
 | `/api/quote` | Random or daily dev quotes | `?daily=true` |
 | `/api/social` | Social links card | `?github=heznpc&linkedin=heznpc` |
@@ -43,6 +48,7 @@ One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywher
 ```markdown
 ![Stats](https://profilekit.vercel.app/api/stats?username=heznpc)
 ![Languages](https://profilekit.vercel.app/api/languages?username=heznpc)
+![Reviews](https://profilekit.vercel.app/api/reviews?username=heznpc)
 ![Typing](https://profilekit.vercel.app/api/typing?lines=Hello,World)
 ![Quote](https://profilekit.vercel.app/api/quote)
 ![Social](https://profilekit.vercel.app/api/social?github=heznpc&x=heznpc)
@@ -95,6 +101,11 @@ These work on all endpoints (where applicable):
 | `hide` | Comma-separated language names to exclude |
 | `compact` | `true` for stacked bar layout |
 
+### /api/reviews
+| Param | Description |
+|-------|-------------|
+| `username` | GitHub username (required) |
+
 ### /api/typing
 | Param | Description |
 |-------|-------------|
@@ -114,7 +125,7 @@ These work on all endpoints (where applicable):
 | Param | Description |
 |-------|-------------|
 | `daily` | `true` for same quote all day, otherwise random |
-| `width` | Card width (default: 450) |
+| `width` | Card width (default: 495) |
 
 ### /api/social
 | Param | Description |
@@ -131,6 +142,16 @@ These work on all endpoints (where applicable):
 | Param | Description |
 |-------|-------------|
 | `username` | LeetCode username (required) |
+
+## Design
+
+Every card features:
+- Gradient accent bar at the top
+- Smooth fade-in animations
+- Icon backgrounds with subtle opacity
+- Accent-colored values for visual hierarchy
+- Gradient progress bars (languages)
+- Consistent 495px width across cards
 
 ## Self-Hosting
 

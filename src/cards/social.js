@@ -19,24 +19,26 @@ const socialIcons = {
 function renderSocialCard(links, { colors, hideBorder, title, layout }) {
   const cardTitle = title || "";
   const isCompact = layout === "compact";
-  const iconSize = isCompact ? 18 : 20;
-  const gap = isCompact ? 32 : 45;
+  const iconSize = isCompact ? 20 : 20;
+  const gap = isCompact ? 36 : 45;
   const startX = 25;
-  const startY = cardTitle && !isCompact ? 45 : 25;
+  const startY = cardTitle && !isCompact ? 50 : 25;
 
   if (isCompact) {
-    // Horizontal icon row
-    const width = startX * 2 + links.length * gap;
-    const height = 60;
+    const width = startX * 2 + links.length * gap + 10;
+    const height = 65;
 
     const iconsMarkup = links
       .map((link, i) => {
         const x = startX + i * gap;
         const icon = socialIcons[link.type] || socialIcons.website;
         return `<a href="${escapeHtml(link.url)}" target="_blank">
-        <svg x="${x}" y="${startY}" viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${colors.icon}">
-          ${icon}
-        </svg>
+        <g transform="translate(${x}, ${startY})">
+          <circle cx="10" cy="10" r="14" fill="${colors.icon}" opacity="0.1"/>
+          <svg x="2" y="2" viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${colors.icon}">
+            ${icon}
+          </svg>
+        </g>
       </a>`;
       })
       .join("\n    ");
@@ -53,7 +55,7 @@ function renderSocialCard(links, { colors, hideBorder, title, layout }) {
   }
 
   // Default: vertical list with labels
-  const rowHeight = 30;
+  const rowHeight = 32;
   const height = startY + links.length * rowHeight + 15;
 
   const rows = links
@@ -64,17 +66,18 @@ function renderSocialCard(links, { colors, hideBorder, title, layout }) {
       const delay = i * 100;
       return `<a href="${escapeHtml(link.url)}" target="_blank">
       <g transform="translate(${startX}, ${y})" class="stagger" style="animation-delay: ${delay}ms">
-        <svg viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${colors.icon}">
+        <circle cx="10" cy="10" r="14" fill="${colors.icon}" opacity="0.1"/>
+        <svg x="2" y="2" viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${colors.icon}">
           ${icon}
         </svg>
-        <text x="28" y="15" class="stat-label">${label}</text>
+        <text x="32" y="15" class="stat-label">${label}</text>
       </g>
     </a>`;
     })
     .join("\n    ");
 
   return renderCard({
-    width: 320,
+    width: 350,
     height,
     title: cardTitle,
     colors,

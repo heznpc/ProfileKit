@@ -14,7 +14,7 @@ const statItems = [
 function renderStatsCard(stats, { colors, hide = [], hideBorder, hideTitle, title }) {
   const visible = statItems.filter((s) => !hide.includes(s.key));
   const cardTitle = title || `${escapeHtml(stats.name)}'s GitHub Stats`;
-  const rowHeight = 28;
+  const rowHeight = 30;
   const startY = hideTitle ? 25 : 55;
   const height = startY + visible.length * rowHeight + 20;
 
@@ -24,10 +24,11 @@ function renderStatsCard(stats, { colors, hide = [], hideBorder, hideTitle, titl
       const value = formatNumber(stats[item.field]);
       const delay = i * 150;
       return `<g transform="translate(25, ${y})" class="stagger" style="animation-delay: ${delay}ms">
-      <svg viewBox="0 0 16 16" width="16" height="16" fill="${colors.icon}">
+      <circle cx="10" cy="8" r="12" fill="${colors.icon}" opacity="0.1"/>
+      <svg x="2" y="0" viewBox="0 0 16 16" width="16" height="16" fill="${colors.icon}">
         ${item.icon}
       </svg>
-      <text x="25" y="12.5" class="stat-label">${item.label}</text>
+      <text x="32" y="12.5" class="stat-label">${item.label}</text>
       <text x="450" y="12.5" class="stat-value" text-anchor="end">${value}</text>
     </g>`;
     })
