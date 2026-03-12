@@ -7,40 +7,40 @@ One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywher
 ## Examples
 
 <p>
-  <img src="https://profilekit.vercel.app/api/stats?username=heznpc" alt="Stats" />
+  <img src="https://profile-kit.vercel.app/api/stats?username=heznpc" alt="Stats" />
 </p>
 
 <p>
-  <img src="https://profilekit.vercel.app/api/languages?username=heznpc" alt="Languages" />
-  <img src="https://profilekit.vercel.app/api/languages?username=heznpc&compact=true" alt="Languages Compact" />
+  <img src="https://profile-kit.vercel.app/api/languages?username=heznpc" alt="Languages" />
+  <img src="https://profile-kit.vercel.app/api/languages?username=heznpc&compact=true" alt="Languages Compact" />
 </p>
 
 <p>
-  <img src="https://profilekit.vercel.app/api/contributions?username=heznpc&color=58a6ff" alt="Contributions" />
+  <img src="https://profile-kit.vercel.app/api/contributions?username=heznpc&color=58a6ff" alt="Contributions" />
 </p>
 
 <p>
-  <img src="https://profilekit.vercel.app/api/activity?username=heznpc" alt="Activity" />
+  <img src="https://profile-kit.vercel.app/api/activity?username=heznpc" alt="Activity" />
 </p>
 
 <p>
-  <img src="https://profilekit.vercel.app/api/repos?username=heznpc&repo=ProfileKit" alt="Repo Card" />
+  <img src="https://profile-kit.vercel.app/api/repos?username=heznpc&repo=ProfileKit" alt="Repo Card" />
 </p>
 
 <p>
-  <img src="https://profilekit.vercel.app/api/leetcode?username=heznpc" alt="LeetCode" />
+  <img src="https://profile-kit.vercel.app/api/leetcode?username=heznpc" alt="LeetCode" />
 </p>
 
 <p>
-  <img src="https://profilekit.vercel.app/api/typing?lines=ProfileKit,All-in-one+GitHub+profile+cards&color=58a6ff&align=center&width=500&height=40" alt="Typing" />
+  <img src="https://profile-kit.vercel.app/api/typing?lines=ProfileKit,All-in-one+GitHub+profile+cards&color=58a6ff&align=center&width=500&height=40" alt="Typing" />
 </p>
 
 <p>
-  <img src="https://profilekit.vercel.app/api/quote?daily=true" alt="Quote" />
+  <img src="https://profile-kit.vercel.app/api/quote?daily=true" alt="Quote" />
 </p>
 
 <p>
-  <img src="https://profilekit.vercel.app/api/social?github=heznpc&email=heznpc@gmail.com&layout=compact" alt="Social" />
+  <img src="https://profile-kit.vercel.app/api/social?github=heznpc&email=heznpc@gmail.com&layout=compact" alt="Social" />
 </p>
 
 ## Endpoints
@@ -60,15 +60,15 @@ One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywher
 ## Usage
 
 ```markdown
-![Stats](https://profilekit.vercel.app/api/stats?username=heznpc)
-![Languages](https://profilekit.vercel.app/api/languages?username=heznpc)
-![Activity](https://profilekit.vercel.app/api/activity?username=heznpc)
-![Contributions](https://profilekit.vercel.app/api/contributions?username=heznpc)
-![Repo](https://profilekit.vercel.app/api/repos?username=heznpc&repo=ProfileKit)
-![Typing](https://profilekit.vercel.app/api/typing?lines=Hello,World)
-![Quote](https://profilekit.vercel.app/api/quote)
-![Social](https://profilekit.vercel.app/api/social?github=heznpc&x=heznpc)
-![LeetCode](https://profilekit.vercel.app/api/leetcode?username=heznpc)
+![Stats](https://profile-kit.vercel.app/api/stats?username=heznpc)
+![Languages](https://profile-kit.vercel.app/api/languages?username=heznpc)
+![Activity](https://profile-kit.vercel.app/api/activity?username=heznpc)
+![Contributions](https://profile-kit.vercel.app/api/contributions?username=heznpc)
+![Repo](https://profile-kit.vercel.app/api/repos?username=heznpc&repo=ProfileKit)
+![Typing](https://profile-kit.vercel.app/api/typing?lines=Hello,World)
+![Quote](https://profile-kit.vercel.app/api/quote)
+![Social](https://profile-kit.vercel.app/api/social?github=heznpc&x=heznpc)
+![LeetCode](https://profile-kit.vercel.app/api/leetcode?username=heznpc)
 ```
 
 ## Themes
