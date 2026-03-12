@@ -10,7 +10,7 @@ function renderCard({ width, height, title, colors, hideBorder, hideTitle, body 
     .header { font: 600 18px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.title}; }
     .stat-label { font: 400 14px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.text}; }
     .stat-value { font: 600 14px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.text}; }
-    .lang-name { font: 400 12px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.text}; }
+    .lang-name { font: 400 13px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.text}; }
     .lang-pct { font: 400 12px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.muted}; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .stagger { opacity: 0; animation: fadeIn 0.3s ease-in-out forwards; }

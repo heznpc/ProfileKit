@@ -14,7 +14,7 @@ const statItems = [
 function renderStatsCard(stats, { colors, hide = [], hideBorder, hideTitle, title }) {
   const visible = statItems.filter((s) => !hide.includes(s.key));
   const cardTitle = title || `${escapeHtml(stats.name)}'s GitHub Stats`;
-  const rowHeight = 25;
+  const rowHeight = 28;
   const startY = hideTitle ? 25 : 55;
   const height = startY + visible.length * rowHeight + 20;
 
