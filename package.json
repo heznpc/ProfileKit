@@ -1,0 +1,10 @@
+{
+  "name": "github-stats-card",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub stats cards for your README — just the numbers, no ratings",
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
