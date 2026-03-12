@@ -1,16 +1,16 @@
 const { renderCard } = require("../common/card");
 const { escapeHtml } = require("../common/utils");
 
-function renderLanguagesCard(languages, { colors, hideBorder, hideTitle, title, compact }) {
+function renderLanguagesCard(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, compact }) {
   const cardTitle = title || "Top Languages";
 
   if (compact) {
-    return renderCompact(languages, { colors, hideBorder, hideTitle, cardTitle });
+    return renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle });
   }
-  return renderDefault(languages, { colors, hideBorder, hideTitle, cardTitle });
+  return renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle });
 }
 
-function renderDefault(languages, { colors, hideBorder, hideTitle, cardTitle }) {
+function renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle }) {
   const rowHeight = 32;
   const startY = hideTitle ? 25 : 55;
   const barWidth = 185;
@@ -38,15 +38,16 @@ function renderDefault(languages, { colors, hideBorder, hideTitle, cardTitle }) 
     colors,
     hideBorder,
     hideTitle,
+    hideBar,
+    borderRadius,
     body: rows,
   });
 }
 
-function renderCompact(languages, { colors, hideBorder, hideTitle, cardTitle }) {
+function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle }) {
   const barWidth = 445;
   const startY = hideTitle ? 25 : 55;
 
-  // Stacked bar with clip path for proper rounding
   const totalPct = languages.reduce((sum, l) => sum + l.percentage, 0);
   let barX = 25;
   const barSegments = languages
@@ -68,7 +69,6 @@ function renderCompact(languages, { colors, hideBorder, hideTitle, cardTitle }) 
     ${barSegments}
   </g>`;
 
-  // Legend — 4 columns
   const legendY = startY + 24;
   const colWidth = 110;
   const legendItems = languages
@@ -94,6 +94,8 @@ function renderCompact(languages, { colors, hideBorder, hideTitle, cardTitle }) 
     colors,
     hideBorder,
     hideTitle,
+    hideBar,
+    borderRadius,
     body: `${barGroup}\n  ${legendItems}`,
   });
 }

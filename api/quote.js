@@ -11,8 +11,10 @@ module.exports = async (req, res) => {
   const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
   const theme = params.get("theme") || "dark";
   const hideBorder = parseBoolean(params.get("hide_border"));
+  const hideBar = parseBoolean(params.get("hide_bar"));
+  const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
   const daily = parseBoolean(params.get("daily"));
-  const width = parseIntSafe(params.get("width"), 450);
+  const width = parseIntSafe(params.get("width"), 495);
 
   const colors = getTheme(theme, {
     bg: params.get("bg_color"),
@@ -20,13 +22,13 @@ module.exports = async (req, res) => {
     title: params.get("title_color"),
     icon: params.get("icon_color"),
     border: params.get("border_color"),
+    accent: params.get("accent_color"),
   });
 
   const quote = daily ? getDailyQuote() : getRandomQuote();
-  const svg = renderQuoteCard(quote, { colors, hideBorder, width });
+  const svg = renderQuoteCard(quote, { colors, hideBorder, hideBar, borderRadius, width });
 
   res.setHeader("Content-Type", "image/svg+xml");
-  // Random quotes cache shorter, daily quotes cache longer
   res.setHeader(
     "Cache-Control",
     daily

@@ -86,6 +86,9 @@ These work on all endpoints (where applicable):
 | `title_color` | Title color |
 | `icon_color` | Icon color |
 | `border_color` | Border color |
+| `accent_color` | Accent color — overrides gradient bar + stat/icon colors |
+| `hide_bar` | `true` to remove gradient accent bar |
+| `border_radius` | Border radius in px (default: 6) |
 
 ## Endpoint-Specific Options
 
@@ -143,15 +146,18 @@ These work on all endpoints (where applicable):
 |-------|-------------|
 | `username` | LeetCode username (required) |
 
-## Design
+## Customization Examples
 
-Every card features:
-- Gradient accent bar at the top
-- Smooth fade-in animations
-- Icon backgrounds with subtle opacity
-- Accent-colored values for visual hierarchy
-- Gradient progress bars (languages)
-- Consistent 495px width across cards
+```
+# Red accent, no border
+?username=heznpc&accent_color=f85149&hide_border=true
+
+# Minimal — no bar, no border, sharp corners
+?username=heznpc&hide_bar=true&hide_border=true&border_radius=0
+
+# Custom palette
+?username=heznpc&bg_color=1a1b27&text_color=a9b1d6&title_color=7aa2f7&accent_color=bb9af7&border_color=292e42
+```
 
 ## Self-Hosting
 

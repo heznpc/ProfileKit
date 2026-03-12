@@ -3,12 +3,11 @@ const { renderError } = require("../src/common/card");
 const { getTheme } = require("../src/common/themes");
 const {
   parseBoolean,
+  parseIntSafe,
   cacheHeaders,
   errorCacheHeaders,
 } = require("../src/common/utils");
 
-// Parse links from query params
-// Format: github=username&linkedin=username&x=username&email=you@mail.com&website=https://...&youtube=channel
 function parseLinks(params) {
   const types = {
     github: (v) => ({ type: "github", label: v, url: `https://github.com/${v}` }),
@@ -31,6 +30,8 @@ module.exports = async (req, res) => {
   const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
   const theme = params.get("theme") || "dark";
   const hideBorder = parseBoolean(params.get("hide_border"));
+  const hideBar = parseBoolean(params.get("hide_bar"));
+  const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
   const title = params.get("title");
   const layout = params.get("layout") || "default";
 
@@ -40,6 +41,7 @@ module.exports = async (req, res) => {
     title: params.get("title_color"),
     icon: params.get("icon_color"),
     border: params.get("border_color"),
+    accent: params.get("accent_color"),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");
@@ -52,7 +54,7 @@ module.exports = async (req, res) => {
     );
   }
 
-  const svg = renderSocialCard(links, { colors, hideBorder, title, layout });
+  const svg = renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, title, layout });
   res.setHeader("Cache-Control", cacheHeaders());
   return res.send(svg);
 };

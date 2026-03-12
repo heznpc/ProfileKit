@@ -17,7 +17,7 @@ function wrapText(text, maxChars) {
   return lines;
 }
 
-function renderQuoteCard(quote, { colors, hideBorder, width }) {
+function renderQuoteCard(quote, { colors, hideBorder, hideBar, borderRadius, width }) {
   const cardWidth = width || 495;
   const maxChars = Math.floor(cardWidth / 8.5);
   const lines = wrapText(quote.text, maxChars);
@@ -26,7 +26,6 @@ function renderQuoteCard(quote, { colors, hideBorder, width }) {
   const textHeight = lines.length * lineHeight;
   const height = startY + textHeight + 45;
 
-  // Decorative large quote mark
   const decorQuote = `<text x="20" y="55" font-family="Georgia, serif" font-size="60" fill="${colors.muted}" opacity="0.25">\u201C</text>`;
 
   const quoteMarkup = lines
@@ -51,6 +50,8 @@ function renderQuoteCard(quote, { colors, hideBorder, width }) {
     colors,
     hideBorder,
     hideTitle: true,
+    hideBar,
+    borderRadius,
     body,
   });
 }

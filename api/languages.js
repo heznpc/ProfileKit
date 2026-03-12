@@ -19,6 +19,8 @@ module.exports = async (req, res) => {
   const excludeRepo = parseArray(params.get("exclude_repo"));
   const hideBorder = parseBoolean(params.get("hide_border"));
   const hideTitle = parseBoolean(params.get("hide_title"));
+  const hideBar = parseBoolean(params.get("hide_bar"));
+  const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
   const title = params.get("title");
   const compact = parseBoolean(params.get("compact"));
 
@@ -28,6 +30,7 @@ module.exports = async (req, res) => {
     title: params.get("title_color"),
     icon: params.get("icon_color"),
     border: params.get("border_color"),
+    accent: params.get("accent_color"),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");
@@ -43,11 +46,9 @@ module.exports = async (req, res) => {
 
     let languages = await fetchLanguages(username, token, excludeRepo);
 
-    // Filter hidden languages
     if (hide.length > 0) {
       const lower = hide.map((h) => h.toLowerCase());
       languages = languages.filter((l) => !lower.includes(l.name.toLowerCase()));
-      // Recalculate percentages
       const total = languages.reduce((sum, l) => sum + l.size, 0);
       languages = languages.map((l) => ({
         ...l,
@@ -61,6 +62,8 @@ module.exports = async (req, res) => {
       colors,
       hideBorder,
       hideTitle,
+      hideBar,
+      borderRadius,
       title,
       compact,
     });

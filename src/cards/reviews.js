@@ -9,7 +9,7 @@ const reviewItems = [
   { key: "reposReviewed", label: "Repos Reviewed", icon: icons.repos, color: "#56d4dd" },
 ];
 
-function renderReviewsCard(stats, { colors, hideBorder, hideTitle, title }) {
+function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title }) {
   const cardTitle = title || `${escapeHtml(stats.name)}'s Code Reviews`;
   const width = 495;
   const startY = hideTitle ? 25 : 55;
@@ -21,9 +21,9 @@ function renderReviewsCard(stats, { colors, hideBorder, hideTitle, title }) {
   const circumference = 2 * Math.PI * circleR;
   const ratePct = stats.approvalRate / 100;
   const dashOffset = circumference * (1 - ratePct);
-  const rateColor = stats.approvalRate >= 80 ? "#3fb950"
+  const rateColor = stats.totalReviews === 0 ? colors.muted
+    : stats.approvalRate >= 80 ? "#3fb950"
     : stats.approvalRate >= 50 ? "#d29922"
-    : stats.totalReviews === 0 ? colors.muted
     : "#f85149";
 
   const ringMarkup = `
@@ -40,13 +40,14 @@ function renderReviewsCard(stats, { colors, hideBorder, hideTitle, title }) {
     .map((item, i) => {
       const y = startY + 15 + i * 28;
       const value = formatNumber(stats[item.key]);
+      const c = colors.accent || item.color;
       return `<g transform="translate(${detailX}, ${y})" class="stagger" style="animation-delay: ${(i + 1) * 150}ms">
-      <circle cx="10" cy="8" r="12" fill="${item.color}" opacity="0.1"/>
-      <svg x="2" y="0" viewBox="0 0 16 16" width="16" height="16" fill="${item.color}">
+      <circle cx="10" cy="8" r="12" fill="${c}" opacity="0.1"/>
+      <svg x="2" y="0" viewBox="0 0 16 16" width="16" height="16" fill="${c}">
         ${item.icon}
       </svg>
       <text x="30" y="12" class="stat-label">${item.label}</text>
-      <text x="310" y="12" class="stat-value" text-anchor="end" fill="${item.color}">${value}</text>
+      <text x="310" y="12" class="stat-value" text-anchor="end" fill="${c}">${value}</text>
     </g>`;
     })
     .join("\n    ");
@@ -61,6 +62,8 @@ function renderReviewsCard(stats, { colors, hideBorder, hideTitle, title }) {
     colors,
     hideBorder,
     hideTitle,
+    hideBar,
+    borderRadius,
     body,
   });
 }

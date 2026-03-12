@@ -16,13 +16,14 @@ const socialIcons = {
     '<path d="M15.32 4.06c-.17-.67-.67-1.19-1.32-1.37C12.8 2.4 8 2.4 8 2.4s-4.8 0-5.99.29c-.65.18-1.15.7-1.32 1.37C.4 5.28.4 8 .4 8s0 2.72.29 3.94c.17.67.67 1.19 1.32 1.37C3.2 13.6 8 13.6 8 13.6s4.8 0 5.99-.29c.65-.18 1.15-.7 1.32-1.37.29-1.22.29-3.94.29-3.94s0-2.72-.29-3.94zM6.4 10.4V5.6L10.56 8 6.4 10.4z"/>',
 };
 
-function renderSocialCard(links, { colors, hideBorder, title, layout }) {
+function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, title, layout }) {
   const cardTitle = title || "";
   const isCompact = layout === "compact";
-  const iconSize = isCompact ? 20 : 20;
+  const iconSize = 20;
   const gap = isCompact ? 36 : 45;
   const startX = 25;
   const startY = cardTitle && !isCompact ? 50 : 25;
+  const iconColor = colors.accent || colors.icon;
 
   if (isCompact) {
     const width = startX * 2 + links.length * gap + 10;
@@ -34,8 +35,8 @@ function renderSocialCard(links, { colors, hideBorder, title, layout }) {
         const icon = socialIcons[link.type] || socialIcons.website;
         return `<a href="${escapeHtml(link.url)}" target="_blank">
         <g transform="translate(${x}, ${startY})">
-          <circle cx="10" cy="10" r="14" fill="${colors.icon}" opacity="0.1"/>
-          <svg x="2" y="2" viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${colors.icon}">
+          <circle cx="10" cy="10" r="14" fill="${iconColor}" opacity="0.1"/>
+          <svg x="2" y="2" viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${iconColor}">
             ${icon}
           </svg>
         </g>
@@ -50,11 +51,12 @@ function renderSocialCard(links, { colors, hideBorder, title, layout }) {
       colors,
       hideBorder,
       hideTitle: !cardTitle,
+      hideBar,
+      borderRadius,
       body: iconsMarkup,
     });
   }
 
-  // Default: vertical list with labels
   const rowHeight = 32;
   const height = startY + links.length * rowHeight + 15;
 
@@ -66,8 +68,8 @@ function renderSocialCard(links, { colors, hideBorder, title, layout }) {
       const delay = i * 100;
       return `<a href="${escapeHtml(link.url)}" target="_blank">
       <g transform="translate(${startX}, ${y})" class="stagger" style="animation-delay: ${delay}ms">
-        <circle cx="10" cy="10" r="14" fill="${colors.icon}" opacity="0.1"/>
-        <svg x="2" y="2" viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${colors.icon}">
+        <circle cx="10" cy="10" r="14" fill="${iconColor}" opacity="0.1"/>
+        <svg x="2" y="2" viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${iconColor}">
           ${icon}
         </svg>
         <text x="32" y="15" class="stat-label">${label}</text>
@@ -83,6 +85,8 @@ function renderSocialCard(links, { colors, hideBorder, title, layout }) {
     colors,
     hideBorder,
     hideTitle: !cardTitle,
+    hideBar,
+    borderRadius,
     body: rows,
   });
 }

@@ -4,6 +4,7 @@ const { renderError } = require("../src/common/card");
 const { getTheme } = require("../src/common/themes");
 const {
   parseBoolean,
+  parseIntSafe,
   cacheHeaders,
   errorCacheHeaders,
 } = require("../src/common/utils");
@@ -14,6 +15,8 @@ module.exports = async (req, res) => {
   const theme = params.get("theme") || "dark";
   const hideBorder = parseBoolean(params.get("hide_border"));
   const hideTitle = parseBoolean(params.get("hide_title"));
+  const hideBar = parseBoolean(params.get("hide_bar"));
+  const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
   const title = params.get("title");
 
   const colors = getTheme(theme, {
@@ -22,6 +25,7 @@ module.exports = async (req, res) => {
     title: params.get("title_color"),
     icon: params.get("icon_color"),
     border: params.get("border_color"),
+    accent: params.get("accent_color"),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");
@@ -39,7 +43,7 @@ module.exports = async (req, res) => {
 
   try {
     const stats = await fetchReviews(username, token);
-    const svg = renderReviewsCard(stats, { colors, hideBorder, hideTitle, title });
+    const svg = renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);

@@ -34,6 +34,10 @@ function getTheme(name, overrides = {}) {
       resolved[key] = v.startsWith("#") ? v : `#${v}`;
     }
   }
+  if (overrides.accent) {
+    const v = overrides.accent;
+    resolved.accent = v.startsWith("#") ? v : `#${v}`;
+  }
   return resolved;
 }
 
