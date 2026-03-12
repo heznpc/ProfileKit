@@ -4,6 +4,45 @@ All-in-one GitHub profile cards. No ratings, no rankings — just clean, customi
 
 One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywhere.
 
+## Examples
+
+<p>
+  <img src="https://profilekit.vercel.app/api/stats?username=heznpc" alt="Stats" />
+</p>
+
+<p>
+  <img src="https://profilekit.vercel.app/api/languages?username=heznpc" alt="Languages" />
+  <img src="https://profilekit.vercel.app/api/languages?username=heznpc&compact=true" alt="Languages Compact" />
+</p>
+
+<p>
+  <img src="https://profilekit.vercel.app/api/contributions?username=heznpc&color=58a6ff" alt="Contributions" />
+</p>
+
+<p>
+  <img src="https://profilekit.vercel.app/api/activity?username=heznpc" alt="Activity" />
+</p>
+
+<p>
+  <img src="https://profilekit.vercel.app/api/repos?username=heznpc&repo=ProfileKit" alt="Repo Card" />
+</p>
+
+<p>
+  <img src="https://profilekit.vercel.app/api/leetcode?username=heznpc" alt="LeetCode" />
+</p>
+
+<p>
+  <img src="https://profilekit.vercel.app/api/typing?lines=ProfileKit,All-in-one+GitHub+profile+cards&color=58a6ff&align=center&width=500&height=40" alt="Typing" />
+</p>
+
+<p>
+  <img src="https://profilekit.vercel.app/api/quote?daily=true" alt="Quote" />
+</p>
+
+<p>
+  <img src="https://profilekit.vercel.app/api/social?github=heznpc&email=heznpc@gmail.com&layout=compact" alt="Social" />
+</p>
+
 ## Endpoints
 
 | Endpoint | Description | Example |
