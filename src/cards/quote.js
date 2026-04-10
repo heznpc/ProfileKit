@@ -19,7 +19,9 @@ function wrapText(text, maxChars) {
 
 function renderQuoteCard(quote, { colors, hideBorder, hideBar, borderRadius, width }) {
   const cardWidth = width || 495;
-  const maxChars = Math.floor(cardWidth / 8.5);
+  // 14px italic Segoe UI averages ~7.5-8px per char in practice. Dividing by
+  // 9.5 leaves a safety margin so wrap doesn't push text past the right edge.
+  const maxChars = Math.floor((cardWidth - 60) / 9.5);
   const lines = wrapText(quote.text, maxChars);
   const lineHeight = 22;
   const startY = 50;
@@ -47,6 +49,7 @@ function renderQuoteCard(quote, { colors, hideBorder, hideBar, borderRadius, wid
     width: cardWidth,
     height,
     title: "",
+    ariaLabel: `Quote: ${quote.text} — ${quote.author}`,
     colors,
     hideBorder,
     hideTitle: true,

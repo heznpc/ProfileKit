@@ -18,6 +18,9 @@ const socialIcons = {
 
 function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, title, layout }) {
   const cardTitle = title || "";
+  const ariaLabel =
+    cardTitle ||
+    `Social links: ${links.map((l) => l.type).join(", ")}`;
   const isCompact = layout === "compact";
   const iconSize = 20;
   const gap = isCompact ? 36 : 45;
@@ -48,6 +51,7 @@ function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, ti
       width,
       height,
       title: cardTitle,
+      ariaLabel,
       colors,
       hideBorder,
       hideTitle: !cardTitle,
@@ -82,6 +86,7 @@ function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, ti
     width: 350,
     height,
     title: cardTitle,
+    ariaLabel,
     colors,
     hideBorder,
     hideTitle: !cardTitle,

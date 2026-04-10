@@ -1,6 +1,9 @@
 const { renderCard } = require("../common/card");
 const { icons } = require("../common/icons");
-const { formatNumber, escapeHtml } = require("../common/utils");
+const { formatNumber, escapeHtml, truncate } = require("../common/utils");
+
+const LANG_LEAD = 18;   // circle + gap before language text
+const BLOCK_TRAIL = 20; // gap between footer blocks
 
 function wrapText(text, maxChars) {
   if (!text) return [];
@@ -48,30 +51,40 @@ function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWi
     })
     .join("\n    ");
 
+  // Layout the footer left-to-right but reserve space for stars/forks first so
+  // a long language name gets truncated rather than pushing them off-card.
   const footerParts = [];
+  const footerEnd = width - 25;
+  const starsStr = repo.stars > 0 ? formatNumber(repo.stars) : "";
+  const forksStr = repo.forks > 0 ? formatNumber(repo.forks) : "";
+  const starsW = starsStr ? 20 + starsStr.length * 7 + 20 : 0;
+  const forksW = forksStr ? 20 + forksStr.length * 7 + 20 : 0;
   let fx = 25;
 
   if (repo.language) {
     const langColor = repo.languageColor || colors.muted;
+    const available = footerEnd - fx - LANG_LEAD - BLOCK_TRAIL - starsW - forksW;
+    const maxLangChars = Math.max(3, Math.floor(available / 7.5));
+    const langText = truncate(repo.language, maxLangChars);
     footerParts.push(
       `<circle cx="${fx + 6}" cy="${footerY}" r="6" fill="${langColor}"/>`,
-      `<text x="${fx + 18}" y="${footerY + 4}" class="lang-name">${escapeHtml(repo.language)}</text>`
+      `<text x="${fx + LANG_LEAD}" y="${footerY + 4}" class="lang-name">${escapeHtml(langText)}</text>`
     );
-    fx += 18 + repo.language.length * 7.5 + 20;
+    fx += LANG_LEAD + langText.length * 7.5 + BLOCK_TRAIL;
   }
 
-  if (repo.stars > 0) {
+  if (starsStr) {
     footerParts.push(
       `<svg x="${fx}" y="${footerY - 8}" viewBox="0 0 16 16" width="16" height="16" fill="${colors.muted}">${icons.stars}</svg>`,
-      `<text x="${fx + 20}" y="${footerY + 4}" class="lang-pct">${formatNumber(repo.stars)}</text>`
+      `<text x="${fx + 20}" y="${footerY + 4}" class="lang-pct">${starsStr}</text>`
     );
-    fx += 20 + String(formatNumber(repo.stars)).length * 7 + 20;
+    fx += 20 + starsStr.length * 7 + 20;
   }
 
-  if (repo.forks > 0) {
+  if (forksStr) {
     footerParts.push(
       `<svg x="${fx}" y="${footerY - 8}" viewBox="0 0 16 16" width="16" height="16" fill="${colors.muted}">${icons.forks}</svg>`,
-      `<text x="${fx + 20}" y="${footerY + 4}" class="lang-pct">${formatNumber(repo.forks)}</text>`
+      `<text x="${fx + 20}" y="${footerY + 4}" class="lang-pct">${forksStr}</text>`
     );
   }
 
@@ -81,10 +94,15 @@ function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWi
     ${footerParts.join("\n    ")}
   `;
 
+  const ariaLabel = desc
+    ? `${repo.name}: ${desc}`
+    : `${repo.name} repository`;
+
   return renderCard({
     width,
     height,
     title: "",
+    ariaLabel,
     colors,
     hideBorder,
     hideTitle: true,

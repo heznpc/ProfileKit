@@ -18,6 +18,7 @@ module.exports = async (req, res) => {
   const hideBar = parseBoolean(params.get("hide_bar"));
   const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
   const title = params.get("title");
+  const cardWidth = params.has("card_width") ? parseIntSafe(params.get("card_width"), 495) : undefined;
 
   const colors = getTheme(theme, {
     bg: params.get("bg_color"),
@@ -43,7 +44,7 @@ module.exports = async (req, res) => {
 
   try {
     const stats = await fetchReviews(username, token);
-    const svg = renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title });
+    const svg = renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);

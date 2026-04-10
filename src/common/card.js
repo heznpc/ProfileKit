@@ -1,6 +1,6 @@
 const { escapeHtml } = require("./utils");
 
-function renderCard({ width, height, title, colors, hideBorder, hideTitle, hideBar, borderRadius, body }) {
+function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideTitle, hideBar, borderRadius, body }) {
   const rx = borderRadius != null ? borderRadius : 6;
 
   const titleMarkup = hideTitle
@@ -18,7 +18,16 @@ function renderCard({ width, height, title, colors, hideBorder, hideTitle, hideB
     ? ""
     : `<rect x="0.5" y="0.5" width="${width - 1}" height="3" fill="url(#accent-grad)" clip-path="url(#card-clip)"/>`;
 
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  const a11y = ariaLabel || title;
+  // Only emit role/aria-label/<title> when a label exists. role="img" with an
+  // empty aria-label is a WAI-ARIA spec violation; treat unlabelled cards as
+  // decorative instead.
+  const a11ySafe = a11y ? escapeHtml(a11y) : "";
+  const svgA11yAttrs = a11y ? `role="img" aria-label="${a11ySafe}"` : "";
+  const titleEl = a11y ? `<title>${a11ySafe}</title>` : "";
+
+  return `<svg ${svgA11yAttrs} width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  ${titleEl}
   <defs>
     <linearGradient id="accent-grad" x1="0%" y1="0%" x2="100%" y2="0%">
       ${accentStops}
@@ -28,13 +37,16 @@ function renderCard({ width, height, title, colors, hideBorder, hideTitle, hideB
     </clipPath>
   </defs>
   <style>
-    .header { font: 600 18px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.title}; }
+    .header { font: 700 18px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.title}; }
     .stat-label { font: 400 14px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.text}; }
     .stat-value { font: 700 14px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.title}; }
     .lang-name { font: 400 13px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.text}; }
     .lang-pct { font: 400 12px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.muted}; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .stagger { animation: fadeIn 0.3s ease-in-out both; }
+    @media (prefers-reduced-motion: reduce) {
+      .stagger { animation: none; opacity: 1; }
+    }
   </style>
   <rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${rx}"
         fill="${colors.bg}" stroke="${colors.border}" stroke-opacity="${hideBorder ? 0 : 1}"/>
@@ -44,12 +56,14 @@ function renderCard({ width, height, title, colors, hideBorder, hideTitle, hideB
 </svg>`;
 }
 
-function renderError(message, colors) {
+function renderError(message, colors, width) {
+  const w = width || 495;
   const body = `<text x="25" y="40" class="stat-label" fill="#f85149">${escapeHtml(message)}</text>`;
   return renderCard({
-    width: 495,
+    width: w,
     height: 70,
     title: "",
+    ariaLabel: `Error: ${message}`,
     colors,
     hideBorder: false,
     hideTitle: true,

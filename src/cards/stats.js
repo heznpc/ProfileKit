@@ -1,6 +1,6 @@
 const { renderCard } = require("../common/card");
 const { icons } = require("../common/icons");
-const { formatNumber, escapeHtml } = require("../common/utils");
+const { formatNumber } = require("../common/utils");
 
 const statItems = [
   { key: "commits", label: "Total Commits", shortLabel: "Commits", icon: icons.commits, field: "totalCommits", color: "#3fb950" },
@@ -13,7 +13,8 @@ const statItems = [
 
 function renderStatsCard(stats, { colors, hide = [], hideBorder, hideTitle, hideBar, borderRadius, title, layout, cardWidth }) {
   const visible = statItems.filter((s) => !hide.includes(s.key));
-  const cardTitle = title || `${escapeHtml(stats.name)}'s GitHub Stats`;
+  // renderCard escapes the title; pre-escaping here would double up to "&amp;amp;"
+  const cardTitle = title || `${stats.name}'s GitHub Stats`;
 
   if (layout === "compact") {
     return renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth });
@@ -71,8 +72,8 @@ function renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar,
       <svg x="2" y="2" viewBox="0 0 16 16" width="16" height="16" fill="${c}">
         ${item.icon}
       </svg>
-      <text x="30" y="10" class="stat-value" fill="${c}" font-size="16">${value}</text>
-      <text x="30" y="24" class="lang-pct">${item.shortLabel}</text>
+      <text x="30" y="14" class="stat-value" fill="${c}" font-size="16">${value}</text>
+      <text x="30" y="29" class="lang-pct">${item.shortLabel}</text>
     </g>`;
     })
     .join("\n  ");

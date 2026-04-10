@@ -16,8 +16,12 @@ function renderTypingCard({
   cursorColor,
   cursorWidth = 2,
   align = "left",
+  frame = false,
+  hideBorder = false,
+  hideBar = false,
+  borderRadius,
+  colors,
 }) {
-  const totalChars = lines.reduce((sum, l) => sum + l.length, 0);
   const actualCursorColor = cursorColor || color;
   const textAnchor =
     align === "center" ? "middle" : align === "right" ? "end" : "start";
@@ -90,9 +94,27 @@ function renderTypingCard({
     }`
     : "";
 
-  const bgRect = bgColor
-    ? `<rect width="${width}" height="${height}" fill="${bgColor}" rx="4.5"/>`
+  // Backward-compat: existing URLs are transparent. A frame (bg + border) is
+  // only drawn when the caller explicitly opts in via frame=true. bgColor
+  // alone still paints just the background, like the original behavior.
+  const useFrame = frame && colors;
+  const rx = borderRadius != null ? borderRadius : useFrame ? 6 : 4.5;
+  const frameBg = bgColor || (useFrame ? colors.bg : null);
+
+  const bgRect = frameBg
+    ? `<rect width="${width}" height="${height}" fill="${frameBg}" rx="${rx}"/>`
     : "";
+
+  const barMarkup =
+    useFrame && !hideBar
+      ? `<rect x="0" y="0" width="${width}" height="3" fill="${colors.accent || "#58a6ff"}"/>`
+      : "";
+
+  const borderRect =
+    useFrame && !hideBorder
+      ? `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${rx}"
+          fill="none" stroke="${colors.border}"/>`
+      : "";
 
   const textY = height / 2;
   const textElements = lines
@@ -109,12 +131,24 @@ function renderTypingCard({
         stroke="${actualCursorColor}" stroke-width="${cursorWidth}" class="cursor"/>`
     : "";
 
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  const safeAriaLabel = escapeHtml(lines.join(", "));
+  const reducedMotion = lines.length
+    ? `@media (prefers-reduced-motion: reduce) {
+      ${lines.map((_, i) => `.line${i}`).join(", ")} { animation: none; opacity: 1; }
+      .cursor { animation: none; }
+    }`
+    : "";
+
+  return `<svg role="img" aria-label="${safeAriaLabel}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  <title>${safeAriaLabel}</title>
   <style>${styles}${cursorStyle}
+    ${reducedMotion}
   </style>
   ${bgRect}
+  ${barMarkup}
   ${textElements}
   ${cursorMarkup}
+  ${borderRect}
 </svg>`;
 }
 

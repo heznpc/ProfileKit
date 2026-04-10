@@ -33,6 +33,29 @@ function parseIntSafe(value, defaultValue) {
   return Number.isNaN(n) ? defaultValue : n;
 }
 
+function parseFloatSafe(value, defaultValue) {
+  const n = parseFloat(value);
+  return Number.isNaN(n) ? defaultValue : n;
+}
+
+function parseColor(value) {
+  if (!value) return undefined;
+  return value.startsWith("#") ? value : `#${value}`;
+}
+
+function makeRng(seed) {
+  let s = seed || 1;
+  return () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+
+function truncate(str, max) {
+  if (!str) return "";
+  return str.length > max ? str.slice(0, max - 1) + "\u2026" : str;
+}
+
 function cacheHeaders() {
   return "public, max-age=1800, s-maxage=1800, stale-while-revalidate=300";
 }
@@ -47,6 +70,10 @@ module.exports = {
   parseBoolean,
   parseArray,
   parseIntSafe,
+  parseFloatSafe,
+  parseColor,
+  makeRng,
+  truncate,
   cacheHeaders,
   errorCacheHeaders,
 };

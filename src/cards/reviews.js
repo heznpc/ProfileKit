@@ -1,6 +1,6 @@
 const { renderCard } = require("../common/card");
 const { icons } = require("../common/icons");
-const { formatNumber, escapeHtml } = require("../common/utils");
+const { formatNumber } = require("../common/utils");
 
 const reviewItems = [
   { key: "totalReviews", label: "Total Reviews", icon: icons.reviews, color: "#a371f7" },
@@ -9,9 +9,10 @@ const reviewItems = [
   { key: "reposReviewed", label: "Repos Reviewed", icon: icons.repos, color: "#56d4dd" },
 ];
 
-function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title }) {
-  const cardTitle = title || `${escapeHtml(stats.name)}'s Code Reviews`;
-  const width = 495;
+function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth }) {
+  // renderCard escapes the title; pre-escaping here would double up to "&amp;amp;"
+  const cardTitle = title || `${stats.name}'s Code Reviews`;
+  const width = cardWidth || 495;
   const startY = hideTitle ? 25 : 55;
 
   // Approval rate ring
@@ -36,6 +37,7 @@ function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, bord
   `;
 
   const detailX = 160;
+  const valueX = width - detailX - 25;
   const detailsMarkup = reviewItems
     .map((item, i) => {
       const y = startY + 15 + i * 28;
@@ -47,7 +49,7 @@ function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, bord
         ${item.icon}
       </svg>
       <text x="30" y="12" class="stat-label">${item.label}</text>
-      <text x="310" y="12" class="stat-value" text-anchor="end" fill="${c}">${value}</text>
+      <text x="${valueX}" y="12" class="stat-value" text-anchor="end" fill="${c}">${value}</text>
     </g>`;
     })
     .join("\n    ");

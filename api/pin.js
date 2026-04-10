@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
 
   if (!username || !repo) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("Missing ?username= and ?repo= parameters", colors));
+    return res.send(renderError("Missing ?username= and ?repo= parameters", colors, cardWidth));
   }
 
   try {
@@ -58,6 +58,6 @@ module.exports = async (req, res) => {
     return res.send(svg);
   } catch (err) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError(err.message, colors));
+    return res.send(renderError(err.message, colors, cardWidth));
   }
 };
