@@ -1,32 +1,18 @@
 const { fetchPosts } = require("../src/fetchers/posts");
 const { renderPostsCard } = require("../src/cards/posts");
 const { renderError } = require("../src/common/card");
-const { getTheme } = require("../src/common/themes");
-const {
-  parseBoolean,
-  parseIntSafe,
-  parseRadius,
-  cacheHeaders,
-  errorCacheHeaders,
-} = require("../src/common/utils");
+const { parseSearchParams, parseCardOptions } = require("../src/common/options");
+const { parseIntSafe, cacheHeaders, errorCacheHeaders } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
-  const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
-  const font = params.get("font");
+  const params = parseSearchParams(req);
+  const opts = parseCardOptions(params);
+  const { colors, font } = opts;
+
   const source = params.get("source") || "devto";
   const username = params.get("username");
   const url = params.get("url");
   const count = parseIntSafe(params.get("count"), 5);
-  const theme = params.get("theme") || "dark";
-
-  const colors = getTheme(theme, {
-    bg: params.get("bg_color"),
-    text: params.get("text_color"),
-    title: params.get("title_color"),
-    icon: params.get("icon_color"),
-    border: params.get("border_color"),
-    accent: params.get("accent_color"),
-  });
 
   res.setHeader("Content-Type", "image/svg+xml");
 
@@ -45,18 +31,7 @@ module.exports = async (req, res) => {
 
   try {
     const posts = await fetchPosts({ source, username, url, count });
-    const svg = renderPostsCard(posts, {
-      colors,
-      hideBorder: parseBoolean(params.get("hide_border")),
-      hideTitle: parseBoolean(params.get("hide_title")),
-      hideBar: parseBoolean(params.get("hide_bar")),
-      borderRadius: parseRadius(params.get("border_radius"), undefined),
-      title: params.get("title"),
-      cardWidth: params.has("card_width")
-        ? parseIntSafe(params.get("card_width"), 495)
-        : undefined,
-      font,
-    });
+    const svg = renderPostsCard(posts, opts);
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);

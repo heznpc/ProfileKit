@@ -26,8 +26,9 @@
   <img src="https://profilekit.vercel.app/api/hero?name=ProfileKit&subtitle=All-in-one+GitHub+profile+cards.+Designer+typography.&bg=wave&width=900&height=240&font=inter" alt="ProfileKit" />
 </p>
 
-All-in-one GitHub profile cards. No ratings, no rankings — just clean, customizable cards.
-Stats, languages, blog-layout primitives, ten animated mood cards, and five bundled designer fonts. One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywhere.
+Developer personal brand visuals as composable SVG. Stats, languages, blog-layout primitives, animations, and five bundled designer fonts — no ratings, no rankings, just clean customizable cards.
+
+One service, many contexts. The same card renders in your GitHub README, your dev.to bio, your Hashnode post header, or your slide cover. Deploy once on Vercel, use everywhere.
 
 <p align="center">
   <img src="https://profilekit.vercel.app/api/divider?style=wave&width=900" alt="" />
@@ -129,6 +130,31 @@ Pure SVG. No JavaScript. Renders inside GitHub's image proxy.
   <img src="https://profilekit.vercel.app/api/divider?style=double&width=900" alt="" />
 </p>
 
+## Where it works
+
+ProfileKit cards are plain SVG. They render anywhere a platform allows external SVG via `<img>` — which turns out to be most developer-first surfaces, and almost no upload-only ones.
+
+| Context | Status | Notes |
+|---|---|---|
+| **GitHub README** (profile + repo) | ✅ Verified | Renders via Camo proxy. CSS / SMIL animations work. No JavaScript. |
+| **GitLab README** | ✅ Likely | Same model as GitHub. |
+| **Bitbucket README** | ✅ Likely | |
+| **dev.to** (post + bio) | ✅ Likely | Markdown `img` accepts external URLs. Animations preserved. |
+| **Hashnode** (post + profile) | ✅ Likely | |
+| **Static sites** (Docusaurus / MkDocs / Astro / Next.js / Nuxt) | ✅ Yes | Just an `<img>` tag. Full SVG fidelity. |
+| **Stack Overflow** profile | ✅ Yes | Markdown bio supports `img` with external URL. |
+| **Notion** (image block / embed) | 🟡 Partial | URL works for static cards; animation behavior depends on Notion's image proxy — test before relying. |
+| **Confluence Cloud** | 🟡 Partial | Image macro accepts URL; animation support varies. |
+| **Medium / Substack** | ❌ No | Upload-only. External URLs get re-hosted as raster. |
+| **LinkedIn posts** | ❌ No | Image upload only. |
+| **X (Twitter)** | ❌ No | `og:image` must be raster. |
+| **Discord embeds** | ❌ No | SVG explicitly blocked. |
+| **Slack** | ❌ No | Unfurls require raster `og:image`. |
+
+**The pattern**: developer-first surfaces (code hosts, dev blogs, static site generators) support external SVG natively. Long-form publishing platforms and social/chat surfaces require raster uploads — ProfileKit cards aren't directly usable there without exporting to PNG first.
+
+**Verified a new context?** Open a PR updating the table — the test URL is any ProfileKit endpoint, e.g. `https://profilekit.vercel.app/api/wave?text=test`.
+
 ## Endpoints
 
 | Endpoint | Description |
@@ -162,6 +188,8 @@ Pure SVG. No JavaScript. Renders inside GitHub's image proxy.
 | `/api/heartbeat` | EKG heartbeat line |
 | `/api/constellation` | Twinkling stars + connections |
 | `/api/radar` | Rotating radar sweep with blips |
+| **Composition** | |
+| `/api/stack` | Compose multiple cards into a single SVG |
 
 ## Usage
 
@@ -174,19 +202,66 @@ Pure SVG. No JavaScript. Renders inside GitHub's image proxy.
 
 ## Themes
 
-Three built-in themes. Pass `?theme=` to any endpoint.
+Seventeen built-in themes. Pass `?theme=` to any endpoint. Each theme defines a custom accent gradient for the top bar.
 
 | Theme | Background | Text |
 |-------|-----------|------|
 | `dark` (default) | `#0d1117` | `#e6edf3` |
 | `dark_dimmed` | `#22272e` | `#adbac7` |
 | `light` | `#ffffff` | `#1f2328` |
+| `tokyo_night` | `#1a1b26` | `#c0caf5` |
+| `nord` | `#2e3440` | `#eceff4` |
+| `gruvbox_dark` | `#282828` | `#ebdbb2` |
+| `catppuccin_mocha` | `#1e1e2e` | `#cdd6f4` |
+| `catppuccin_latte` | `#eff1f5` | `#4c4f69` |
+| `dracula` | `#282a36` | `#f8f8f2` |
+| `monokai` | `#272822` | `#f8f8f2` |
+| `one_dark` | `#282c34` | `#abb2bf` |
+| `kanagawa` | `#1f1f28` | `#dcd7ba` |
+| `synthwave` | `#241b2f` | `#ffffff` |
+| `solarized_dark` | `#002b36` | `#839496` |
+| `solarized_light` | `#fdf6e3` | `#657b83` |
+| `rose_pine` | `#191724` | `#e0def4` |
+| `rose_pine_dawn` | `#faf4ed` | `#575279` |
 
 Override individual colors with query params:
 
 ```
 ?bg_color=000000&text_color=ffffff&title_color=58a6ff&icon_color=58a6ff&border_color=30363d
 ```
+
+### Custom themes from a gist (`?theme_url=`)
+
+Bring your own palette without forking. Host a JSON gist with the theme schema and pass its raw URL — `/api/stats` and `/api/stack` will fetch and apply it.
+
+```
+?theme_url=https://gist.githubusercontent.com/<user>/<id>/raw/my-theme.json
+```
+
+The JSON shape mirrors the entries in `src/common/themes.js`:
+
+```json
+{
+  "bg":      "#0f0f0f",
+  "title":   "#fafafa",
+  "text":    "#dddddd",
+  "muted":   "#888888",
+  "icon":    "#88aaff",
+  "border":  "#262626",
+  "accentStops": ["#ff5e6c", "#ffb86c", "#88aaff"]
+}
+```
+
+**Rules**:
+
+- `https://gist.githubusercontent.com` is currently the only allowlisted host. Other hosts → 400 (header `X-Theme-Error`).
+- All seven keys are required. Extras are silently ignored so you can keep comments / metadata in the gist.
+- `accentStops` must be an array of two or more `#hex` strings.
+- Per-param overrides (`?bg_color=`, `?accent_color=`, …) still win on top of the external palette.
+- Responses are cached for 30 minutes per URL.
+- On any failure (host not allowed, network, schema mismatch) the card falls back to the default `dark` palette and the response carries an `X-Theme-Error` header explaining why.
+
+**Currently supported by**: `/api/stats`, `/api/stack` (and any cards rendered through `/api/stack`). Other endpoints will adopt `theme_url=` as a follow-up — no behavior change for callers that don't use the parameter.
 
 ## Common Options
 
@@ -483,6 +558,38 @@ Pick a card from the sidebar, tweak parameters in the right panel, copy the URL 
 | `seed` | Blip placement seed |
 | `width` / `height` | Default 300 × 300 (square) |
 
+## Composition
+
+`/api/stack` returns a single SVG containing several cards stacked vertically — useful when you want one URL for an entire README header instead of three or four `<img>` tags side by side.
+
+```
+https://profilekit.vercel.app/api/stack
+  ?cards=hero,section,divider,now
+  &theme=tokyo_night
+  &font=inter
+  &hero.name=ProfileKit
+  &hero.subtitle=Personal+brand+visuals
+  &hero.width=900&hero.height=240
+  &section.title=Currently
+  &section.width=900
+  &divider.width=900
+  &now.coding=ProfileKit&now.reading=DDIA&now.cardWidth=900
+```
+
+**Syntax**: `?cards=` is a comma-separated list of card names. Top-level params (`theme`, `font`, `border_radius`, etc.) apply to every card. Per-card overrides use the prefix `?<card>.<param>=`, e.g. `?hero.width=900&stats.layout=compact`.
+
+| Param | Description |
+|-------|-------------|
+| `cards` | Comma-separated list of card names (required) |
+| `gap` | Vertical gap between cards in px (default `16`) |
+| `<card>.<param>` | Override any param for one card only |
+
+**Supported cards (v1)**: `hero`, `section`, `divider`, `now`, `timeline`, `tags`, `toc`, `stats`, `languages`. The remaining endpoints will land in subsequent versions — open a PR or issue if you want one prioritized.
+
+**How it works**: each child card's SVG is positioned inside an outer viewport. Element IDs are namespaced per child so `<defs>` from one card don't clobber another. CSS classes and `@keyframes` are not namespaced, so mixing per-card themes within a single stack may produce style collisions — use a single top-level `?theme=` for predictable results.
+
+**Failure mode**: if one card fails (missing required param, fetch error, unknown name), only that slot renders an inline error card; the rest of the stack still ships.
+
 ## Customization Examples
 
 ```
@@ -501,6 +608,22 @@ Pick a card from the sidebar, tweak parameters in the right panel, copy the URL 
 # Terminal with custom commands
 /api/terminal?commands=npm+run+dev,git+commit+-m+"ship+it",git+push&prompt=%E2%9D%AF&color=a371f7
 ```
+
+## Beyond GitHub README
+
+The same hero endpoint that renders your README banner also renders the cover image for your dev.to bio, your Hashnode post header, your Notion page cover, and your slide title card — same SVG, different `width=` / `height=`.
+
+A gallery of dimension presets for each context lives in [`examples/README.md`](examples/README.md):
+
+| Context | Recommended dimensions |
+|---|---|
+| Hashnode post header | `1600 × 400` |
+| dev.to bio cover | `1000 × 420` |
+| Notion page cover | `1500 × 600` |
+| Conference slide (16:9) | `1280 × 720` |
+| Personal site hero | `1200 × 400` |
+
+Copy any URL from the gallery, change the `name` / `subtitle` / `theme`, and drop it into the matching context.
 
 ## Self-Hosting
 

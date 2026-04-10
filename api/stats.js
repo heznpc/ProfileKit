@@ -1,40 +1,20 @@
 const { fetchStats } = require("../src/fetchers/stats");
 const { renderStatsCard } = require("../src/cards/stats");
 const { renderError } = require("../src/common/card");
-const { getTheme } = require("../src/common/themes");
-const {
-  parseBoolean,
-  parseArray,
-  parseIntSafe,
-  parseRadius,
-  cacheHeaders,
-  errorCacheHeaders,
-} = require("../src/common/utils");
+const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { parseArray, cacheHeaders, errorCacheHeaders } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
-  const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
-  const font = params.get("font");
-  const username = params.get("username");
-  const theme = params.get("theme") || "dark";
-  const hide = parseArray(params.get("hide"));
-  const hideBorder = parseBoolean(params.get("hide_border"));
-  const hideTitle = parseBoolean(params.get("hide_title"));
-  const hideBar = parseBoolean(params.get("hide_bar"));
-  const borderRadius = parseRadius(params.get("border_radius"), undefined);
-  const title = params.get("title");
-  const layout = params.get("layout");
-  const cardWidth = params.has("card_width") ? parseIntSafe(params.get("card_width"), 495) : undefined;
+  const params = parseSearchParams(req);
+  const { opts, themeError } = await resolveCardOptions(params);
+  const { colors, font } = opts;
 
-  const colors = getTheme(theme, {
-    bg: params.get("bg_color"),
-    text: params.get("text_color"),
-    title: params.get("title_color"),
-    icon: params.get("icon_color"),
-    border: params.get("border_color"),
-    accent: params.get("accent_color"),
-  });
+  const username = params.get("username");
+  const hide = parseArray(params.get("hide"));
+  const layout = params.get("layout");
 
   res.setHeader("Content-Type", "image/svg+xml");
+  if (themeError) res.setHeader("X-Theme-Error", themeError);
 
   if (!username) {
     res.setHeader("Cache-Control", errorCacheHeaders());
@@ -46,7 +26,7 @@ module.exports = async (req, res) => {
     if (!token) throw new Error("GITHUB_TOKEN not configured");
 
     const stats = await fetchStats(username, token);
-    const svg = renderStatsCard(stats, { colors, hide, hideBorder, hideTitle, hideBar, borderRadius, title, layout, cardWidth, font });
+    const svg = renderStatsCard(stats, { ...opts, hide, layout });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);

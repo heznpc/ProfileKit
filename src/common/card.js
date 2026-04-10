@@ -4,6 +4,10 @@ const FONTS = require("../data/fonts.json");
 const DEFAULT_FAMILY = "'Segoe UI', Ubuntu, sans-serif";
 const DEFAULT_MONO_FAMILY = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
 
+// Fallback gradient if a theme is missing accentStops (kept identical to the
+// pre-theme-gradient default so unmigrated callers see no visual change).
+const FALLBACK_ACCENT_STOPS = ["#3fb950", "#a371f7", "#f778ba"];
+
 // Resolve a font key to its embed CSS + computed font-family stack. Cards
 // that pass an unknown key fall back silently to whatever fallback they
 // specified (typically the system sans for data cards, or monospace for
@@ -17,6 +21,30 @@ function resolveFont(key, fallback = DEFAULT_FAMILY) {
   };
 }
 
+// Build SVG <stop> elements for the accent bar gradient.
+//   - ?accent_color= override → single color, faded to 0.6 opacity at the end
+//   - theme.accentStops       → multi-color gradient, evenly distributed
+//   - fallback                → original rainbow (green → purple → pink)
+function buildAccentStops(colors) {
+  if (colors.accent) {
+    return `<stop offset="0%" stop-color="${colors.accent}"/>
+      <stop offset="100%" stop-color="${colors.accent}" stop-opacity="0.6"/>`;
+  }
+  const stops = colors.accentStops && colors.accentStops.length
+    ? colors.accentStops
+    : FALLBACK_ACCENT_STOPS;
+  if (stops.length === 1) {
+    return `<stop offset="0%" stop-color="${stops[0]}"/>
+      <stop offset="100%" stop-color="${stops[0]}" stop-opacity="0.6"/>`;
+  }
+  return stops
+    .map((c, i) => {
+      const offset = ((i / (stops.length - 1)) * 100).toFixed(0);
+      return `<stop offset="${offset}%" stop-color="${c}"/>`;
+    })
+    .join("\n      ");
+}
+
 function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideTitle, hideBar, borderRadius, body, font }) {
   const rx = borderRadius != null ? borderRadius : 6;
   const { embedCss, family } = resolveFont(font);
@@ -25,12 +53,7 @@ function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideT
     ? ""
     : `<text x="25" y="35" class="header">${escapeHtml(title)}</text>`;
 
-  const accentStops = colors.accent
-    ? `<stop offset="0%" stop-color="${colors.accent}"/>
-      <stop offset="100%" stop-color="${colors.accent}" stop-opacity="0.6"/>`
-    : `<stop offset="0%" stop-color="#3fb950"/>
-      <stop offset="40%" stop-color="#a371f7"/>
-      <stop offset="100%" stop-color="#f778ba"/>`;
+  const accentStops = buildAccentStops(colors);
 
   const barMarkup = hideBar
     ? ""
