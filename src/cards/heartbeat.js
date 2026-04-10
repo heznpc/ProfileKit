@@ -1,4 +1,5 @@
 const { escapeHtml } = require("../common/utils");
+const { resolveFont, DEFAULT_MONO_FAMILY } = require("../common/card");
 
 function renderHeartbeatCard({
   text,
@@ -9,6 +10,7 @@ function renderHeartbeatCard({
   colors,
   borderRadius,
   hideBorder,
+  font,
 }) {
   const w = width;
   const h = height;
@@ -16,6 +18,11 @@ function renderHeartbeatCard({
   const accent = color || "#f85149";
   const bg = colors.bg;
   const padding = 20;
+  // If the user picks a font, use it for both states (text + bare BPM). If
+  // not, the bare BPM falls back to mono and the text-with-label uses sans.
+  const safeText = text ? escapeHtml(text) : "";
+  const { embedCss, family: textFamily } = resolveFont(font);
+  const monoFamily = font ? textFamily : DEFAULT_MONO_FAMILY;
 
   // PQRST waveform: flat → P bump → QRS spike → T bump → flat. Drawn across
   // multiple cycle widths so the looped translate doesn't reveal a seam.
@@ -42,13 +49,11 @@ function renderHeartbeatCard({
   const path = segments.join(" ");
 
   const cycleDur = 60 / bpm;
-  const safeText = text ? escapeHtml(text) : "";
-
   const ariaLabel = safeText ? `${safeText} (${bpm} BPM)` : `Heartbeat ${bpm} BPM`;
 
   return `<svg role="img" aria-label="${ariaLabel}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <title>${ariaLabel}</title>
-  <style>@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
+  <style>${embedCss}@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
   <defs>
     <clipPath id="hb-clip">
       <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"/>
@@ -74,9 +79,9 @@ function renderHeartbeatCard({
     <rect x="0" y="0" width="${w}" height="${h}" fill="url(#hb-fade)"/>
     ${
       safeText
-        ? `<text x="${padding}" y="${padding + 10}" font-family="'Segoe UI', sans-serif" font-size="14" font-weight="600" fill="${colors.title}">${safeText}</text>
-           <text x="${padding}" y="${padding + 28}" font-family="'Segoe UI', sans-serif" font-size="11" fill="${colors.muted}">${bpm} BPM</text>`
-        : `<text x="${padding}" y="${padding + 10}" font-family="ui-monospace, monospace" font-size="13" font-weight="700" fill="${accent}">${bpm} BPM</text>`
+        ? `<text x="${padding}" y="${padding + 10}" font-family="${textFamily}" font-size="14" font-weight="600" fill="${colors.title}">${safeText}</text>
+           <text x="${padding}" y="${padding + 28}" font-family="${textFamily}" font-size="11" fill="${colors.muted}">${bpm} BPM</text>`
+        : `<text x="${padding}" y="${padding + 10}" font-family="${monoFamily}" font-size="13" font-weight="700" fill="${accent}">${bpm} BPM</text>`
     }
     <circle cx="${w - padding - 4}" cy="${padding + 4}" r="4" fill="${accent}">
       <animate attributeName="opacity" values="1;0.3;1" dur="${cycleDur.toFixed(2)}s" repeatCount="indefinite"/>

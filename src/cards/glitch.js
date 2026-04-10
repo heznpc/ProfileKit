@@ -1,4 +1,5 @@
 const { escapeHtml } = require("../common/utils");
+const { resolveFont } = require("../common/card");
 
 // Perceived brightness via the standard luma weights. Used to pick clone
 // colors that contrast against the actual background instead of hard-coding
@@ -29,7 +30,7 @@ function renderGlitchCard({
   const baseColor = color || colors.title;
   const bg = colors.bg;
   const fSize = size;
-  const fontFamily = font || "'Segoe UI', sans-serif";
+  const { embedCss, family: fontFamily } = resolveFont(font);
   const safeText = escapeHtml(text);
   const cx = w / 2;
   const cy = h / 2 + fSize * 0.35;
@@ -44,7 +45,7 @@ function renderGlitchCard({
       <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"/>
     </clipPath>
   </defs>
-  <style>
+  <style>${embedCss}
     @keyframes glitch-r {
       0%, 100% { transform: translate(0, 0); }
       20% { transform: translate(-3px, 1px); }

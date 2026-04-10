@@ -6,19 +6,21 @@ const {
   parseBoolean,
   parseArray,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
   errorCacheHeaders,
 } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
   const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
+  const font = params.get("font");
   const username = params.get("username");
   const theme = params.get("theme") || "dark";
   const hide = parseArray(params.get("hide"));
   const hideBorder = parseBoolean(params.get("hide_border"));
   const hideTitle = parseBoolean(params.get("hide_title"));
   const hideBar = parseBoolean(params.get("hide_bar"));
-  const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
+  const borderRadius = parseRadius(params.get("border_radius"), undefined);
   const title = params.get("title");
   const layout = params.get("layout");
   const cardWidth = params.has("card_width") ? parseIntSafe(params.get("card_width"), 495) : undefined;
@@ -36,7 +38,7 @@ module.exports = async (req, res) => {
 
   if (!username) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("Missing ?username= parameter", colors));
+    return res.send(renderError("Missing ?username= parameter", { colors, font }));
   }
 
   try {
@@ -44,12 +46,12 @@ module.exports = async (req, res) => {
     if (!token) throw new Error("GITHUB_TOKEN not configured");
 
     const stats = await fetchStats(username, token);
-    const svg = renderStatsCard(stats, { colors, hide, hideBorder, hideTitle, hideBar, borderRadius, title, layout, cardWidth });
+    const svg = renderStatsCard(stats, { colors, hide, hideBorder, hideTitle, hideBar, borderRadius, title, layout, cardWidth, font });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);
   } catch (err) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError(err.message, colors));
+    return res.send(renderError(err.message, { colors, font }));
   }
 };

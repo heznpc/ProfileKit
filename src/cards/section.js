@@ -1,8 +1,10 @@
 const { escapeHtml } = require("../common/utils");
+const { resolveFont } = require("../common/card");
 
-// Approximate width of one char at 26px Segoe UI semi-bold. SVG can't measure
-// text without a layout engine, so this is a deliberate over-estimate that
-// keeps the underline + icon offsets visually aligned for typical Latin titles.
+// Approximate width of one char at 26px in a typical variable-width sans
+// (Inter / Segoe UI / Manrope). SVG can't measure text without a layout
+// engine, so this is a deliberate over-estimate that keeps the underline +
+// icon offsets visually aligned for Latin titles regardless of bundled font.
 const TITLE_CHAR_W = 14;
 const ICON_GAP = 10;
 const ICON_W = 30;
@@ -16,7 +18,9 @@ function renderSectionCard({
   height,
   icon,
   colors,
+  font,
 }) {
+  const { embedCss, family } = resolveFont(font);
   const w = width;
   const h = height || (subtitle ? 90 : 70);
   const c = color || colors.title;
@@ -46,9 +50,9 @@ function renderSectionCard({
 
   return `<svg role="img" aria-label="${ariaLabel}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <title>${ariaLabel}</title>
-  <style>
-    .sec-title { font: 700 26px 'Segoe UI', Ubuntu, sans-serif; fill: ${c}; }
-    .sec-sub { font: 400 14px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.muted}; }
+  <style>${embedCss}
+    .sec-title { font: 700 26px ${family}; fill: ${c}; }
+    .sec-sub { font: 400 14px ${family}; fill: ${colors.muted}; }
     @keyframes drawIn { from { width: 0; } to { width: ${underlineWidth}px; } }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     .sec-title, .sec-sub { animation: fadeUp 0.5s ease-out both; }

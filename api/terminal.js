@@ -4,6 +4,7 @@ const {
   parseBoolean,
   parseColor,
   parseIntSafe,
+  parseRadius,
   parseArray,
   cacheHeaders,
 } = require("../src/common/utils");
@@ -37,9 +38,7 @@ module.exports = async (req, res) => {
     font: params.get("font"),
     fontSize: parseIntSafe(params.get("size"), 14),
     colors,
-    borderRadius: params.has("border_radius")
-      ? parseIntSafe(params.get("border_radius"), 8)
-      : undefined,
+    borderRadius: parseRadius(params.get("border_radius"), undefined),
     hideBorder: parseBoolean(params.get("hide_border")),
   });
 

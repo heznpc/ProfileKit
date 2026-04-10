@@ -1,4 +1,5 @@
 const { renderCard } = require("../common/card");
+const { bodyStartY } = require("../common/tokens");
 const { escapeHtml } = require("../common/utils");
 
 function parseItems(raw) {
@@ -17,10 +18,10 @@ function parseItems(raw) {
 }
 
 function renderTimelineCard(rawItems, opts) {
-  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth } = opts;
+  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth, font } = opts;
   const items = parseItems(rawItems);
   const width = cardWidth || 495;
-  const startY = hideTitle ? 30 : 60;
+  const startY = bodyStartY(hideTitle);
   const itemHeight = 58;
   const height = startY + Math.max(items.length, 1) * itemHeight + 10;
   const lineX = 45;
@@ -65,6 +66,7 @@ function renderTimelineCard(rawItems, opts) {
     hideBar,
     borderRadius,
     body: verticalLine + nodes,
+    font,
   });
 }
 

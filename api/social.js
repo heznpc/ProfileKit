@@ -4,6 +4,7 @@ const { getTheme } = require("../src/common/themes");
 const {
   parseBoolean,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
   errorCacheHeaders,
 } = require("../src/common/utils");
@@ -28,10 +29,11 @@ function parseLinks(params) {
 
 module.exports = async (req, res) => {
   const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
+  const font = params.get("font");
   const theme = params.get("theme") || "dark";
   const hideBorder = parseBoolean(params.get("hide_border"));
   const hideBar = parseBoolean(params.get("hide_bar"));
-  const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
+  const borderRadius = parseRadius(params.get("border_radius"), undefined);
   const title = params.get("title");
   const layout = params.get("layout") || "default";
 
@@ -50,11 +52,11 @@ module.exports = async (req, res) => {
   if (links.length === 0) {
     res.setHeader("Cache-Control", errorCacheHeaders());
     return res.send(
-      renderError("No links provided. Use ?github=user&linkedin=user&...", colors)
+      renderError("No links provided. Use ?github=user&linkedin=user&...", { colors, font })
     );
   }
 
-  const svg = renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, title, layout });
+  const svg = renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, title, layout, font });
   res.setHeader("Cache-Control", cacheHeaders());
   return res.send(svg);
 };

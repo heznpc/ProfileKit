@@ -6,12 +6,14 @@ const {
   parseBoolean,
   parseArray,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
   errorCacheHeaders,
 } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
   const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
+  const font = params.get("font");
   const username = params.get("username");
   const theme = params.get("theme") || "dark";
   const langsCount = parseIntSafe(params.get("langs_count"), 6);
@@ -20,7 +22,7 @@ module.exports = async (req, res) => {
   const hideBorder = parseBoolean(params.get("hide_border"));
   const hideTitle = parseBoolean(params.get("hide_title"));
   const hideBar = parseBoolean(params.get("hide_bar"));
-  const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
+  const borderRadius = parseRadius(params.get("border_radius"), undefined);
   const title = params.get("title");
   const compact = parseBoolean(params.get("compact"));
   const layout = params.get("layout");
@@ -39,7 +41,7 @@ module.exports = async (req, res) => {
 
   if (!username) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("Missing ?username= parameter", colors));
+    return res.send(renderError("Missing ?username= parameter", { colors, font }));
   }
 
   try {
@@ -70,12 +72,13 @@ module.exports = async (req, res) => {
       compact,
       layout,
       cardWidth,
+      font,
     });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);
   } catch (err) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError(err.message, colors));
+    return res.send(renderError(err.message, { colors, font }));
   }
 };

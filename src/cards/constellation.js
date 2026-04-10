@@ -1,4 +1,5 @@
 const { escapeHtml, makeRng } = require("../common/utils");
+const { resolveFont } = require("../common/card");
 
 function renderConstellationCard({
   text,
@@ -10,7 +11,9 @@ function renderConstellationCard({
   borderRadius,
   hideBorder,
   seed,
+  font,
 }) {
+  const { embedCss, family } = resolveFont(font);
   const w = width;
   const h = height;
   const rx = borderRadius != null ? borderRadius : 6;
@@ -69,7 +72,7 @@ function renderConstellationCard({
   const safeText = text ? escapeHtml(text) : "";
   const overlay = safeText
     ? `<text x="${w / 2}" y="${h / 2 + 10}" text-anchor="middle"
-        font-family="'Segoe UI', sans-serif" font-size="32" font-weight="700"
+        font-family="${family}" font-size="32" font-weight="700"
         fill="${colors.title}" letter-spacing="3">${safeText}
         <animate attributeName="opacity" from="0" to="1" dur="1s" fill="freeze"/>
       </text>`
@@ -79,7 +82,7 @@ function renderConstellationCard({
 
   return `<svg role="img" aria-label="${ariaLabel}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <title>${ariaLabel}</title>
-  <style>@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
+  <style>${embedCss}@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
   <defs>
     <clipPath id="con-clip">
       <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"/>

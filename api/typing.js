@@ -1,19 +1,23 @@
 const { renderTypingCard } = require("../src/cards/typing");
+const { renderError } = require("../src/common/card");
 const { getTheme } = require("../src/common/themes");
 const {
   parseBoolean,
   parseColor,
   parseArray,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
+  errorCacheHeaders,
 } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
   const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
   const lines = parseArray(params.get("lines"));
   const theme = params.get("theme") || "dark";
-  // Note: bg_color is consumed directly via the bgColor prop on the card, not
-  // as a getTheme override. Routing it through both creates a double meaning.
+  const font = params.get("font");
+  // bg_color is consumed via the bgColor prop on the card, not as a getTheme
+  // override — routing it through both creates a double meaning.
   const colors = getTheme(theme, {
     text: params.get("text_color"),
     title: params.get("title_color"),
@@ -22,19 +26,16 @@ module.exports = async (req, res) => {
     accent: params.get("accent_color"),
   });
 
+  res.setHeader("Content-Type", "image/svg+xml");
+
   if (lines.length === 0) {
-    res.setHeader("Content-Type", "image/svg+xml");
-    res.setHeader("Cache-Control", cacheHeaders());
-    return res.send(
-      `<svg width="400" height="40" xmlns="http://www.w3.org/2000/svg">
-        <text x="20" y="25" fill="#f85149" font-size="14" font-family="monospace">Missing ?lines= parameter</text>
-      </svg>`
-    );
+    res.setHeader("Cache-Control", errorCacheHeaders());
+    return res.send(renderError("Missing ?lines= parameter", { colors, font }));
   }
 
   const svg = renderTypingCard({
     lines,
-    font: params.get("font") || "monospace",
+    font,
     size: parseIntSafe(params.get("size"), 20),
     weight: parseIntSafe(params.get("weight"), 400),
     color: parseColor(params.get("color")),
@@ -51,13 +52,10 @@ module.exports = async (req, res) => {
     frame: parseBoolean(params.get("frame")),
     hideBorder: parseBoolean(params.get("hide_border")),
     hideBar: parseBoolean(params.get("hide_bar")),
-    borderRadius: params.has("border_radius")
-      ? parseIntSafe(params.get("border_radius"), 6)
-      : undefined,
+    borderRadius: parseRadius(params.get("border_radius"), undefined),
     colors,
   });
 
-  res.setHeader("Content-Type", "image/svg+xml");
   res.setHeader("Cache-Control", cacheHeaders());
   return res.send(svg);
 };

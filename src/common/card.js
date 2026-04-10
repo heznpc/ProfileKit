@@ -1,7 +1,25 @@
 const { escapeHtml } = require("./utils");
+const FONTS = require("../data/fonts.json");
 
-function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideTitle, hideBar, borderRadius, body }) {
+const DEFAULT_FAMILY = "'Segoe UI', Ubuntu, sans-serif";
+const DEFAULT_MONO_FAMILY = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
+
+// Resolve a font key to its embed CSS + computed font-family stack. Cards
+// that pass an unknown key fall back silently to whatever fallback they
+// specified (typically the system sans for data cards, or monospace for
+// terminal/matrix).
+function resolveFont(key, fallback = DEFAULT_FAMILY) {
+  const f = key && FONTS[key];
+  if (!f) return { embedCss: "", family: fallback };
+  return {
+    embedCss: f.css,
+    family: `'${f.family}', ${fallback}`,
+  };
+}
+
+function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideTitle, hideBar, borderRadius, body, font }) {
   const rx = borderRadius != null ? borderRadius : 6;
+  const { embedCss, family } = resolveFont(font);
 
   const titleMarkup = hideTitle
     ? ""
@@ -36,12 +54,12 @@ function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideT
       <rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${rx}"/>
     </clipPath>
   </defs>
-  <style>
-    .header { font: 700 18px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.title}; }
-    .stat-label { font: 400 14px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.text}; }
-    .stat-value { font: 700 14px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.title}; }
-    .lang-name { font: 400 13px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.text}; }
-    .lang-pct { font: 400 12px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.muted}; }
+  <style>${embedCss}
+    .header { font: 700 18px ${family}; fill: ${colors.title}; }
+    .stat-label { font: 400 14px ${family}; fill: ${colors.text}; }
+    .stat-value { font: 700 14px ${family}; fill: ${colors.title}; }
+    .lang-name { font: 400 13px ${family}; fill: ${colors.text}; }
+    .lang-pct { font: 400 12px ${family}; fill: ${colors.muted}; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .stagger { animation: fadeIn 0.3s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
@@ -56,7 +74,7 @@ function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideT
 </svg>`;
 }
 
-function renderError(message, colors, width) {
+function renderError(message, { colors, width, font } = {}) {
   const w = width || 495;
   const body = `<text x="25" y="40" class="stat-label" fill="#f85149">${escapeHtml(message)}</text>`;
   return renderCard({
@@ -68,7 +86,8 @@ function renderError(message, colors, width) {
     hideBorder: false,
     hideTitle: true,
     body,
+    font,
   });
 }
 
-module.exports = { renderCard, renderError };
+module.exports = { renderCard, renderError, resolveFont, DEFAULT_FAMILY, DEFAULT_MONO_FAMILY };

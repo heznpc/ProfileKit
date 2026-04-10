@@ -5,12 +5,14 @@ const { getTheme } = require("../src/common/themes");
 const {
   parseBoolean,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
   errorCacheHeaders,
 } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
   const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
+  const font = params.get("font");
   const source = params.get("source") || "devto";
   const username = params.get("username");
   const url = params.get("url");
@@ -30,15 +32,15 @@ module.exports = async (req, res) => {
 
   if ((source === "devto" || source === "hashnode") && !username) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("Missing ?username= parameter", colors));
+    return res.send(renderError("Missing ?username= parameter", { colors, font }));
   }
   if (source === "rss" && !url) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("Missing ?url= parameter", colors));
+    return res.send(renderError("Missing ?url= parameter", { colors, font }));
   }
   if (source === "medium" && !username && !url) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("Missing ?username= or ?url= parameter", colors));
+    return res.send(renderError("Missing ?username= or ?url= parameter", { colors, font }));
   }
 
   try {
@@ -48,19 +50,18 @@ module.exports = async (req, res) => {
       hideBorder: parseBoolean(params.get("hide_border")),
       hideTitle: parseBoolean(params.get("hide_title")),
       hideBar: parseBoolean(params.get("hide_bar")),
-      borderRadius: params.has("border_radius")
-        ? parseIntSafe(params.get("border_radius"), 6)
-        : undefined,
+      borderRadius: parseRadius(params.get("border_radius"), undefined),
       title: params.get("title"),
       cardWidth: params.has("card_width")
         ? parseIntSafe(params.get("card_width"), 495)
         : undefined,
+      font,
     });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);
   } catch (err) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError(err.message, colors));
+    return res.send(renderError(err.message, { colors, font }));
   }
 };

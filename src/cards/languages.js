@@ -1,19 +1,20 @@
 const { renderCard } = require("../common/card");
+const { bodyStartY } = require("../common/tokens");
 const { escapeHtml } = require("../common/utils");
 
-function renderLanguagesCard(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, compact, layout, cardWidth }) {
+function renderLanguagesCard(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, compact, layout, cardWidth, font }) {
   const cardTitle = title || "Top Languages";
-  const opts = { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth };
+  const opts = { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font };
 
   if (layout === "donut") return renderDonut(languages, opts);
   if (compact || layout === "compact") return renderCompact(languages, opts);
   return renderDefault(languages, opts);
 }
 
-function renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth }) {
+function renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font }) {
   const width = cardWidth || 495;
   const rowHeight = 32;
-  const startY = hideTitle ? 25 : 55;
+  const startY = bodyStartY(hideTitle);
   const barWidth = Math.min(185, width - 310);
   const barX = width - barWidth - 90;
   const pctX = width - 75;
@@ -34,13 +35,13 @@ function renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, bord
     })
     .join("\n  ");
 
-  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: rows });
+  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: rows, font });
 }
 
-function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth }) {
+function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font }) {
   const width = cardWidth || 495;
   const barWidth = width - 50;
-  const startY = hideTitle ? 25 : 55;
+  const startY = bodyStartY(hideTitle);
 
   const totalPct = languages.reduce((sum, l) => sum + l.percentage, 0);
   let barX = 25;
@@ -81,12 +82,12 @@ function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, bord
   const legendRows = Math.ceil(languages.length / 4);
   const totalHeight = startY + 24 + legendRows * 20 + 12;
 
-  return renderCard({ width, height: totalHeight, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: `${barGroup}\n  ${legendItems}` });
+  return renderCard({ width, height: totalHeight, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: `${barGroup}\n  ${legendItems}`, font });
 }
 
-function renderDonut(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth }) {
+function renderDonut(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font }) {
   const width = cardWidth || 400;
-  const startY = hideTitle ? 15 : 45;
+  const startY = bodyStartY(hideTitle);
   const r = 55;
   const cx = 90;
   const cy = startY + r + 10;
@@ -133,7 +134,7 @@ function renderDonut(languages, { colors, hideBorder, hideTitle, hideBar, border
     ${segments}
     ${legendItems}`;
 
-  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body });
+  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body, font });
 }
 
 module.exports = { renderLanguagesCard };

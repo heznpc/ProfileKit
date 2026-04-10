@@ -4,6 +4,7 @@ const { getTheme } = require("../src/common/themes");
 const {
   parseBoolean,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
 } = require("../src/common/utils");
 
@@ -12,7 +13,7 @@ module.exports = async (req, res) => {
   const theme = params.get("theme") || "dark";
   const hideBorder = parseBoolean(params.get("hide_border"));
   const hideBar = parseBoolean(params.get("hide_bar"));
-  const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
+  const borderRadius = parseRadius(params.get("border_radius"), undefined);
   const daily = parseBoolean(params.get("daily"));
   const width = parseIntSafe(params.get("width"), 495);
 
@@ -26,7 +27,7 @@ module.exports = async (req, res) => {
   });
 
   const quote = daily ? getDailyQuote() : getRandomQuote();
-  const svg = renderQuoteCard(quote, { colors, hideBorder, hideBar, borderRadius, width });
+  const svg = renderQuoteCard(quote, { colors, hideBorder, hideBar, borderRadius, width, font: params.get("font") });
 
   res.setHeader("Content-Type", "image/svg+xml");
   res.setHeader(

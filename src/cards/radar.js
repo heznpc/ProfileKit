@@ -1,4 +1,5 @@
 const { escapeHtml, makeRng } = require("../common/utils");
+const { resolveFont, DEFAULT_MONO_FAMILY } = require("../common/card");
 
 function renderRadarCard({
   text,
@@ -11,7 +12,9 @@ function renderRadarCard({
   borderRadius,
   hideBorder,
   seed,
+  font,
 }) {
+  const { embedCss, family } = resolveFont(font, DEFAULT_MONO_FAMILY);
   const w = width;
   const h = height;
   const rx = borderRadius != null ? borderRadius : 6;
@@ -69,14 +72,14 @@ function renderRadarCard({
 
   const safeText = text ? escapeHtml(text) : "";
   const labelMarkup = safeText
-    ? `<text x="${cx}" y="${cy + radius + 18}" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" fill="${accent}" letter-spacing="2">${safeText}</text>`
+    ? `<text x="${cx}" y="${cy + radius + 18}" text-anchor="middle" font-family="${family}" font-size="11" fill="${accent}" letter-spacing="2">${safeText}</text>`
     : "";
 
   const ariaLabel = safeText ? `Radar: ${safeText}` : "Radar animation";
 
   return `<svg role="img" aria-label="${ariaLabel}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <title>${ariaLabel}</title>
-  <style>@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
+  <style>${embedCss}@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
   <defs>
     <clipPath id="rd-clip">
       <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"/>

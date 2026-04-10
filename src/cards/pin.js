@@ -24,7 +24,7 @@ function wrapText(text, maxChars) {
   return lines.slice(0, 3);
 }
 
-function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWidth, description }) {
+function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWidth, description, font }) {
   const width = cardWidth || 400;
   const maxChars = Math.floor((width - 50) / 7);
   const desc = description || repo.description;
@@ -109,6 +109,7 @@ function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWi
     hideBar,
     borderRadius,
     body,
+    font,
   });
 }
 

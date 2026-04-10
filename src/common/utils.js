@@ -43,6 +43,11 @@ function parseColor(value) {
   return value.startsWith("#") ? value : `#${value}`;
 }
 
+// Re-export the token-aware radius parser from src/common/tokens so endpoints
+// don't need a second require line. Spacing/type-size parsers will be added
+// here when they pick up their first caller.
+const { parseRadius } = require("./tokens");
+
 function makeRng(seed) {
   let s = seed || 1;
   return () => {
@@ -72,6 +77,7 @@ module.exports = {
   parseIntSafe,
   parseFloatSafe,
   parseColor,
+  parseRadius,
   makeRng,
   truncate,
   cacheHeaders,

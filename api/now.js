@@ -3,6 +3,7 @@ const { getTheme } = require("../src/common/themes");
 const {
   parseBoolean,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
 } = require("../src/common/utils");
 
@@ -30,13 +31,12 @@ module.exports = async (req, res) => {
     hideBorder: parseBoolean(params.get("hide_border")),
     hideTitle: parseBoolean(params.get("hide_title")),
     hideBar: parseBoolean(params.get("hide_bar")),
-    borderRadius: params.has("border_radius")
-      ? parseIntSafe(params.get("border_radius"), 6)
-      : undefined,
+    borderRadius: parseRadius(params.get("border_radius"), undefined),
     title: params.get("title"),
     cardWidth: params.has("card_width")
       ? parseIntSafe(params.get("card_width"), 495)
       : undefined,
+    font: params.get("font"),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");

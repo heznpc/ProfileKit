@@ -1,4 +1,5 @@
 const { renderCard } = require("../common/card");
+const { bodyStartY } = require("../common/tokens");
 const { escapeHtml, truncate } = require("../common/utils");
 
 function formatDate(iso) {
@@ -13,9 +14,9 @@ function formatDate(iso) {
 }
 
 function renderPostsCard(posts, opts) {
-  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth } = opts;
+  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth, font } = opts;
   const width = cardWidth || 495;
-  const startY = hideTitle ? 30 : 55;
+  const startY = bodyStartY(hideTitle);
   const rowHeight = 52;
   const height = startY + Math.max(posts.length, 1) * rowHeight + 10;
   const accent = colors.accent || "#58a6ff";
@@ -52,6 +53,7 @@ function renderPostsCard(posts, opts) {
     hideBar,
     borderRadius,
     body: rows,
+    font,
   });
 }
 

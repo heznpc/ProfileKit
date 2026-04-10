@@ -1,11 +1,33 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ProfileKit
 
 <p align="center">
-  <img src="https://profilekit.vercel.app/api/hero?name=ProfileKit&subtitle=All-in-one+GitHub+profile+cards.+Now+with+animations.&bg=wave&width=900&height=240" alt="ProfileKit" />
+  <img src="https://profilekit.vercel.app/api/hero?name=ProfileKit&subtitle=All-in-one+GitHub+profile+cards.+Designer+typography.&bg=wave&width=900&height=240&font=inter" alt="ProfileKit" />
 </p>
 
 All-in-one GitHub profile cards. No ratings, no rankings — just clean, customizable cards.
-Stats, languages, blog-layout primitives, and ten animated mood cards. One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywhere.
+Stats, languages, blog-layout primitives, ten animated mood cards, and five bundled designer fonts. One service replaces 5–6 scattered tools. Deploy once on Vercel, use everywhere.
 
 <p align="center">
   <img src="https://profilekit.vercel.app/api/divider?style=wave&width=900" alt="" />
@@ -185,6 +207,71 @@ These work on most card endpoints (where applicable):
 | `hide_bar` | `true` to remove gradient accent bar |
 | `border_radius` | Border radius in px (default: 6) |
 | `card_width` | Card width in px |
+| `font` | Bundled designer font (see below) |
+
+## Fonts
+
+ProfileKit defaults to the system `Segoe UI` stack — fast, zero overhead. Pass `?font=` to embed one of five bundled Variable Fonts (Latin subset). Each adds ~30–65 KB of base64 woff2 to the SVG, but the response is CDN-cached so the cost is paid once.
+
+| Key | Family | Best for | CSS size |
+|-----|--------|----------|----------|
+| `inter` | Inter | Data cards, neutral UI | ~63 KB |
+| `space-grotesk` | Space Grotesk | Headers, geometric look | ~29 KB |
+| `jetbrains-mono` | JetBrains Mono | Terminal, code, matrix rain | ~41 KB |
+| `ibm-plex-sans` | IBM Plex Sans | Corporate, refined sans | ~52 KB |
+| `manrope` | Manrope | Friendly, modern sans | ~32 KB |
+
+Same card, five fonts:
+
+<p>
+  <img src="https://profilekit.vercel.app/api/stats?username=heznpc&font=inter&hide=issues,contributed" alt="Inter" />
+  <img src="https://profilekit.vercel.app/api/stats?username=heznpc&font=space-grotesk&hide=issues,contributed" alt="Space Grotesk" />
+</p>
+<p>
+  <img src="https://profilekit.vercel.app/api/stats?username=heznpc&font=jetbrains-mono&hide=issues,contributed" alt="JetBrains Mono" />
+  <img src="https://profilekit.vercel.app/api/stats?username=heznpc&font=ibm-plex-sans&hide=issues,contributed" alt="IBM Plex Sans" />
+</p>
+<p>
+  <img src="https://profilekit.vercel.app/api/stats?username=heznpc&font=manrope&hide=issues,contributed" alt="Manrope" />
+</p>
+
+```
+?font=inter             # any card
+?font=jetbrains-mono    # terminal, matrix, radar feel right
+```
+
+Bundled fonts are downloaded from Google Fonts and ship under the SIL Open Font License 1.1. To refresh or add fonts, edit `scripts/fetch-fonts.js` and run `node scripts/fetch-fonts.js`.
+
+## Design Tokens
+
+Common scale params accept either a friendly token name **or** a raw px number, so you can write `border_radius=lg` instead of memorizing `border_radius=6`. Token names match Tailwind/shadcn conventions.
+
+**Radius** (`border_radius`)
+
+| Token | px |
+|-------|-----|
+| `none` | 0 |
+| `sm` | 2 |
+| `md` | 4 |
+| `lg` (default) | 6 |
+| `xl` | 12 |
+| `2xl` | 16 |
+| `3xl` | 24 |
+| `full` | 9999 |
+
+```
+?border_radius=full   # pill-shaped card
+?border_radius=none   # sharp corners
+?border_radius=20     # any raw px still works
+```
+
+The same scale (`xs / sm / md / lg / xl / 2xl / 3xl / 4xl`) is exposed for spacing and the type scale internally — see `src/common/tokens.js`. Designer-friendly param names will roll out across the rest of the catalog as cards adopt them.
+
+## Playground
+
+Live editor at the deployment root: <https://profilekit.vercel.app/>
+
+Pick a card from the sidebar, tweak parameters in the right panel, copy the URL or markdown snippet. Every preview is rendered by the real `/api/*` endpoint, so what you see is exactly what GitHub will fetch.
 
 ## Endpoint-Specific Options
 

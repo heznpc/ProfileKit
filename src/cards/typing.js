@@ -1,8 +1,9 @@
 const { escapeHtml } = require("../common/utils");
+const { resolveFont, DEFAULT_MONO_FAMILY } = require("../common/card");
 
 function renderTypingCard({
   lines,
-  font = "monospace",
+  font,
   size = 20,
   weight = 400,
   color = "#58a6ff",
@@ -22,6 +23,8 @@ function renderTypingCard({
   borderRadius,
   colors,
 }) {
+  // Default to system monospace; ?font=jetbrains-mono picks the bundled VF.
+  const { embedCss, family: fontFamily } = resolveFont(font, DEFAULT_MONO_FAMILY);
   const actualCursorColor = cursorColor || color;
   const textAnchor =
     align === "center" ? "middle" : align === "right" ? "end" : "start";
@@ -121,7 +124,7 @@ function renderTypingCard({
     .map(
       (line, i) =>
         `<text x="${textX}" y="${textY}" dominant-baseline="central" text-anchor="${textAnchor}"
-          font-family="${font}" font-size="${size}" font-weight="${weight}"
+          font-family="${fontFamily}" font-size="${size}" font-weight="${weight}"
           fill="${color}" class="line${i}">${escapeHtml(line)}</text>`
     )
     .join("\n  ");
@@ -141,7 +144,7 @@ function renderTypingCard({
 
   return `<svg role="img" aria-label="${safeAriaLabel}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
   <title>${safeAriaLabel}</title>
-  <style>${styles}${cursorStyle}
+  <style>${embedCss}${styles}${cursorStyle}
     ${reducedMotion}
   </style>
   ${bgRect}

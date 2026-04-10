@@ -5,20 +5,20 @@ const { getTheme } = require("../src/common/themes");
 const {
   parseBoolean,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
   errorCacheHeaders,
 } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
   const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
+  const font = params.get("font");
   const username = params.get("username");
   const repo = params.get("repo");
   const theme = params.get("theme") || "dark";
   const hideBorder = parseBoolean(params.get("hide_border"));
   const hideBar = parseBoolean(params.get("hide_bar"));
-  const borderRadius = params.has("border_radius")
-    ? parseIntSafe(params.get("border_radius"), 6)
-    : undefined;
+  const borderRadius = parseRadius(params.get("border_radius"), undefined);
   const cardWidth = params.has("card_width")
     ? parseIntSafe(params.get("card_width"), 400)
     : undefined;
@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
 
   if (!username || !repo) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("Missing ?username= and ?repo= parameters", colors, cardWidth));
+    return res.send(renderError("Missing ?username= and ?repo= parameters", { colors, width: cardWidth, font }));
   }
 
   try {
@@ -52,12 +52,13 @@ module.exports = async (req, res) => {
       borderRadius,
       cardWidth,
       description,
+      font,
     });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);
   } catch (err) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError(err.message, colors, cardWidth));
+    return res.send(renderError(err.message, { colors, width: cardWidth, font }));
   }
 };

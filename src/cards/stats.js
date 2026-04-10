@@ -1,4 +1,5 @@
 const { renderCard } = require("../common/card");
+const { bodyStartY } = require("../common/tokens");
 const { icons } = require("../common/icons");
 const { formatNumber } = require("../common/utils");
 
@@ -11,21 +12,21 @@ const statItems = [
   { key: "contributed", label: "Contributed To", shortLabel: "Contrib", icon: icons.contributed, field: "contributedTo", color: "#f778ba" },
 ];
 
-function renderStatsCard(stats, { colors, hide = [], hideBorder, hideTitle, hideBar, borderRadius, title, layout, cardWidth }) {
+function renderStatsCard(stats, { colors, hide = [], hideBorder, hideTitle, hideBar, borderRadius, title, layout, cardWidth, font }) {
   const visible = statItems.filter((s) => !hide.includes(s.key));
   // renderCard escapes the title; pre-escaping here would double up to "&amp;amp;"
   const cardTitle = title || `${stats.name}'s GitHub Stats`;
 
   if (layout === "compact") {
-    return renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth });
+    return renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font });
   }
-  return renderDefault(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth });
+  return renderDefault(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font });
 }
 
-function renderDefault(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth }) {
+function renderDefault(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font }) {
   const width = cardWidth || 495;
   const rowHeight = 30;
-  const startY = hideTitle ? 25 : 55;
+  const startY = bodyStartY(hideTitle);
   const height = startY + visible.length * rowHeight + 20;
   const valueX = width - 45;
 
@@ -46,15 +47,15 @@ function renderDefault(stats, visible, { colors, hideBorder, hideTitle, hideBar,
     })
     .join("\n  ");
 
-  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: rows });
+  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: rows, font });
 }
 
-function renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth }) {
+function renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font }) {
   const cols = 2;
   const colWidth = 210;
   const width = cardWidth || (colWidth * cols + 75);
   const rowHeight = 38;
-  const startY = hideTitle ? 20 : 50;
+  const startY = bodyStartY(hideTitle);
   const rowCount = Math.ceil(visible.length / cols);
   const height = startY + rowCount * rowHeight + 15;
 
@@ -78,7 +79,7 @@ function renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar,
     })
     .join("\n  ");
 
-  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: cells });
+  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: cells, font });
 }
 
 module.exports = { renderStatsCard };

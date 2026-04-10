@@ -24,6 +24,7 @@ module.exports = async (req, res) => {
     height: params.has("height") ? parseIntSafe(params.get("height"), 70) : null,
     icon: params.get("icon"),
     colors,
+    font: params.get("font"),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");

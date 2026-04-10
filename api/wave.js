@@ -4,6 +4,7 @@ const {
   parseBoolean,
   parseColor,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
 } = require("../src/common/utils");
 
@@ -27,10 +28,9 @@ module.exports = async (req, res) => {
     height: parseIntSafe(params.get("height"), 160),
     waves: parseIntSafe(params.get("waves"), 3),
     colors,
-    borderRadius: params.has("border_radius")
-      ? parseIntSafe(params.get("border_radius"), 6)
-      : undefined,
+    borderRadius: parseRadius(params.get("border_radius"), undefined),
     hideBorder: parseBoolean(params.get("hide_border")),
+    font: params.get("font"),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");

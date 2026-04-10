@@ -1,4 +1,5 @@
 const { renderCard } = require("../common/card");
+const { bodyStartY } = require("../common/tokens");
 const { escapeHtml } = require("../common/utils");
 
 const NOW_FIELDS = [
@@ -12,10 +13,10 @@ const NOW_FIELDS = [
 ];
 
 function renderNowCard(values, opts) {
-  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth } = opts;
+  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth, font } = opts;
   const items = NOW_FIELDS.filter((f) => values[f.key]);
   const width = cardWidth || 495;
-  const startY = hideTitle ? 30 : 60;
+  const startY = bodyStartY(hideTitle);
   // 36 leaves ~4px breathing room between the bottom of one row's value text
   // and the top of the next row's icon box.
   const rowHeight = 36;
@@ -48,6 +49,7 @@ function renderNowCard(values, opts) {
     hideBar,
     borderRadius,
     body: rows,
+    font,
   });
 }
 

@@ -5,6 +5,7 @@ const {
   parseColor,
   parseFloatSafe,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
 } = require("../src/common/utils");
 
@@ -32,9 +33,7 @@ module.exports = async (req, res) => {
     cellGap: parseIntSafe(params.get("cell_gap"), 3),
     duration: parseFloatSafe(params.get("duration"), 24),
     colors,
-    borderRadius: params.has("border_radius")
-      ? parseIntSafe(params.get("border_radius"), 6)
-      : undefined,
+    borderRadius: parseRadius(params.get("border_radius"), undefined),
     hideBorder: parseBoolean(params.get("hide_border")),
     seed: parseIntSafe(params.get("seed"), 7),
   });

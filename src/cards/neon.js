@@ -1,4 +1,5 @@
 const { escapeHtml } = require("../common/utils");
+const { resolveFont } = require("../common/card");
 
 function renderNeonCard({
   text,
@@ -17,7 +18,7 @@ function renderNeonCard({
   const c = color || "#ff2bd1";
   const bg = colors.bg;
   const fSize = size;
-  const fontFamily = font || "'Segoe UI', sans-serif";
+  const { embedCss, family: fontFamily } = resolveFont(font);
   const safeText = escapeHtml(text);
 
   return `<svg role="img" aria-label="${safeText}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
@@ -42,7 +43,7 @@ function renderNeonCard({
       <stop offset="100%" stop-color="${c}" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <style>
+  <style>${embedCss}
     @keyframes flicker {
       0%, 18%, 22%, 25%, 53%, 57%, 100% {
         opacity: 1;

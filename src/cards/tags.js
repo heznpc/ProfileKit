@@ -1,4 +1,5 @@
 const { renderCard } = require("../common/card");
+const { bodyStartY } = require("../common/tokens");
 const { escapeHtml, parseArray } = require("../common/utils");
 
 function parseTags(raw) {
@@ -11,11 +12,11 @@ function parseTags(raw) {
 }
 
 function renderTagsCard(rawTags, opts) {
-  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth } = opts;
+  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth, font } = opts;
   const tags = parseTags(rawTags);
   const width = cardWidth || 495;
   const padding = 25;
-  const startY = hideTitle ? 30 : 55;
+  const startY = bodyStartY(hideTitle);
   const tagHeight = 28;
   const tagSpacing = 8;
   const tagPadX = 14;
@@ -61,6 +62,7 @@ function renderTagsCard(rawTags, opts) {
     hideBar,
     borderRadius,
     body: pills,
+    font,
   });
 }
 

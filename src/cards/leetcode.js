@@ -1,4 +1,5 @@
 const { renderCard } = require("../common/card");
+const { bodyStartY } = require("../common/tokens");
 
 const difficultyColors = {
   easy: "#3fb950",
@@ -6,11 +7,11 @@ const difficultyColors = {
   hard: "#f85149",
 };
 
-function renderLeetcodeCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title }) {
+function renderLeetcodeCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, font }) {
   // renderCard escapes the title; pre-escaping here would double up to "&amp;amp;"
   const cardTitle = title || `${stats.username}'s LeetCode`;
   const width = 495;
-  const startY = hideTitle ? 20 : 50;
+  const startY = bodyStartY(hideTitle);
 
   const circleR = 42;
   const circleX = 75;
@@ -66,6 +67,7 @@ function renderLeetcodeCard(stats, { colors, hideBorder, hideTitle, hideBar, bor
     hideBar,
     borderRadius,
     body,
+    font,
   });
 }
 

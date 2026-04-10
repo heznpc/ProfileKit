@@ -16,7 +16,7 @@ const socialIcons = {
     '<path d="M15.32 4.06c-.17-.67-.67-1.19-1.32-1.37C12.8 2.4 8 2.4 8 2.4s-4.8 0-5.99.29c-.65.18-1.15.7-1.32 1.37C.4 5.28.4 8 .4 8s0 2.72.29 3.94c.17.67.67 1.19 1.32 1.37C3.2 13.6 8 13.6 8 13.6s4.8 0 5.99-.29c.65-.18 1.15-.7 1.32-1.37.29-1.22.29-3.94.29-3.94s0-2.72-.29-3.94zM6.4 10.4V5.6L10.56 8 6.4 10.4z"/>',
 };
 
-function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, title, layout }) {
+function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, title, layout, font }) {
   const cardTitle = title || "";
   const ariaLabel =
     cardTitle ||
@@ -58,6 +58,7 @@ function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, ti
       hideBar,
       borderRadius,
       body: iconsMarkup,
+      font,
     });
   }
 
@@ -93,6 +94,7 @@ function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, ti
     hideBar,
     borderRadius,
     body: rows,
+    font,
   });
 }
 

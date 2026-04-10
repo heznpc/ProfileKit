@@ -1,4 +1,5 @@
 const { escapeHtml, makeRng } = require("../common/utils");
+const { resolveFont } = require("../common/card");
 
 function renderHeroCard({
   name,
@@ -11,7 +12,9 @@ function renderHeroCard({
   colors,
   borderRadius,
   hideBorder,
+  font,
 }) {
+  const { embedCss, family } = resolveFont(font);
   const w = width;
   const h = height;
   const c = color || colors.accent || "#58a6ff";
@@ -122,9 +125,9 @@ function renderHeroCard({
       <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"/>
     </clipPath>
   </defs>
-  <style>
-    .hero-name { font: 800 56px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.title}; }
-    .hero-sub { font: 400 20px 'Segoe UI', Ubuntu, sans-serif; fill: ${colors.text}; }
+  <style>${embedCss}
+    .hero-name { font: 800 56px ${family}; fill: ${colors.title}; }
+    .hero-sub { font: 400 20px ${family}; fill: ${colors.text}; }
     @keyframes heroIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes barIn { from { width: 0; opacity: 0; } to { width: ${accentBarW}px; opacity: 1; } }
     .hero-name { animation: heroIn 0.8s ease-out both; }

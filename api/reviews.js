@@ -5,18 +5,20 @@ const { getTheme } = require("../src/common/themes");
 const {
   parseBoolean,
   parseIntSafe,
+  parseRadius,
   cacheHeaders,
   errorCacheHeaders,
 } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
   const params = new URL(req.url, `http://${req.headers.host}`).searchParams;
+  const font = params.get("font");
   const username = params.get("username");
   const theme = params.get("theme") || "dark";
   const hideBorder = parseBoolean(params.get("hide_border"));
   const hideTitle = parseBoolean(params.get("hide_title"));
   const hideBar = parseBoolean(params.get("hide_bar"));
-  const borderRadius = params.has("border_radius") ? parseIntSafe(params.get("border_radius"), 6) : undefined;
+  const borderRadius = parseRadius(params.get("border_radius"), undefined);
   const title = params.get("title");
   const cardWidth = params.has("card_width") ? parseIntSafe(params.get("card_width"), 495) : undefined;
 
@@ -33,23 +35,23 @@ module.exports = async (req, res) => {
 
   if (!username) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("Missing ?username= parameter", colors));
+    return res.send(renderError("Missing ?username= parameter", { colors, font }));
   }
 
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("GITHUB_TOKEN not configured", colors));
+    return res.send(renderError("GITHUB_TOKEN not configured", { colors, font }));
   }
 
   try {
     const stats = await fetchReviews(username, token);
-    const svg = renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth });
+    const svg = renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth, font });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);
   } catch (err) {
     res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError(err.message, colors));
+    return res.send(renderError(err.message, { colors, font }));
   }
 };

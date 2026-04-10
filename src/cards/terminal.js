@@ -1,4 +1,5 @@
 const { escapeHtml } = require("../common/utils");
+const { resolveFont, DEFAULT_MONO_FAMILY } = require("../common/card");
 
 function renderTerminalCard({
   commands,
@@ -24,7 +25,9 @@ function renderTerminalCard({
   const bg = colors.bg;
   const headerBg = "#161b22";
   const textColor = colors.text;
-  const fontFamily = font || "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
+  // Terminal defaults to system monospace; ?font=jetbrains-mono picks the
+  // bundled VF instead. Other (sans) keys also work but look out of place.
+  const { embedCss, family: fontFamily } = resolveFont(font, DEFAULT_MONO_FAMILY);
   const fSize = fontSize;
   const charW = fSize * 0.62;
   const bodyY = headerH + padding + 8;
@@ -74,7 +77,7 @@ function renderTerminalCard({
 
   return `<svg role="img" aria-label="${escapeHtml(ariaLabel)}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <title>${escapeHtml(ariaLabel)}</title>
-  <style>@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
+  <style>${embedCss}@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
   <defs>
     <clipPath id="term-frame">
       <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"/>

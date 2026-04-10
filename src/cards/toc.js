@@ -1,4 +1,5 @@
 const { renderCard } = require("../common/card");
+const { bodyStartY } = require("../common/tokens");
 const { escapeHtml } = require("../common/utils");
 
 function parseItems(raw) {
@@ -10,10 +11,10 @@ function parseItems(raw) {
 }
 
 function renderTocCard(rawItems, opts) {
-  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth } = opts;
+  const { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth, font } = opts;
   const items = parseItems(rawItems);
   const width = cardWidth || 495;
-  const startY = hideTitle ? 30 : 55;
+  const startY = bodyStartY(hideTitle);
   const rowHeight = 28;
   const height = startY + Math.max(items.length, 1) * rowHeight + 15;
   const accent = colors.accent || "#58a6ff";
@@ -45,6 +46,7 @@ function renderTocCard(rawItems, opts) {
     hideBar,
     borderRadius,
     body: rows,
+    font,
   });
 }
 

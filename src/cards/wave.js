@@ -1,4 +1,5 @@
 const { escapeHtml } = require("../common/utils");
+const { resolveFont } = require("../common/card");
 
 function renderWaveCard({
   text,
@@ -9,7 +10,9 @@ function renderWaveCard({
   colors,
   borderRadius,
   hideBorder,
+  font,
 }) {
+  const { embedCss, family } = resolveFont(font);
   const w = width;
   const h = height;
   const c = color || colors.accent || "#58a6ff";
@@ -44,7 +47,7 @@ function renderWaveCard({
   const safeText = text ? escapeHtml(text) : "";
   const textMarkup = safeText
     ? `<text x="${w / 2}" y="${h / 2 + 8}" text-anchor="middle"
-        font-family="'Segoe UI', sans-serif" font-size="32" font-weight="700" fill="${colors.title}">
+        font-family="${family}" font-size="32" font-weight="700" fill="${colors.title}">
         ${safeText}
         <animate attributeName="opacity" from="0" to="1" dur="0.8s" fill="freeze"/>
       </text>`
@@ -54,7 +57,7 @@ function renderWaveCard({
 
   return `<svg role="img" aria-label="${ariaLabel}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <title>${ariaLabel}</title>
-  <style>@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
+  <style>${embedCss}@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
   <defs>
     <clipPath id="wave-clip">
       <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"/>

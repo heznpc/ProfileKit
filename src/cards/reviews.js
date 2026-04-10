@@ -1,4 +1,5 @@
 const { renderCard } = require("../common/card");
+const { bodyStartY } = require("../common/tokens");
 const { icons } = require("../common/icons");
 const { formatNumber } = require("../common/utils");
 
@@ -9,11 +10,11 @@ const reviewItems = [
   { key: "reposReviewed", label: "Repos Reviewed", icon: icons.repos, color: "#56d4dd" },
 ];
 
-function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth }) {
+function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, borderRadius, title, cardWidth, font }) {
   // renderCard escapes the title; pre-escaping here would double up to "&amp;amp;"
   const cardTitle = title || `${stats.name}'s Code Reviews`;
   const width = cardWidth || 495;
-  const startY = hideTitle ? 25 : 55;
+  const startY = bodyStartY(hideTitle);
 
   // Approval rate ring
   const circleR = 38;
@@ -67,6 +68,7 @@ function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, bord
     hideBar,
     borderRadius,
     body,
+    font,
   });
 }
 

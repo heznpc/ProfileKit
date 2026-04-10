@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ProfileKit Playground</title>
+  <meta name="description" content="Designer-grade GitHub profile cards. Live preview, copy URL." />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-2: #1c222b;
+      --border: #21262d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --radius: 8px;
+      --pad: 16px;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, kbd { font-family: var(--mono); }
+
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+    }
+    header h1 span { color: var(--accent); }
+    header .tagline {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    header nav a {
+      margin-left: 16px;
+      font-size: 13px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 240px 1fr 320px;
+      min-height: calc(100vh - 78px);
+    }
+    @media (max-width: 1080px) {
+      main { grid-template-columns: 200px 1fr; }
+      .params-panel { grid-column: 1 / -1; border-left: none; border-top: 1px solid var(--border); }
+    }
+    @media (max-width: 720px) {
+      main { grid-template-columns: 1fr; }
+      .card-list-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    .card-list-panel {
+      border-right: 1px solid var(--border);
+      padding: 20px 12px;
+      overflow-y: auto;
+    }
+    .card-list-panel h2 {
+      margin: 0 0 12px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+    .card-group { margin-bottom: 18px; }
+    .card-group h3 {
+      margin: 0 0 6px 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+    .card-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .card-list button {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 7px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .card-list button:hover { background: var(--surface); }
+    .card-list button.active {
+      background: var(--surface-2);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .preview-panel {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 0;
+    }
+    .preview-panel h2 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .preview-panel .desc {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .preview-frame {
+      background:
+        linear-gradient(45deg, var(--surface) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--surface) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--surface) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--surface) 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 260px;
+      overflow: auto;
+    }
+    .preview-frame img {
+      max-width: 100%;
+      display: block;
+      filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4));
+    }
+
+    .copy-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .copy-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 8px 8px 14px;
+    }
+    .copy-row code {
+      flex: 1;
+      font-size: 12px;
+      color: var(--text);
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: thin;
+    }
+    .copy-row button {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      border-radius: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .copy-row button:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .copy-row button.copied {
+      background: #3fb950;
+      border-color: #3fb950;
+      color: #fff;
+    }
+
+    .params-panel {
+      border-left: 1px solid var(--border);
+      padding: 24px 20px;
+      overflow-y: auto;
+    }
+    .params-panel h3 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+    .params-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .field label .req { color: #f85149; }
+    .field input[type="text"],
+    .field input[type="number"],
+    .field select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 13px;
+      width: 100%;
+    }
+    .field input[type="text"]:focus,
+    .field input[type="number"]:focus,
+    .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .field input[type="color"] {
+      flex: 1;
+      height: 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .field .color-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .field .color-wrap input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .field-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+    }
+    .field-row label {
+      font-size: 13px;
+      color: var(--text);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Profile<span>Kit</span></h1>
+    <p class="tagline">Designer-grade GitHub profile cards. Live preview, copy URL.</p>
+  </div>
+  <nav>
+    <a href="https://github.com/heznpc/ProfileKit" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/heznpc/ProfileKit#endpoints" target="_blank" rel="noopener">Docs</a>
+  </nav>
+</header>
+
+<main>
+  <aside class="card-list-panel">
+    <h2>Catalog</h2>
+    <div id="card-list-root"></div>
+  </aside>
+
+  <section class="preview-panel">
+    <div>
+      <h2 id="card-name">Stats</h2>
+      <p class="desc" id="card-desc">GitHub stats — commits, PRs, issues, stars, repos.</p>
+    </div>
+    <div class="preview-frame">
+      <img id="preview-img" alt="" />
+    </div>
+    <div class="copy-section">
+      <div class="copy-row">
+        <code id="url-output"></code>
+        <button id="copy-url" type="button">Copy URL</button>
+      </div>
+      <div class="copy-row">
+        <code id="md-output"></code>
+        <button id="copy-md" type="button">Copy Markdown</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="params-panel">
+    <h3>Parameters</h3>
+    <form id="params-form" class="params-form" onsubmit="return false;"></form>
+  </aside>
+</main>
+
+<script>
+// Card schema. Each card lists its tweakable params; rendering happens via the
+// real /api/* endpoints so the preview is always exactly what the user gets.
+
+const COMMON_FRAME = [
+  { name: "theme", type: "select", options: ["dark", "dark_dimmed", "light"] },
+  { name: "font", type: "select", options: ["", "inter", "space-grotesk", "jetbrains-mono", "ibm-plex-sans", "manrope"], placeholder: "(system)" },
+  { name: "accent_color", type: "color" },
+  { name: "border_radius", type: "select", options: ["", "none", "sm", "md", "lg", "xl", "2xl", "3xl", "full"], placeholder: "(default)" },
+  { name: "hide_border", type: "boolean" },
+  { name: "hide_bar", type: "boolean" },
+];
+
+const COMMON_DECOR = [
+  { name: "theme", type: "select", options: ["dark", "dark_dimmed", "light"] },
+  { name: "font", type: "select", options: ["", "inter", "space-grotesk", "jetbrains-mono", "ibm-plex-sans", "manrope"], placeholder: "(system)" },
+  { name: "color", type: "color" },
+  { name: "border_radius", type: "select", options: ["", "none", "sm", "md", "lg", "xl", "2xl", "3xl", "full"], placeholder: "(default)" },
+  { name: "hide_border", type: "boolean" },
+];
+
+const CARDS = {
+  stats: {
+    label: "Stats",
+    group: "Data",
+    desc: "GitHub stats — commits, PRs, issues, stars, repos.",
+    params: [
+      { name: "username", type: "text", default: "heznpc", required: true },
+      { name: "layout", type: "select", options: ["default", "compact"] },
+      ...COMMON_FRAME,
+    ],
+  },
+  languages: {
+    label: "Languages",
+    group: "Data",
+    desc: "Top languages with bars or donut layout.",
+    params: [
+      { name: "username", type: "text", default: "heznpc", required: true },
+      { name: "layout", type: "select", options: ["default", "compact", "donut"] },
+      { name: "langs_count", type: "number", default: 6 },
+      ...COMMON_FRAME,
+    ],
+  },
+  reviews: {
+    label: "Reviews",
+    group: "Data",
+    desc: "Code review stats with approval ring.",
+    params: [
+      { name: "username", type: "text", default: "heznpc", required: true },
+      ...COMMON_FRAME,
+    ],
+  },
+  pin: {
+    label: "Pin",
+    group: "Data",
+    desc: "Repository card.",
+    params: [
+      { name: "username", type: "text", default: "heznpc", required: true },
+      { name: "repo", type: "text", default: "ProfileKit", required: true },
+      { name: "card_width", type: "number", default: 400 },
+      ...COMMON_FRAME,
+    ],
+  },
+  leetcode: {
+    label: "LeetCode",
+    group: "Data",
+    desc: "LeetCode problem stats.",
+    params: [
+      { name: "username", type: "text", default: "heznpc", required: true },
+      ...COMMON_FRAME,
+    ],
+  },
+  social: {
+    label: "Social",
+    group: "Data",
+    desc: "Social links card.",
+    params: [
+      { name: "github", type: "text", default: "heznpc" },
+      { name: "linkedin", type: "text" },
+      { name: "x", type: "text" },
+      { name: "email", type: "text" },
+      { name: "website", type: "text" },
+      { name: "layout", type: "select", options: ["default", "compact"] },
+      ...COMMON_FRAME,
+    ],
+  },
+  quote: {
+    label: "Quote",
+    group: "Data",
+    desc: "Random or daily dev quote.",
+    params: [
+      { name: "daily", type: "boolean" },
+      ...COMMON_FRAME,
+    ],
+  },
+  hero: {
+    label: "Hero",
+    group: "Blog",
+    desc: "Wide hero banner with animated background.",
+    params: [
+      { name: "name", type: "text", default: "Hello, World" },
+      { name: "subtitle", type: "text", default: "Building things that ship" },
+      { name: "bg", type: "select", options: ["gradient", "wave", "grid", "particles"] },
+      { name: "align", type: "select", options: ["center", "left"] },
+      { name: "width", type: "number", default: 1200 },
+      { name: "height", type: "number", default: 280 },
+      ...COMMON_DECOR,
+    ],
+  },
+  section: {
+    label: "Section",
+    group: "Blog",
+    desc: "Section header with animated underline.",
+    params: [
+      { name: "title", type: "text", default: "About" },
+      { name: "subtitle", type: "text" },
+      { name: "align", type: "select", options: ["left", "center"] },
+      { name: "icon", type: "text", placeholder: "✦" },
+      { name: "width", type: "number", default: 800 },
+      ...COMMON_DECOR,
+    ],
+  },
+  divider: {
+    label: "Divider",
+    group: "Blog",
+    desc: "Decorative separator (6 styles).",
+    params: [
+      { name: "style", type: "select", options: ["line", "wave", "dots", "dashed", "gradient", "double"] },
+      { name: "width", type: "number", default: 800 },
+      { name: "height", type: "number", default: 30 },
+      { name: "color", type: "color" },
+      { name: "theme", type: "select", options: ["dark", "dark_dimmed", "light"] },
+    ],
+  },
+  now: {
+    label: "Now",
+    group: "Blog",
+    desc: "\"Currently\" status card.",
+    params: [
+      { name: "coding", type: "text", default: "ProfileKit" },
+      { name: "reading", type: "text", default: "DDIA" },
+      { name: "listening", type: "text", default: "Lo-fi" },
+      { name: "building", type: "text" },
+      ...COMMON_FRAME,
+    ],
+  },
+  timeline: {
+    label: "Timeline",
+    group: "Blog",
+    desc: "Vertical timeline of events.",
+    params: [
+      { name: "items", type: "text", default: "2024;Joined team;Working on AI|2023;Built ProfileKit;Open source" },
+      ...COMMON_FRAME,
+    ],
+  },
+  tags: {
+    label: "Tags",
+    group: "Blog",
+    desc: "Tag cloud / skill pills.",
+    params: [
+      { name: "tags", type: "text", default: "React,TypeScript,Go:00add8,Python:3776ab,Rust:dea584" },
+      ...COMMON_FRAME,
+    ],
+  },
+  toc: {
+    label: "TOC",
+    group: "Blog",
+    desc: "Table of contents.",
+    params: [
+      { name: "items", type: "text", default: "About|Stats|Projects|Contact" },
+      ...COMMON_FRAME,
+    ],
+  },
+  posts: {
+    label: "Posts",
+    group: "Blog",
+    desc: "Latest posts from dev.to / Hashnode / Medium / RSS.",
+    params: [
+      { name: "source", type: "select", options: ["devto", "hashnode", "medium", "rss"] },
+      { name: "username", type: "text", default: "ben" },
+      { name: "url", type: "text" },
+      { name: "count", type: "number", default: 5 },
+      ...COMMON_FRAME,
+    ],
+  },
+  typing: {
+    label: "Typing",
+    group: "Animation",
+    desc: "Typewriter text animation.",
+    params: [
+      { name: "lines", type: "text", default: "ProfileKit,All-in-one+profile+cards" },
+      { name: "color", type: "color" },
+      { name: "size", type: "number", default: 20 },
+      { name: "align", type: "select", options: ["left", "center", "right"] },
+      { name: "width", type: "number", default: 500 },
+      { name: "height", type: "number", default: 50 },
+      { name: "frame", type: "boolean" },
+      { name: "font", type: "select", options: ["", "inter", "space-grotesk", "jetbrains-mono", "ibm-plex-sans", "manrope"], placeholder: "(monospace)" },
+      { name: "theme", type: "select", options: ["dark", "dark_dimmed", "light"] },
+      { name: "border_radius", type: "select", options: ["", "none", "sm", "md", "lg", "xl", "2xl", "3xl", "full"], placeholder: "(default)" },
+      { name: "hide_border", type: "boolean" },
+      { name: "hide_bar", type: "boolean" },
+    ],
+  },
+  wave: {
+    label: "Wave",
+    group: "Animation",
+    desc: "Layered animated sin waves.",
+    params: [
+      { name: "text", type: "text", default: "ProfileKit" },
+      { name: "waves", type: "number", default: 3 },
+      { name: "width", type: "number", default: 800 },
+      { name: "height", type: "number", default: 160 },
+      ...COMMON_DECOR,
+    ],
+  },
+  terminal: {
+    label: "Terminal",
+    group: "Animation",
+    desc: "Terminal window with auto-typing commands.",
+    params: [
+      { name: "commands", type: "text", default: "whoami,ls -la,git status" },
+      { name: "prompt", type: "text", default: "$" },
+      { name: "window_title", type: "text", default: "bash" },
+      { name: "speed", type: "number", default: 70 },
+      { name: "width", type: "number", default: 600 },
+      ...COMMON_DECOR,
+    ],
+  },
+  neon: {
+    label: "Neon",
+    group: "Animation",
+    desc: "Neon glow with flicker.",
+    params: [
+      { name: "text", type: "text", default: "NEON" },
+      { name: "size", type: "number", default: 64 },
+      { name: "width", type: "number", default: 600 },
+      { name: "height", type: "number", default: 160 },
+      ...COMMON_DECOR,
+    ],
+  },
+  glitch: {
+    label: "Glitch",
+    group: "Animation",
+    desc: "RGB-split glitch text.",
+    params: [
+      { name: "text", type: "text", default: "GLITCH" },
+      { name: "size", type: "number", default: 64 },
+      { name: "width", type: "number", default: 600 },
+      { name: "height", type: "number", default: 160 },
+      ...COMMON_DECOR,
+    ],
+  },
+  matrix: {
+    label: "Matrix",
+    group: "Animation",
+    desc: "Matrix code rain.",
+    params: [
+      { name: "text", type: "text", default: "MATRIX" },
+      { name: "density", type: "number", default: 1 },
+      { name: "speed", type: "number", default: 1 },
+      { name: "seed", type: "number", default: 42 },
+      { name: "width", type: "number", default: 600 },
+      { name: "height", type: "number", default: 200 },
+      ...COMMON_DECOR,
+    ],
+  },
+  snake: {
+    label: "Snake",
+    group: "Animation",
+    desc: "Standalone snake on a contribution grid.",
+    params: [
+      { name: "cols", type: "number", default: 53 },
+      { name: "rows", type: "number", default: 7 },
+      { name: "duration", type: "number", default: 24 },
+      { name: "seed", type: "number", default: 7 },
+      ...COMMON_DECOR,
+    ],
+  },
+  equalizer: {
+    label: "Equalizer",
+    group: "Animation",
+    desc: "Audio EQ bars with LIVE indicator.",
+    params: [
+      { name: "label", type: "text", default: "Now Playing" },
+      { name: "bars", type: "number", default: 24 },
+      { name: "width", type: "number", default: 495 },
+      { name: "height", type: "number", default: 140 },
+      ...COMMON_DECOR,
+    ],
+  },
+  heartbeat: {
+    label: "Heartbeat",
+    group: "Animation",
+    desc: "EKG line + pulse.",
+    params: [
+      { name: "text", type: "text", default: "Still shipping" },
+      { name: "bpm", type: "number", default: 72 },
+      { name: "width", type: "number", default: 495 },
+      { name: "height", type: "number", default: 140 },
+      ...COMMON_DECOR,
+    ],
+  },
+  constellation: {
+    label: "Constellation",
+    group: "Animation",
+    desc: "Twinkling stars + connections.",
+    params: [
+      { name: "text", type: "text", default: "ProfileKit" },
+      { name: "density", type: "number", default: 1 },
+      { name: "seed", type: "number", default: 19 },
+      { name: "width", type: "number", default: 600 },
+      { name: "height", type: "number", default: 200 },
+      ...COMMON_DECOR,
+    ],
+  },
+  radar: {
+    label: "Radar",
+    group: "Animation",
+    desc: "Rotating radar sweep with blips.",
+    params: [
+      { name: "text", type: "text", default: "SCANNING" },
+      { name: "blips", type: "number", default: 5 },
+      { name: "speed", type: "number", default: 4 },
+      { name: "width", type: "number", default: 300 },
+      { name: "height", type: "number", default: 300 },
+      ...COMMON_DECOR,
+    ],
+  },
+};
+
+const GROUPS = ["Data", "Blog", "Animation"];
+
+const cardListRoot = document.getElementById("card-list-root");
+const cardName = document.getElementById("card-name");
+const cardDesc = document.getElementById("card-desc");
+const previewImg = document.getElementById("preview-img");
+const urlOutput = document.getElementById("url-output");
+const mdOutput = document.getElementById("md-output");
+const paramsForm = document.getElementById("params-form");
+const copyUrlBtn = document.getElementById("copy-url");
+const copyMdBtn = document.getElementById("copy-md");
+
+// Build the sidebar grouped by category.
+function buildCardList() {
+  for (const group of GROUPS) {
+    const groupDiv = document.createElement("div");
+    groupDiv.className = "card-group";
+    const h3 = document.createElement("h3");
+    h3.textContent = group;
+    groupDiv.appendChild(h3);
+    const list = document.createElement("ul");
+    list.className = "card-list";
+    for (const [key, card] of Object.entries(CARDS)) {
+      if (card.group !== group) continue;
+      const li = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.card = key;
+      button.textContent = card.label;
+      button.addEventListener("click", () => selectCard(key));
+      li.appendChild(button);
+      list.appendChild(li);
+    }
+    groupDiv.appendChild(list);
+    cardListRoot.appendChild(groupDiv);
+  }
+}
+
+let currentCard = "stats";
+let currentValues = {};
+
+function selectCard(key) {
+  currentCard = key;
+  const card = CARDS[key];
+  cardName.textContent = card.label;
+  cardDesc.textContent = card.desc;
+  document.querySelectorAll(".card-list button").forEach((b) => {
+    b.classList.toggle("active", b.dataset.card === key);
+  });
+  currentValues = {};
+  for (const p of card.params) {
+    if (p.default != null) currentValues[p.name] = p.default;
+  }
+  buildForm(card.params);
+  render();
+}
+
+function buildForm(params) {
+  paramsForm.innerHTML = "";
+  for (const p of params) {
+    const field = document.createElement("div");
+    field.className = p.type === "boolean" ? "field-row" : "field";
+    const id = `f-${p.name}`;
+    let input;
+    if (p.type === "select") {
+      input = document.createElement("select");
+      for (const opt of p.options) {
+        const o = document.createElement("option");
+        o.value = opt;
+        o.textContent = opt || (p.placeholder || "(default)");
+        input.appendChild(o);
+      }
+      input.value = currentValues[p.name] || "";
+    } else if (p.type === "boolean") {
+      input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = !!currentValues[p.name];
+    } else if (p.type === "color") {
+      // Color input always holds a value, so we wrap it with a checkbox that
+      // gates whether the value flows into the URL — otherwise opening the
+      // picker would silently lock the user into the default swatch.
+      input = document.createElement("div");
+      input.className = "color-wrap";
+      const swatch = document.createElement("input");
+      swatch.type = "color";
+      swatch.value = currentValues[p.name] ? `#${currentValues[p.name].replace("#", "")}` : "#58a6ff";
+      const toggle = document.createElement("input");
+      toggle.type = "checkbox";
+      toggle.checked = !!currentValues[p.name];
+      toggle.title = "Use custom color";
+      input.appendChild(toggle);
+      input.appendChild(swatch);
+      input.__swatch = swatch;
+      input.__toggle = toggle;
+    } else if (p.type === "number") {
+      input = document.createElement("input");
+      input.type = "number";
+      input.value = currentValues[p.name] != null ? currentValues[p.name] : "";
+      if (p.placeholder) input.placeholder = p.placeholder;
+    } else {
+      input = document.createElement("input");
+      input.type = "text";
+      input.value = currentValues[p.name] || "";
+      if (p.placeholder) input.placeholder = p.placeholder;
+    }
+    input.id = id;
+    const onChange = () => {
+      let value;
+      if (p.type === "boolean") value = input.checked ? "true" : "";
+      else if (p.type === "color") {
+        value = input.__toggle.checked ? input.__swatch.value.replace("#", "") : "";
+      } else value = input.value;
+      if (value === "" || value == null) delete currentValues[p.name];
+      else currentValues[p.name] = value;
+      render();
+    };
+    if (p.type === "color") {
+      input.__swatch.addEventListener("input", () => {
+        // Picking a color implicitly enables the toggle.
+        input.__toggle.checked = true;
+        onChange();
+      });
+      input.__toggle.addEventListener("change", onChange);
+    } else {
+      input.addEventListener("input", onChange);
+    }
+    if (p.type === "boolean") {
+      field.appendChild(input);
+      const label = document.createElement("label");
+      label.htmlFor = id;
+      label.textContent = p.name;
+      field.appendChild(label);
+    } else {
+      const label = document.createElement("label");
+      label.htmlFor = id;
+      label.innerHTML = p.name + (p.required ? ' <span class="req">*</span>' : "");
+      field.appendChild(label);
+      field.appendChild(input);
+    }
+    paramsForm.appendChild(field);
+  }
+}
+
+function buildUrl() {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(currentValues)) {
+    if (v == null || v === "") continue;
+    params.set(k, v);
+  }
+  const qs = params.toString();
+  return `/api/${currentCard}${qs ? "?" + qs : ""}`;
+}
+
+function absoluteUrl(rel) {
+  return window.location.origin + rel;
+}
+
+// URL/markdown text update synchronously, but the actual <img> request is
+// debounced so typing into a username field doesn't fire one fetch per
+// keystroke.
+let renderTimer;
+function render() {
+  const url = buildUrl();
+  const abs = absoluteUrl(url);
+  urlOutput.textContent = abs;
+  mdOutput.textContent = `![${CARDS[currentCard].label}](${abs})`;
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => {
+    previewImg.src = url;
+    previewImg.alt = CARDS[currentCard].label;
+  }, 200);
+}
+
+function copyText(text, button) {
+  navigator.clipboard.writeText(text).then(() => {
+    const original = button.textContent;
+    button.textContent = "Copied!";
+    button.classList.add("copied");
+    setTimeout(() => {
+      button.textContent = original;
+      button.classList.remove("copied");
+    }, 1500);
+  });
+}
+
+copyUrlBtn.addEventListener("click", () => copyText(urlOutput.textContent, copyUrlBtn));
+copyMdBtn.addEventListener("click", () => copyText(mdOutput.textContent, copyMdBtn));
+
+buildCardList();
+selectCard("stats");
+</script>
+
+</body>
+</html>

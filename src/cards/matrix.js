@@ -1,4 +1,5 @@
 const { escapeHtml, makeRng } = require("../common/utils");
+const { resolveFont, DEFAULT_MONO_FAMILY, DEFAULT_FAMILY } = require("../common/card");
 
 const CHARS =
   "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*+=";
@@ -18,6 +19,7 @@ function renderMatrixCard({
   borderRadius,
   hideBorder,
   seed,
+  font,
 }) {
   const w = width;
   const h = height;
@@ -25,6 +27,9 @@ function renderMatrixCard({
   const c = color || "#3fb950";
   const bg = colors.bg;
   const rng = makeRng(seed);
+  // Rain glyphs default to monospace; the optional overlay text uses sans.
+  const { embedCss, family: rainFamily } = resolveFont(font, DEFAULT_MONO_FAMILY);
+  const overlayFamily = font ? rainFamily : DEFAULT_FAMILY;
 
   const colSpacing = 18;
   const cols = Math.max(8, Math.floor(w / colSpacing));
@@ -67,7 +72,7 @@ function renderMatrixCard({
   const overlay = safeText
     ? `<rect x="0" y="${h / 2 - 32}" width="${w}" height="64" fill="${bg}" opacity="0.55"/>
        <text x="${w / 2}" y="${h / 2 + 10}" text-anchor="middle"
-        font-family="'Segoe UI', sans-serif" font-size="32" font-weight="700"
+        font-family="${overlayFamily}" font-size="32" font-weight="700"
         fill="${c}" letter-spacing="2">${safeText}</text>`
     : "";
 
@@ -75,13 +80,13 @@ function renderMatrixCard({
 
   return `<svg role="img" aria-label="${ariaLabel}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <title>${ariaLabel}</title>
-  <style>@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
+  <style>${embedCss}@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
   <defs>
     <clipPath id="mtx-clip">
       <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"/>
     </clipPath>
   </defs>
-  <g clip-path="url(#mtx-clip)" font-family="ui-monospace, monospace" font-size="${fontSize}" text-anchor="middle">
+  <g clip-path="url(#mtx-clip)" font-family="${rainFamily}" font-size="${fontSize}" text-anchor="middle">
     <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
     ${columns.join("\n    ")}
     ${overlay}
