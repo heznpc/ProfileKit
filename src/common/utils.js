@@ -43,6 +43,29 @@ function parseColor(value) {
   return value.startsWith("#") ? value : `#${value}`;
 }
 
+// URL schemes we're willing to emit into an SVG `<a href>` attribute. The
+// card renderer wraps this in escapeHtml, but escapeHtml only handles
+// attribute-value injection — it doesn't reject `javascript:` / `data:` /
+// `vbscript:` schemes that browsers still execute when the SVG is opened
+// directly (as opposed to being embedded through `<img>`, which sandboxes
+// scripts). ProfileKit URLs are accessed both ways (README via img, raw
+// Vercel URL by humans / unfurl crawlers), so the renderer has to reject
+// those schemes itself. Returns the canonical URL string on success, or
+// `null` if the input is unparseable or uses a disallowed scheme.
+const SAFE_URL_SCHEMES = new Set(["https:", "http:", "mailto:"]);
+
+function sanitizeUrl(raw) {
+  if (raw == null || raw === "") return null;
+  let url;
+  try {
+    url = new URL(String(raw));
+  } catch {
+    return null;
+  }
+  if (!SAFE_URL_SCHEMES.has(url.protocol)) return null;
+  return url.toString();
+}
+
 // Re-export the token-aware radius parser from src/common/tokens so endpoints
 // don't need a second require line. Spacing/type-size parsers will be added
 // here when they pick up their first caller.
@@ -78,8 +101,10 @@ module.exports = {
   parseFloatSafe,
   parseColor,
   parseRadius,
+  sanitizeUrl,
   makeRng,
   truncate,
   cacheHeaders,
   errorCacheHeaders,
+  SAFE_URL_SCHEMES,
 };

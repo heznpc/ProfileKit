@@ -1,5 +1,5 @@
 const { renderCard } = require("../common/card");
-const { escapeHtml } = require("../common/utils");
+const { escapeHtml, sanitizeUrl } = require("../common/utils");
 
 const socialIcons = {
   github:
@@ -28,6 +28,18 @@ function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, ti
   const startY = cardTitle && !isCompact ? 50 : 25;
   const iconColor = colors.accent || colors.icon;
 
+  // Wrap a group in an anchor only if the URL passed the scheme check —
+  // `javascript:` / `data:` / `vbscript:` URLs get dropped entirely and
+  // the icon renders as decoration without a link. This is defense-in-depth:
+  // the api/social.js link builders already prefix https:/mailto:, but a
+  // future link type (or a hand-crafted ?website=) could slip through
+  // without this check.
+  function wrapLink(href, inner) {
+    const safe = sanitizeUrl(href);
+    if (!safe) return inner;
+    return `<a href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer">${inner}</a>`;
+  }
+
   if (isCompact) {
     const width = startX * 2 + links.length * gap + 10;
     const height = 65;
@@ -36,14 +48,13 @@ function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, ti
       .map((link, i) => {
         const x = startX + i * gap;
         const icon = socialIcons[link.type] || socialIcons.website;
-        return `<a href="${escapeHtml(link.url)}" target="_blank">
-        <g transform="translate(${x}, ${startY})">
+        const inner = `<g transform="translate(${x}, ${startY})">
           <circle cx="10" cy="10" r="14" fill="${iconColor}" opacity="0.1"/>
           <svg x="2" y="2" viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${iconColor}">
             ${icon}
           </svg>
-        </g>
-      </a>`;
+        </g>`;
+        return wrapLink(link.url, inner);
       })
       .join("\n    ");
 
@@ -71,15 +82,14 @@ function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, ti
       const icon = socialIcons[link.type] || socialIcons.website;
       const label = escapeHtml(link.label || link.url);
       const delay = i * 100;
-      return `<a href="${escapeHtml(link.url)}" target="_blank">
-      <g transform="translate(${startX}, ${y})" class="stagger" style="animation-delay: ${delay}ms">
+      const inner = `<g transform="translate(${startX}, ${y})" class="stagger" style="animation-delay: ${delay}ms">
         <circle cx="10" cy="10" r="14" fill="${iconColor}" opacity="0.1"/>
         <svg x="2" y="2" viewBox="0 0 16 16" width="${iconSize}" height="${iconSize}" fill="${iconColor}">
           ${icon}
         </svg>
         <text x="32" y="15" class="stat-label">${label}</text>
-      </g>
-    </a>`;
+      </g>`;
+      return wrapLink(link.url, inner);
     })
     .join("\n    ");
 
