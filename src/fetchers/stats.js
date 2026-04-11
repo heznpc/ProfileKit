@@ -59,7 +59,11 @@ async function graphql(query, variables, token) {
   });
 
   if (!res.ok) {
-    throw new Error(`GitHub API error: ${res.status}`);
+    // Surface status so the calling token-pool can rotate on 401/403/429
+    // instead of giving up after a single per-token rate-limit hit.
+    const err = new Error(`GitHub API error: ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
 
   const json = await res.json();
@@ -72,42 +76,51 @@ async function graphql(query, variables, token) {
   return json.data;
 }
 
-async function fetchStats(username, token) {
-  const data = await graphql(QUERY, { login: username }, token);
-  const user = data.user;
+const { withRotation } = require("../common/github-token");
 
-  let totalStars = user.repositories.nodes.reduce(
-    (sum, r) => sum + r.stargazerCount,
-    0
-  );
+async function fetchStats(username, _legacyToken) {
+  // The legacy second argument is ignored — token rotation now lives in
+  // src/common/github-token.js. Endpoints can still pass a token to keep
+  // the old call sites working until they migrate.
+  return withRotation(async (token) => {
+    const data = await graphql(QUERY, { login: username }, token);
+    const user = data.user;
 
-  // Paginate remaining repos (max 4 extra pages = 500 repos total)
-  let pageInfo = user.repositories.pageInfo;
-  let pages = 0;
-  while (pageInfo.hasNextPage && pages < 4) {
-    const more = await graphql(
-      REPOS_QUERY,
-      { login: username, after: pageInfo.endCursor },
-      token
+    let totalStars = user.repositories.nodes.reduce(
+      (sum, r) => sum + r.stargazerCount,
+      0
     );
-    const repos = more.user.repositories;
-    totalStars += repos.nodes.reduce((sum, r) => sum + r.stargazerCount, 0);
-    pageInfo = repos.pageInfo;
-    pages++;
-  }
 
-  return {
-    name: user.name || user.login,
-    totalCommits:
-      user.contributionsCollection.totalCommitContributions +
-      user.contributionsCollection.restrictedContributionsCount,
-    totalPRs: user.pullRequests.totalCount,
-    totalIssues:
-      user.openIssues.totalCount + user.closedIssues.totalCount,
-    totalStars,
-    totalRepos: user.repositories.totalCount,
-    contributedTo: user.repositoriesContributedTo.totalCount,
-  };
+    // Paginate remaining repos (max 4 extra pages = 500 repos total). Each
+    // page reuses the same token within one fetchStats call; rotation
+    // happens between calls, not mid-pagination.
+    let pageInfo = user.repositories.pageInfo;
+    let pages = 0;
+    while (pageInfo.hasNextPage && pages < 4) {
+      const more = await graphql(
+        REPOS_QUERY,
+        { login: username, after: pageInfo.endCursor },
+        token
+      );
+      const repos = more.user.repositories;
+      totalStars += repos.nodes.reduce((sum, r) => sum + r.stargazerCount, 0);
+      pageInfo = repos.pageInfo;
+      pages++;
+    }
+
+    return {
+      name: user.name || user.login,
+      totalCommits:
+        user.contributionsCollection.totalCommitContributions +
+        user.contributionsCollection.restrictedContributionsCount,
+      totalPRs: user.pullRequests.totalCount,
+      totalIssues:
+        user.openIssues.totalCount + user.closedIssues.totalCount,
+      totalStars,
+      totalRepos: user.repositories.totalCount,
+      contributedTo: user.repositoriesContributedTo.totalCount,
+    };
+  });
 }
 
 module.exports = { fetchStats };
