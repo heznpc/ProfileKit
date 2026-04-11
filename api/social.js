@@ -1,6 +1,6 @@
 const { renderSocialCard } = require("../src/cards/social");
 const { renderError } = require("../src/common/card");
-const { parseSearchParams, parseCardOptions } = require("../src/common/options");
+const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
 const { cacheHeaders, errorCacheHeaders } = require("../src/common/utils");
 
 function parseLinks(params) {
@@ -23,16 +23,17 @@ function parseLinks(params) {
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
-  const opts = parseCardOptions(params);
+  const { opts, themeError } = await resolveCardOptions(params);
   const { colors, font } = opts;
 
   const layout = params.get("layout") || "default";
 
   res.setHeader("Content-Type", "image/svg+xml");
+  if (themeError) res.setHeader("X-Theme-Error", themeError);
 
   const links = parseLinks(params);
   if (links.length === 0) {
-    res.setHeader("Cache-Control", errorCacheHeaders());
+    res.setHeader("Cache-Control", errorCacheHeaders("bad_input"));
     return res.send(
       renderError("No links provided. Use ?github=user&linkedin=user&...", { colors, font })
     );

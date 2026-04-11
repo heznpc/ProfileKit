@@ -28,19 +28,35 @@ function parseArray(value) {
     .filter(Boolean);
 }
 
-function parseIntSafe(value, defaultValue) {
+// Optional bounds clamp the parsed value into [min, max]; out-of-range values
+// fall back to `defaultValue` instead of being silently clipped, so a caller
+// that asks for card_width=999999 doesn't end up with a 1200-wide SVG it did
+// not design for.
+function parseIntSafe(value, defaultValue, min = -Infinity, max = Infinity) {
   const n = parseInt(value, 10);
-  return Number.isNaN(n) ? defaultValue : n;
+  if (Number.isNaN(n)) return defaultValue;
+  if (n < min || n > max) return defaultValue;
+  return n;
 }
 
-function parseFloatSafe(value, defaultValue) {
+function parseFloatSafe(value, defaultValue, min = -Infinity, max = Infinity) {
   const n = parseFloat(value);
-  return Number.isNaN(n) ? defaultValue : n;
+  if (Number.isNaN(n)) return defaultValue;
+  if (n < min || n > max) return defaultValue;
+  return n;
 }
+
+// Strict hex validation: #RGB, #RRGGBB, #RRGGBBAA. Invalid values return
+// `undefined` so callers fall back to the theme's base color instead of
+// emitting something like fill="#zzz" which browsers ignore (or worse,
+// interpret as attribute-value injection surface).
+const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 
 function parseColor(value) {
   if (!value) return undefined;
-  return value.startsWith("#") ? value : `#${value}`;
+  const hex = value.startsWith("#") ? value : `#${value}`;
+  if (!HEX_COLOR_RE.test(hex)) return undefined;
+  return hex;
 }
 
 // URL schemes we're willing to emit into an SVG `<a href>` attribute. The
@@ -88,8 +104,37 @@ function cacheHeaders() {
   return "public, max-age=1800, s-maxage=1800, stale-while-revalidate=300";
 }
 
-function errorCacheHeaders() {
-  return "public, max-age=120, s-maxage=120, stale-while-revalidate=120";
+// Error TTLs are intentionally coarse but distinct. A GitHub rate-limit
+// response propagates for 10 minutes so one exhausted token doesn't spam
+// every reader; network blips clear in a minute so transient failures
+// recover fast; missing-param / bad-input cards survive longer because
+// they only change when the README author fixes their URL.
+const ERROR_TTL_SECONDS = {
+  default: 120,
+  network: 60,
+  ratelimit: 600,
+  bad_input: 300,
+  not_found: 300,
+};
+
+function errorCacheHeaders(kind = "default") {
+  const ttl = ERROR_TTL_SECONDS[kind] ?? ERROR_TTL_SECONDS.default;
+  return `public, max-age=${ttl}, s-maxage=${ttl}, stale-while-revalidate=${ttl}`;
+}
+
+// Classify a fetcher Error into one of the ERROR_TTL_SECONDS kinds. Keeps
+// the catch blocks in each endpoint small — they just pass the caught err.
+function classifyError(err) {
+  const status = err && err.status;
+  if (status === 429) return "ratelimit";
+  if (status === 404) return "not_found";
+  if (status === 401 || status === 403) return "ratelimit";
+  const msg = err && err.message ? String(err.message) : "";
+  if (/rate limit/i.test(msg)) return "ratelimit";
+  if (/not found/i.test(msg)) return "not_found";
+  if (/timed out|ETIMEDOUT|ECONNRESET|fetch failed/i.test(msg)) return "network";
+  if (/GITHUB_TOKEN not configured/i.test(msg)) return "bad_input";
+  return "default";
 }
 
 module.exports = {
@@ -106,5 +151,8 @@ module.exports = {
   truncate,
   cacheHeaders,
   errorCacheHeaders,
+  classifyError,
+  HEX_COLOR_RE,
   SAFE_URL_SCHEMES,
+  ERROR_TTL_SECONDS,
 };

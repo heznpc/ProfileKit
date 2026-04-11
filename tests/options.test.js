@@ -60,6 +60,31 @@ test("card_width is undefined when missing, parsed when present", () => {
   assert.equal(parseCardOptions(p("card_width=not-a-number")).cardWidth, 495);
 });
 
+test("card_width out-of-bounds falls back to 495 default", () => {
+  // Below CARD_WIDTH_MIN (200)
+  assert.equal(parseCardOptions(p("card_width=50")).cardWidth, 495);
+  assert.equal(parseCardOptions(p("card_width=-100")).cardWidth, 495);
+  // Above CARD_WIDTH_MAX (1600)
+  assert.equal(parseCardOptions(p("card_width=99999")).cardWidth, 495);
+  // Boundary values accepted (min=200, max=1600)
+  assert.equal(parseCardOptions(p("card_width=200")).cardWidth, 200);
+  assert.equal(parseCardOptions(p("card_width=1600")).cardWidth, 1600);
+});
+
+test("invalid hex color overrides are silently dropped (theme base stands)", () => {
+  const opts = parseCardOptions(p("theme=dark&bg_color=zzz&title_color=red"));
+  // Both ignored, dark base preserved.
+  assert.equal(opts.colors.bg, "#0d1117");
+  assert.equal(opts.colors.title, "#e6edf3");
+});
+
+test("mixed valid + invalid color overrides: valid wins, invalid preserved", () => {
+  const opts = parseCardOptions(p("bg_color=ff0000&text_color=notacolor"));
+  assert.equal(opts.colors.bg, "#ff0000"); // valid override applied
+  // text falls back to dark theme default.
+  assert.equal(opts.colors.text, "#c9d1d9");
+});
+
 test("font and title are exposed (null when missing)", () => {
   const empty = parseCardOptions(p(""));
   assert.equal(empty.font, null);

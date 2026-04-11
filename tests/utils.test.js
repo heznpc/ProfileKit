@@ -14,6 +14,7 @@ const {
   truncate,
   cacheHeaders,
   errorCacheHeaders,
+  classifyError,
 } = require("../src/common/utils");
 
 test("formatNumber compacts large numbers", () => {
@@ -58,9 +59,26 @@ test("parseIntSafe falls back on NaN", () => {
   assert.equal(parseIntSafe(undefined, 9), 9);
 });
 
+test("parseIntSafe falls back when value is outside [min, max] bounds", () => {
+  assert.equal(parseIntSafe("100", 495, 200, 1600), 495);
+  assert.equal(parseIntSafe("99999", 495, 200, 1600), 495);
+  assert.equal(parseIntSafe("-50", 495, 200, 1600), 495);
+  // In-range values pass through.
+  assert.equal(parseIntSafe("600", 495, 200, 1600), 600);
+  // Boundaries are inclusive.
+  assert.equal(parseIntSafe("200", 495, 200, 1600), 200);
+  assert.equal(parseIntSafe("1600", 495, 200, 1600), 1600);
+});
+
 test("parseFloatSafe falls back on NaN", () => {
   assert.equal(parseFloatSafe("3.14", 0), 3.14);
   assert.equal(parseFloatSafe("nope", 1), 1);
+});
+
+test("parseFloatSafe also honors optional bounds", () => {
+  assert.equal(parseFloatSafe("0.5", 1, 0, 1), 0.5);
+  assert.equal(parseFloatSafe("2.5", 1, 0, 1), 1);
+  assert.equal(parseFloatSafe("-0.1", 1, 0, 1), 1);
 });
 
 test("parseColor prepends # if missing", () => {
@@ -68,6 +86,22 @@ test("parseColor prepends # if missing", () => {
   assert.equal(parseColor("#ff0000"), "#ff0000");
   assert.equal(parseColor(""), undefined);
   assert.equal(parseColor(null), undefined);
+});
+
+test("parseColor accepts 3-digit, 6-digit, and 8-digit hex", () => {
+  assert.equal(parseColor("f00"), "#f00");
+  assert.equal(parseColor("#f00"), "#f00");
+  assert.equal(parseColor("ff0000"), "#ff0000");
+  assert.equal(parseColor("ff0000aa"), "#ff0000aa"); // with alpha
+});
+
+test("parseColor rejects non-hex values", () => {
+  assert.equal(parseColor("zzz"), undefined);
+  assert.equal(parseColor("red"), undefined);
+  assert.equal(parseColor("#xyz"), undefined);
+  assert.equal(parseColor("#ff00"), undefined); // 4 digits, not a valid length
+  assert.equal(parseColor("#fffffffff"), undefined); // 9 digits
+  assert.equal(parseColor('" onload="alert(1)'), undefined);
 });
 
 test("parseRadius accepts tokens and raw px", () => {
@@ -104,6 +138,33 @@ test("cache headers include max-age and stale-while-revalidate", () => {
   assert.match(cacheHeaders(), /max-age=1800/);
   assert.match(cacheHeaders(), /stale-while-revalidate/);
   assert.match(errorCacheHeaders(), /max-age=120/);
+});
+
+test("errorCacheHeaders branches by kind", () => {
+  assert.match(errorCacheHeaders("default"), /max-age=120/);
+  assert.match(errorCacheHeaders("network"), /max-age=60/);
+  assert.match(errorCacheHeaders("ratelimit"), /max-age=600/);
+  assert.match(errorCacheHeaders("bad_input"), /max-age=300/);
+  assert.match(errorCacheHeaders("not_found"), /max-age=300/);
+});
+
+test("errorCacheHeaders falls back to default for unknown kinds", () => {
+  assert.match(errorCacheHeaders("totally-unknown"), /max-age=120/);
+});
+
+test("classifyError routes by HTTP status code", () => {
+  assert.equal(classifyError(Object.assign(new Error("x"), { status: 429 })), "ratelimit");
+  assert.equal(classifyError(Object.assign(new Error("x"), { status: 401 })), "ratelimit");
+  assert.equal(classifyError(Object.assign(new Error("x"), { status: 403 })), "ratelimit");
+  assert.equal(classifyError(Object.assign(new Error("x"), { status: 404 })), "not_found");
+});
+
+test("classifyError routes by message substring when status is missing", () => {
+  assert.equal(classifyError(new Error("User not found: ghost")), "not_found");
+  assert.equal(classifyError(new Error("Fetch timed out after 5000ms")), "network");
+  assert.equal(classifyError(new Error("GITHUB_TOKEN not configured")), "bad_input");
+  assert.equal(classifyError(new Error("API rate limit exceeded")), "ratelimit");
+  assert.equal(classifyError(new Error("something weird")), "default");
 });
 
 test("sanitizeUrl accepts https / http / mailto", () => {

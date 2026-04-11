@@ -164,22 +164,31 @@ const themes = {
 
 const OVERRIDE_KEYS = ["bg", "title", "text", "muted", "icon", "border", "accent"];
 
+const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+// Returns the normalized #-prefixed hex value, or `null` if the input is not
+// a valid 3/6/8-digit hex color. Previously this function accepted anything
+// and just slapped a `#` in front, which let junk like `?bg_color=zzz` land
+// in SVG `fill="#zzz"` attributes — browsers ignored them, but it was also a
+// stepping-stone for attribute-value escape tricks.
 function normalizeColor(v) {
-  return v.startsWith("#") ? v : `#${v}`;
+  if (v == null || v === "") return null;
+  const hex = String(v).startsWith("#") ? String(v) : `#${v}`;
+  return HEX_COLOR_RE.test(hex) ? hex : null;
 }
 
 // Layer color overrides on top of a base palette. Used by both `getTheme`
 // (built-in theme + ?bg_color= overrides) and `resolveCardOptions` (external
-// theme palette + same overrides). Empty string and null are explicitly
-// rejected so `?bg_color=` doesn't silently render as "#" — an invalid CSS
-// color. The original truthy check also dropped "0" which is a real color.
+// theme palette + same overrides). Invalid hex values are silently ignored
+// so the base palette keeps its value — tolerant UX for typos, strict SVG
+// output.
 function applyOverrides(base, overrides) {
   const resolved = { ...base };
   for (const key of OVERRIDE_KEYS) {
     const v = overrides[key];
-    if (v != null && v !== "") {
-      resolved[key] = normalizeColor(v);
-    }
+    if (v == null || v === "") continue;
+    const normalized = normalizeColor(v);
+    if (normalized) resolved[key] = normalized;
   }
   return resolved;
 }

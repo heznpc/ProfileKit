@@ -2,7 +2,12 @@ const { fetchStats } = require("../src/fetchers/stats");
 const { renderStatsCard } = require("../src/cards/stats");
 const { renderError } = require("../src/common/card");
 const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { parseArray, cacheHeaders, errorCacheHeaders } = require("../src/common/utils");
+const {
+  parseArray,
+  cacheHeaders,
+  errorCacheHeaders,
+  classifyError,
+} = require("../src/common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
@@ -17,7 +22,7 @@ module.exports = async (req, res) => {
   if (themeError) res.setHeader("X-Theme-Error", themeError);
 
   if (!username) {
-    res.setHeader("Cache-Control", errorCacheHeaders());
+    res.setHeader("Cache-Control", errorCacheHeaders("bad_input"));
     return res.send(renderError("Missing ?username= parameter", { colors, font }));
   }
 
@@ -31,7 +36,7 @@ module.exports = async (req, res) => {
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);
   } catch (err) {
-    res.setHeader("Cache-Control", errorCacheHeaders());
+    res.setHeader("Cache-Control", errorCacheHeaders(classifyError(err)));
     return res.send(renderError(err.message, { colors, font }));
   }
 };
