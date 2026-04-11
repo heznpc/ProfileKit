@@ -30,8 +30,14 @@ function readColorOverrides(params) {
   return out;
 }
 
+// Use a fixed base origin instead of `req.headers.host`. The host header is
+// untrusted in serverless environments and we only want the path + query
+// parts of `req.url` anyway, so passing a constant origin avoids any chance
+// of host-header injection ever surfacing through `searchParams`.
+const FIXED_PARSE_BASE = "http://profilekit.local";
+
 function parseSearchParams(req) {
-  return new URL(req.url, `http://${req.headers.host}`).searchParams;
+  return new URL(req.url, FIXED_PARSE_BASE).searchParams;
 }
 
 function parseCardOptions(params) {
