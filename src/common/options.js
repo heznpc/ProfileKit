@@ -40,6 +40,13 @@ function parseSearchParams(req) {
   return new URL(req.url, FIXED_PARSE_BASE).searchParams;
 }
 
+// Outer bounds on `?card_width=`. Anything outside this range falls back to
+// the 495 default. The upper bound protects against ?card_width=99999 style
+// DoS attempts (SVG memory + CDN bandwidth); the lower bound keeps the card
+// wide enough to fit the fixed padding + title without clipping.
+const CARD_WIDTH_MIN = 200;
+const CARD_WIDTH_MAX = 1600;
+
 function parseCardOptions(params) {
   const theme = params.get("theme") || "dark";
   const colors = getTheme(theme, readColorOverrides(params));
@@ -54,7 +61,7 @@ function parseCardOptions(params) {
     hideBar: parseBoolean(params.get("hide_bar")),
     borderRadius: parseRadius(params.get("border_radius"), undefined),
     cardWidth: params.has("card_width")
-      ? parseIntSafe(params.get("card_width"), 495)
+      ? parseIntSafe(params.get("card_width"), 495, CARD_WIDTH_MIN, CARD_WIDTH_MAX)
       : undefined,
   };
 }
@@ -78,4 +85,10 @@ async function resolveCardOptions(params) {
   }
 }
 
-module.exports = { parseCardOptions, resolveCardOptions, parseSearchParams };
+module.exports = {
+  parseCardOptions,
+  resolveCardOptions,
+  parseSearchParams,
+  CARD_WIDTH_MIN,
+  CARD_WIDTH_MAX,
+};

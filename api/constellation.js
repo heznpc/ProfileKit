@@ -1,5 +1,5 @@
 const { renderConstellationCard } = require("../src/cards/constellation");
-const { parseSearchParams, parseCardOptions } = require("../src/common/options");
+const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
 const {
   parseColor,
   parseFloatSafe,
@@ -9,7 +9,7 @@ const {
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
-  const opts = parseCardOptions(params);
+  const { opts, themeError } = await resolveCardOptions(params);
 
   const svg = renderConstellationCard({
     ...opts,
@@ -22,6 +22,7 @@ module.exports = async (req, res) => {
   });
 
   res.setHeader("Content-Type", "image/svg+xml");
+  if (themeError) res.setHeader("X-Theme-Error", themeError);
   res.setHeader("Cache-Control", cacheHeaders());
   return res.send(svg);
 };

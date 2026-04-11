@@ -1,0 +1,10 @@
+# ProfileKit — public playground + SVG card generator.
+# Allow crawlers to index the playground (profilekit.vercel.app/) so the
+# project is discoverable. The individual /api/* endpoints are dynamic SVG
+# image responses, not content pages, so we ask crawlers to skip them —
+# they change with every query string and would just bloat crawl budgets
+# without producing useful search results.
+
+User-agent: *
+Allow: /
+Disallow: /api/

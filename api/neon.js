@@ -1,10 +1,10 @@
 const { renderNeonCard } = require("../src/cards/neon");
-const { parseSearchParams, parseCardOptions } = require("../src/common/options");
+const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
 const { parseColor, parseIntSafe, cacheHeaders } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
-  const opts = parseCardOptions(params);
+  const { opts, themeError } = await resolveCardOptions(params);
 
   const svg = renderNeonCard({
     ...opts,
@@ -16,6 +16,7 @@ module.exports = async (req, res) => {
   });
 
   res.setHeader("Content-Type", "image/svg+xml");
+  if (themeError) res.setHeader("X-Theme-Error", themeError);
   res.setHeader("Cache-Control", cacheHeaders());
   return res.send(svg);
 };

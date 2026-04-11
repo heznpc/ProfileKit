@@ -1,6 +1,6 @@
 const { renderTypingCard } = require("../src/cards/typing");
 const { renderError } = require("../src/common/card");
-const { parseSearchParams, parseCardOptions } = require("../src/common/options");
+const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
 const {
   parseBoolean,
   parseColor,
@@ -12,15 +12,16 @@ const {
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
-  const opts = parseCardOptions(params);
+  const { opts, themeError } = await resolveCardOptions(params);
   const { colors, font } = opts;
 
   const lines = parseArray(params.get("lines"));
 
   res.setHeader("Content-Type", "image/svg+xml");
+  if (themeError) res.setHeader("X-Theme-Error", themeError);
 
   if (lines.length === 0) {
-    res.setHeader("Cache-Control", errorCacheHeaders());
+    res.setHeader("Cache-Control", errorCacheHeaders("bad_input"));
     return res.send(renderError("Missing ?lines= parameter", { colors, font }));
   }
 

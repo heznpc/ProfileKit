@@ -1,5 +1,5 @@
 const { renderTerminalCard } = require("../src/cards/terminal");
-const { parseSearchParams, parseCardOptions } = require("../src/common/options");
+const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
 const {
   parseColor,
   parseIntSafe,
@@ -9,7 +9,7 @@ const {
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
-  const opts = parseCardOptions(params);
+  const { opts, themeError } = await resolveCardOptions(params);
 
   const commands = parseArray(params.get("commands"));
   if (commands.length === 0) {
@@ -29,6 +29,7 @@ module.exports = async (req, res) => {
   });
 
   res.setHeader("Content-Type", "image/svg+xml");
+  if (themeError) res.setHeader("X-Theme-Error", themeError);
   res.setHeader("Cache-Control", cacheHeaders());
   return res.send(svg);
 };

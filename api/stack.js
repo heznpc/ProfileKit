@@ -98,7 +98,7 @@ const BUILDERS = {
   languages: async (params, opts) => {
     const username = params.get("username");
     if (!username) throw new Error("missing username");
-    const langsCount = parseIntSafe(params.get("langs_count"), 6);
+    const langsCount = parseIntSafe(params.get("langs_count"), 6, 1, 10);
     const hide = parseArray(params.get("hide"));
     const excludeRepo = parseArray(params.get("exclude_repo"));
     let languages = await fetchLanguages(username, null, excludeRepo);
@@ -111,13 +111,19 @@ const BUILDERS = {
         percentage: total > 0 ? +((l.size / total) * 100).toFixed(1) : 0,
       }));
     }
-    languages = languages.slice(0, Math.min(langsCount, 10));
+    languages = languages.slice(0, langsCount);
     return renderLanguagesCard(languages, {
       ...opts,
       layout: params.get("layout"),
     });
   },
 };
+
+// Upper bound on cards per stack. Each card = up to one GitHub call, so
+// `?cards=stats,stats,stats,...,stats` with no cap would burn a rate-limit
+// bucket in one HTTP request. 8 is generous for real profiles (hero +
+// section + stats + languages + now + timeline + tags + toc = 8).
+const MAX_CARDS_PER_STACK = 8;
 
 const SUPPORTED_CARDS = Object.keys(BUILDERS);
 
@@ -150,12 +156,23 @@ async function buildStack(params) {
   if (baseThemeError) themeErrors.push(`base: ${baseThemeError}`);
 
   const cardList = parseArray(params.get("cards"));
-  const gap = parseIntSafe(params.get("gap"), 16);
+  const gap = parseIntSafe(params.get("gap"), 16, 0, 200);
 
   if (!cardList.length) {
     return {
       svg: renderError(
         "Missing ?cards= parameter (comma-separated list)",
+        baseOpts
+      ),
+      ok: false,
+      themeErrors,
+    };
+  }
+
+  if (cardList.length > MAX_CARDS_PER_STACK) {
+    return {
+      svg: renderError(
+        `Too many cards in ?cards= (got ${cardList.length}, max ${MAX_CARDS_PER_STACK})`,
         baseOpts
       ),
       ok: false,
@@ -221,3 +238,4 @@ module.exports = async (req, res) => {
 module.exports.buildStack = buildStack;
 module.exports.SUPPORTED_CARDS = SUPPORTED_CARDS;
 module.exports.scopeParams = scopeParams;
+module.exports.MAX_CARDS_PER_STACK = MAX_CARDS_PER_STACK;

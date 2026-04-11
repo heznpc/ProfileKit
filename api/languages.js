@@ -1,31 +1,33 @@
 const { fetchLanguages } = require("../src/fetchers/languages");
 const { renderLanguagesCard } = require("../src/cards/languages");
 const { renderError } = require("../src/common/card");
-const { parseSearchParams, parseCardOptions } = require("../src/common/options");
+const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
 const {
   parseBoolean,
   parseArray,
   parseIntSafe,
   cacheHeaders,
   errorCacheHeaders,
+  classifyError,
 } = require("../src/common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
-  const opts = parseCardOptions(params);
+  const { opts, themeError } = await resolveCardOptions(params);
   const { colors, font } = opts;
 
   const username = params.get("username");
-  const langsCount = parseIntSafe(params.get("langs_count"), 6);
+  const langsCount = parseIntSafe(params.get("langs_count"), 6, 1, 10);
   const hide = parseArray(params.get("hide"));
   const excludeRepo = parseArray(params.get("exclude_repo"));
   const compact = parseBoolean(params.get("compact"));
   const layout = params.get("layout");
 
   res.setHeader("Content-Type", "image/svg+xml");
+  if (themeError) res.setHeader("X-Theme-Error", themeError);
 
   if (!username) {
-    res.setHeader("Cache-Control", errorCacheHeaders());
+    res.setHeader("Cache-Control", errorCacheHeaders("bad_input"));
     return res.send(renderError("Missing ?username= parameter", { colors, font }));
   }
 
@@ -43,14 +45,14 @@ module.exports = async (req, res) => {
       }));
     }
 
-    languages = languages.slice(0, Math.min(langsCount, 10));
+    languages = languages.slice(0, langsCount);
 
     const svg = renderLanguagesCard(languages, { ...opts, compact, layout });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);
   } catch (err) {
-    res.setHeader("Cache-Control", errorCacheHeaders());
+    res.setHeader("Cache-Control", errorCacheHeaders(classifyError(err)));
     return res.send(renderError(err.message, { colors, font }));
   }
 };
