@@ -117,9 +117,30 @@ async function withRotation(fn) {
   throw lastError ?? new Error("All GitHub tokens are in cooldown");
 }
 
+// Non-mutating snapshot of the pool for /api/health and test assertions.
+// Deliberately does not advance the round-robin cursor so health probes
+// don't bias token selection.
+function poolStats() {
+  const p = ensurePool();
+  const now = Date.now();
+  let available = 0;
+  let cooldown = 0;
+  for (const entry of p.tokens) {
+    if (entry.cooldownUntil <= now) available++;
+    else cooldown++;
+  }
+  return { total: p.tokens.length, available, cooldown };
+}
+
 // Test-only escape hatch — lets unit tests reset the pool between cases.
 function _resetForTests() {
   pool = null;
 }
 
-module.exports = { nextToken, invalidate, withRotation, _resetForTests };
+module.exports = {
+  nextToken,
+  invalidate,
+  withRotation,
+  poolStats,
+  _resetForTests,
+};

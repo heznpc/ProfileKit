@@ -22,10 +22,10 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const token = process.env.GITHUB_TOKEN;
-    if (!token) throw new Error("GITHUB_TOKEN not configured");
-
-    const stats = await fetchStats(username, token);
+    // Token pool handling lives in src/common/github-token via withRotation
+    // inside fetchStats — missing/invalid/rate-limited tokens are surfaced
+    // here as thrown errors and rendered as the error card.
+    const stats = await fetchStats(username);
     const svg = renderStatsCard(stats, { ...opts, hide, layout });
 
     res.setHeader("Cache-Control", cacheHeaders());

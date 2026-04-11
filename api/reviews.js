@@ -18,14 +18,9 @@ module.exports = async (req, res) => {
     return res.send(renderError("Missing ?username= parameter", { colors, font }));
   }
 
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) {
-    res.setHeader("Cache-Control", errorCacheHeaders());
-    return res.send(renderError("GITHUB_TOKEN not configured", { colors, font }));
-  }
-
   try {
-    const stats = await fetchReviews(username, token);
+    // Token pool resolution lives inside fetchReviews via withRotation.
+    const stats = await fetchReviews(username);
     const svg = renderReviewsCard(stats, opts);
 
     res.setHeader("Cache-Control", cacheHeaders());
