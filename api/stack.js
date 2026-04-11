@@ -84,9 +84,10 @@ const BUILDERS = {
   stats: async (params, opts) => {
     const username = params.get("username");
     if (!username) throw new Error("missing username");
-    const token = process.env.GITHUB_TOKEN;
-    if (!token) throw new Error("GITHUB_TOKEN not configured");
-    const data = await fetchStats(username, token);
+    // Token pool resolution lives inside fetchStats (withRotation). A
+    // missing pool throws "GITHUB_TOKEN not configured" which the per-slot
+    // error handler renders as an inline error card.
+    const data = await fetchStats(username);
     return renderStatsCard(data, {
       ...opts,
       hide: parseArray(params.get("hide")),
@@ -97,12 +98,10 @@ const BUILDERS = {
   languages: async (params, opts) => {
     const username = params.get("username");
     if (!username) throw new Error("missing username");
-    const token = process.env.GITHUB_TOKEN;
-    if (!token) throw new Error("GITHUB_TOKEN not configured");
     const langsCount = parseIntSafe(params.get("langs_count"), 6);
     const hide = parseArray(params.get("hide"));
     const excludeRepo = parseArray(params.get("exclude_repo"));
-    let languages = await fetchLanguages(username, token, excludeRepo);
+    let languages = await fetchLanguages(username, null, excludeRepo);
     if (hide.length > 0) {
       const lower = hide.map((h) => h.toLowerCase());
       languages = languages.filter((l) => !lower.includes(l.name.toLowerCase()));

@@ -178,15 +178,36 @@ test("buildStack renders an error card slot when an unknown card is requested", 
   assert.ok(svg.includes("Unknown card"));
 });
 
-test("buildStack renders inline error when stats requires a token that's missing", async () => {
+test("buildStack renders inline error when stats requires a token pool that's empty", async () => {
+  const { _resetForTests } = require("../src/common/github-token");
   const params = new URLSearchParams("cards=stats&stats.username=foo");
-  const prevToken = process.env.GITHUB_TOKEN;
+
+  // Capture every token env var the pool loader recognizes and wipe them
+  // so the pool resolves to empty regardless of developer environment.
+  const snapshot = {
+    GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+    GITHUB_TOKENS: process.env.GITHUB_TOKENS,
+  };
+  const numbered = {};
+  for (let i = 1; i < 32; i++) {
+    const key = `GITHUB_TOKEN_${i}`;
+    numbered[key] = process.env[key];
+    delete process.env[key];
+  }
   delete process.env.GITHUB_TOKEN;
+  delete process.env.GITHUB_TOKENS;
+  _resetForTests();
+
   try {
     const { svg, ok } = await buildStack(params);
     assert.equal(ok, true); // Outer request still succeeds; only the slot errors.
     assert.ok(svg.includes("GITHUB_TOKEN"));
   } finally {
-    if (prevToken !== undefined) process.env.GITHUB_TOKEN = prevToken;
+    if (snapshot.GITHUB_TOKEN !== undefined) process.env.GITHUB_TOKEN = snapshot.GITHUB_TOKEN;
+    if (snapshot.GITHUB_TOKENS !== undefined) process.env.GITHUB_TOKENS = snapshot.GITHUB_TOKENS;
+    for (const [k, v] of Object.entries(numbered)) {
+      if (v !== undefined) process.env[k] = v;
+    }
+    _resetForTests();
   }
 });

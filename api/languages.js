@@ -30,10 +30,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const token = process.env.GITHUB_TOKEN;
-    if (!token) throw new Error("GITHUB_TOKEN not configured");
-
-    let languages = await fetchLanguages(username, token, excludeRepo);
+    // Token pool resolution lives inside fetchLanguages via withRotation.
+    let languages = await fetchLanguages(username, null, excludeRepo);
 
     if (hide.length > 0) {
       const lower = hide.map((h) => h.toLowerCase());

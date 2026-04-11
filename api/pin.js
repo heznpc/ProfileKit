@@ -23,10 +23,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const token = process.env.GITHUB_TOKEN;
-    if (!token) throw new Error("GITHUB_TOKEN not configured");
-
-    const repoData = await fetchRepo(username, repo, token);
+    // Token pool resolution lives inside fetchRepo via withRotation.
+    const repoData = await fetchRepo(username, repo);
     const svg = renderPinCard(repoData, { ...opts, description });
 
     res.setHeader("Cache-Control", cacheHeaders());
