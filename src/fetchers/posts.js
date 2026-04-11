@@ -7,11 +7,76 @@ const FETCH_TIMEOUT_MS = 5000;
 const MAX_BODY_BYTES = 2_000_000;
 const HEADERS = { "User-Agent": "profilekit-posts-card" };
 
+// Allowlist for `?source=rss&url=` and `?source=medium&url=` — a fixed set
+// of public blogging hosts. Entries match either the full hostname or any
+// subdomain (`user.medium.com` matches `medium.com`). This is a textbook
+// SSRF control: without it a user-controlled URL could resolve to internal
+// IPs (169.254.169.254 metadata service, 127.0.0.1, 10.x, .internal DNS),
+// loopback-mounted services, or cloud provider instance metadata. The host
+// allowlist plus `redirect: "error"` (set in fetchCapped) plus scheme check
+// in validateFeedUrl closes the three classic SSRF bypass routes (direct,
+// redirect, scheme smuggling). Hashnode's own GraphQL API endpoint
+// (gql.hashnode.com) is here too because fetchHashnode pipes through
+// fetchCapped — its allowlist membership is what keeps that call path from
+// becoming a different SSRF surface if the host is ever parameterized.
+const ALLOWED_FEED_HOSTS = [
+  "medium.com",
+  "dev.to",
+  "hashnode.dev",
+  "hashnode.com",
+  "gql.hashnode.com",
+  "substack.com",
+  "github.io",
+  "wordpress.com",
+  "blogger.com",
+  "blogspot.com",
+  "ghost.io",
+  "bearblog.dev",
+  "write.as",
+];
+
+function isAllowedFeedHost(hostname) {
+  if (!hostname) return false;
+  const lower = hostname.toLowerCase();
+  return ALLOWED_FEED_HOSTS.some(
+    (h) => lower === h || lower.endsWith(`.${h}`)
+  );
+}
+
+// Validate a user-controlled feed URL against the SSRF posture: https only,
+// host must be on the allowlist, URL must parse. Throws a `Error` whose
+// message is safe to surface in the error card (no internal hosts leaked).
+function validateFeedUrl(raw) {
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("Invalid feed URL");
+  }
+  if (url.protocol !== "https:") {
+    throw new Error("Feed URL must use https://");
+  }
+  if (!isAllowedFeedHost(url.hostname)) {
+    throw new Error(
+      `Feed host not allowed: ${url.hostname}. Allowed suffixes: ${ALLOWED_FEED_HOSTS.join(", ")}`
+    );
+  }
+  return url;
+}
+
 async function fetchCapped(url, init = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
+    // `redirect: "error"` defends against a classic SSRF bypass where an
+    // allowlisted host returns a 302 pointing at an internal resource — we
+    // refuse to follow any redirect at all. A caller that needs to follow
+    // redirects has to override this explicitly.
+    const res = await fetch(url, {
+      redirect: "error",
+      ...init,
+      signal: controller.signal,
+    });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
@@ -152,10 +217,15 @@ async function fetchHashnode(username, count) {
   }));
 }
 
-async function fetchRssUrl(url, count) {
-  const xml = await fetchCapped(url, { headers: HEADERS }).catch((e) => {
-    throw new Error(`RSS fetch error: ${e.message}`);
-  });
+async function fetchRssUrl(rawUrl, count) {
+  // Validate before hitting fetchCapped so SSRF guard errors surface with
+  // the host allowlist message instead of a generic "fetch failed".
+  const validated = validateFeedUrl(rawUrl);
+  const xml = await fetchCapped(validated.toString(), { headers: HEADERS }).catch(
+    (e) => {
+      throw new Error(`RSS fetch error: ${e.message}`);
+    }
+  );
   const items = parseRss(xml);
   if (items.length === 0) throw new Error("No items in feed");
   return items.slice(0, count);
@@ -168,8 +238,15 @@ async function fetchPosts({ source, username, url, count }) {
   if (source === "rss" || source === "medium") {
     let feedUrl = url;
     if (source === "medium" && username && !feedUrl) {
-      const handle = username.startsWith("@") ? username : `@${username}`;
-      feedUrl = `https://medium.com/feed/${handle}`;
+      // Medium username is controlled — we construct the URL ourselves so
+      // it's guaranteed to be medium.com. Strip any leading @ so
+      // `?username=@foo` and `?username=foo` both work; reject any handle
+      // that contains characters that would escape the feed path.
+      const handle = username.replace(/^@/, "");
+      if (!/^[A-Za-z0-9._-]{1,64}$/.test(handle)) {
+        throw new Error("Invalid medium username");
+      }
+      feedUrl = `https://medium.com/feed/@${handle}`;
     }
     if (!feedUrl) {
       throw new Error(
@@ -183,4 +260,11 @@ async function fetchPosts({ source, username, url, count }) {
   throw new Error(`Unknown source: ${source}`);
 }
 
-module.exports = { fetchPosts };
+module.exports = {
+  fetchPosts,
+  // Exported for the SSRF regression tests and for reuse by any future
+  // fetcher that takes a user-controlled URL.
+  validateFeedUrl,
+  isAllowedFeedHost,
+  ALLOWED_FEED_HOSTS,
+};

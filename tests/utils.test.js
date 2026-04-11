@@ -9,6 +9,7 @@ const {
   parseFloatSafe,
   parseColor,
   parseRadius,
+  sanitizeUrl,
   makeRng,
   truncate,
   cacheHeaders,
@@ -103,4 +104,23 @@ test("cache headers include max-age and stale-while-revalidate", () => {
   assert.match(cacheHeaders(), /max-age=1800/);
   assert.match(cacheHeaders(), /stale-while-revalidate/);
   assert.match(errorCacheHeaders(), /max-age=120/);
+});
+
+test("sanitizeUrl accepts https / http / mailto", () => {
+  assert.equal(sanitizeUrl("https://example.com/"), "https://example.com/");
+  assert.equal(sanitizeUrl("http://example.com/x"), "http://example.com/x");
+  assert.equal(sanitizeUrl("mailto:me@example.com"), "mailto:me@example.com");
+});
+
+test("sanitizeUrl rejects javascript / data / vbscript schemes", () => {
+  assert.equal(sanitizeUrl("javascript:alert(1)"), null);
+  assert.equal(sanitizeUrl("data:text/html,<script>alert(1)</script>"), null);
+  assert.equal(sanitizeUrl("vbscript:msgbox(1)"), null);
+});
+
+test("sanitizeUrl rejects unparseable and empty input", () => {
+  assert.equal(sanitizeUrl(""), null);
+  assert.equal(sanitizeUrl(null), null);
+  assert.equal(sanitizeUrl(undefined), null);
+  assert.equal(sanitizeUrl("not a url"), null);
 });
