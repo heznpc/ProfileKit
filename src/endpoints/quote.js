@@ -1,7 +1,7 @@
-const { getRandomQuote, getDailyQuote } = require("../src/data/quotes");
-const { renderQuoteCard } = require("../src/cards/quote");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { parseBoolean, parseIntSafe, cacheHeaders } = require("../src/common/utils");
+const { getRandomQuote, getDailyQuote } = require("../data/quotes");
+const { renderQuoteCard } = require("../cards/quote");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseBoolean, parseIntSafe, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

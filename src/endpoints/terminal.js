@@ -1,11 +1,11 @@
-const { renderTerminalCard } = require("../src/cards/terminal");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { renderTerminalCard } = require("../cards/terminal");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
 const {
   parseColor,
   parseIntSafe,
   parseArray,
   cacheHeaders,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

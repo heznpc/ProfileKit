@@ -1,12 +1,12 @@
-const { fetchRepo } = require("../src/fetchers/pin");
-const { renderPinCard } = require("../src/cards/pin");
-const { renderError } = require("../src/common/card");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { fetchRepo } = require("../fetchers/pin");
+const { renderPinCard } = require("../cards/pin");
+const { renderError } = require("../common/card");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
 const {
   cacheHeaders,
   errorCacheHeaders,
   classifyError,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

@@ -1,12 +1,12 @@
-const { fetchLeetcode } = require("../src/fetchers/leetcode");
-const { renderLeetcodeCard } = require("../src/cards/leetcode");
-const { renderError } = require("../src/common/card");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { fetchReviews } = require("../fetchers/reviews");
+const { renderReviewsCard } = require("../cards/reviews");
+const { renderError } = require("../common/card");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
 const {
   cacheHeaders,
   errorCacheHeaders,
   classifyError,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
@@ -24,8 +24,9 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const stats = await fetchLeetcode(username);
-    const svg = renderLeetcodeCard(stats, opts);
+    // Token pool resolution lives inside fetchReviews via withRotation.
+    const stats = await fetchReviews(username);
+    const svg = renderReviewsCard(stats, opts);
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);

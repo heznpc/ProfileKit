@@ -1,6 +1,6 @@
-const { renderGlitchCard } = require("../src/cards/glitch");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { parseColor, parseIntSafe, cacheHeaders } = require("../src/common/utils");
+const { renderGlitchCard } = require("../cards/glitch");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseColor, parseIntSafe, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

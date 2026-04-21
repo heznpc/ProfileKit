@@ -1,6 +1,6 @@
-const { renderTocCard } = require("../src/cards/toc");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { cacheHeaders } = require("../src/common/utils");
+const { renderTocCard } = require("../cards/toc");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

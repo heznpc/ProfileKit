@@ -8,9 +8,9 @@
 // monitoring can decide its own severity (zero-token is a warning, not an
 // outage, because pure cards like /api/hero still work).
 
-const { poolStats } = require("../src/common/github-token");
-const { ALLOWED_FEED_HOSTS } = require("../src/fetchers/posts");
-const { ALLOWED_HOSTS: ALLOWED_THEME_URL_HOSTS } = require("../src/common/theme-url");
+const { poolStats } = require("../common/github-token");
+const { ALLOWED_FEED_HOSTS } = require("../fetchers/posts");
+const { ALLOWED_HOSTS: ALLOWED_THEME_URL_HOSTS } = require("../common/theme-url");
 
 module.exports = async (req, res) => {
   const pool = poolStats();

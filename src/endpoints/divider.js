@@ -1,18 +1,17 @@
-const { renderWaveCard } = require("../src/cards/wave");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { parseColor, parseIntSafe, cacheHeaders } = require("../src/common/utils");
+const { renderDividerCard } = require("../cards/divider");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseColor, parseIntSafe, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
   const { opts, themeError } = await resolveCardOptions(params);
 
-  const svg = renderWaveCard({
+  const svg = renderDividerCard({
     ...opts,
-    text: params.get("text"),
+    style: params.get("style") || "line",
     color: parseColor(params.get("color")),
     width: parseIntSafe(params.get("width"), 800),
-    height: parseIntSafe(params.get("height"), 160),
-    waves: parseIntSafe(params.get("waves"), 3),
+    height: parseIntSafe(params.get("height"), 30),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");

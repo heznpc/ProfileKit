@@ -1,6 +1,6 @@
-const { renderTypingCard } = require("../src/cards/typing");
-const { renderError } = require("../src/common/card");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { renderTypingCard } = require("../cards/typing");
+const { renderError } = require("../common/card");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
 const {
   parseBoolean,
   parseColor,
@@ -8,7 +8,7 @@ const {
   parseIntSafe,
   cacheHeaders,
   errorCacheHeaders,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

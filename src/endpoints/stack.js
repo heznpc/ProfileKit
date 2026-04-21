@@ -4,32 +4,32 @@
 // list and syntax are documented in the README "Composition" section; the
 // authoritative supported list is `SUPPORTED_CARDS` (= keys of `BUILDERS`).
 
-const { renderHeroCard } = require("../src/cards/hero");
-const { renderSectionCard } = require("../src/cards/section");
-const { renderDividerCard } = require("../src/cards/divider");
-const { renderNowCard, NOW_FIELDS } = require("../src/cards/now");
-const { renderTimelineCard } = require("../src/cards/timeline");
-const { renderTagsCard } = require("../src/cards/tags");
-const { renderTocCard } = require("../src/cards/toc");
-const { renderStatsCard } = require("../src/cards/stats");
-const { renderLanguagesCard } = require("../src/cards/languages");
+const { renderHeroCard } = require("../cards/hero");
+const { renderSectionCard } = require("../cards/section");
+const { renderDividerCard } = require("../cards/divider");
+const { renderNowCard, NOW_FIELDS } = require("../cards/now");
+const { renderTimelineCard } = require("../cards/timeline");
+const { renderTagsCard } = require("../cards/tags");
+const { renderTocCard } = require("../cards/toc");
+const { renderStatsCard } = require("../cards/stats");
+const { renderLanguagesCard } = require("../cards/languages");
 
-const { fetchStats } = require("../src/fetchers/stats");
-const { fetchLanguages } = require("../src/fetchers/languages");
+const { fetchStats } = require("../fetchers/stats");
+const { fetchLanguages } = require("../fetchers/languages");
 
-const { renderError } = require("../src/common/card");
-const { stackVertical } = require("../src/common/stack");
+const { renderError } = require("../common/card");
+const { stackVertical } = require("../common/stack");
 const {
   parseSearchParams,
   resolveCardOptions,
-} = require("../src/common/options");
+} = require("../common/options");
 const {
   parseArray,
   parseColor,
   parseIntSafe,
   cacheHeaders,
   errorCacheHeaders,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 const BUILDERS = {
   hero: async (params, opts) =>

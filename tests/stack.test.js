@@ -7,7 +7,7 @@ const {
   stackVertical,
 } = require("../src/common/stack");
 
-const { buildStack, scopeParams, SUPPORTED_CARDS } = require("../api/stack");
+const { buildStack, scopeParams, SUPPORTED_CARDS } = require("../src/endpoints/stack");
 
 const SAMPLE_SVG_A = `<svg xmlns="http://www.w3.org/2000/svg" width="495" height="200" viewBox="0 0 495 200">
   <defs>
@@ -213,7 +213,7 @@ test("buildStack renders inline error when stats requires a token pool that's em
 });
 
 test("buildStack refuses to render more cards than MAX_CARDS_PER_STACK", async () => {
-  const { MAX_CARDS_PER_STACK } = require("../api/stack");
+  const { MAX_CARDS_PER_STACK } = require("../src/endpoints/stack");
   const tooMany = Array(MAX_CARDS_PER_STACK + 1).fill("divider").join(",");
   const params = new URLSearchParams(`cards=${tooMany}`);
   const { svg, ok } = await buildStack(params);
