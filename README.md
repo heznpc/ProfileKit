@@ -23,15 +23,31 @@
 # ProfileKit
 
 <p align="center">
-  <img src="https://profilekit.vercel.app/api/hero?name=ProfileKit&subtitle=All-in-one+GitHub+profile+cards.+Designer+typography.&bg=wave&width=900&height=240&font=inter" alt="ProfileKit" />
+  <img src="https://profilekit.vercel.app/api/hero?name=ProfileKit&subtitle=Craft+your+GitHub+profile.+The+human+layer.&bg=gradient&width=900&height=220&font=space-grotesk" alt="ProfileKit" />
 </p>
 
-Developer personal brand visuals as composable SVG. Stats, languages, blog-layout primitives, animations, and five bundled designer fonts — no ratings, no rankings, just clean customizable cards.
+**Craft your GitHub profile — the human layer on top of AI-generated defaults.**
+
+AI makes "nice" easy. ProfileKit makes it *yours*: 28 composable SVG cards, every visual property editable, share your craft through URL-encoded presets. Think Sims 3 Create-A-Style — for developer profiles.
 
 One service, many contexts. The same card renders in your GitHub README, your dev.to bio, your Hashnode post header, or your slide cover. Deploy once on Vercel, use everywhere.
 
 <p align="center">
   <img src="https://profilekit.vercel.app/api/divider?style=wave&width=900" alt="" />
+</p>
+
+## Why ProfileKit
+
+AI generators nail "nice." They struggle with "yours." The thesis in three lines:
+
+- **Constrained creativity beats blank canvas.** Figma is too open (blank-canvas paralysis). AI prompts are too closed (your voice gets absorbed into the training set). ProfileKit sits in between — fixed components (hero, stats, snake, ...), every visual property editable.
+- **Craft as identity.** Your profile is the first thing other devs see. It should feel like *you* made it — even if the content is "just" stats + languages.
+- **Share your craft.** Roadmap v2 adds shareable URL presets ("looks"). v4 adds **The Exchange** — a community registry where devs post their looks and remix each other's. Sims 3 CAS + The Exchange, for developer profile walls.
+
+ProfileKit doesn't replace AI design tools. It's what you reach for when *"nice"* isn't enough.
+
+<p align="center">
+  <img src="https://profilekit.vercel.app/api/divider?style=dots&width=900" alt="" />
 </p>
 
 ## Data Cards

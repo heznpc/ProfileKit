@@ -2,7 +2,7 @@
   "name": "profilekit",
   "version": "1.0.0",
   "private": true,
-  "description": "All-in-one GitHub profile cards — stats, languages, activity, contributions, repos, typing, quotes, social, leetcode",
+  "description": "Craft your GitHub profile. The human layer on top of AI-generated defaults — 28 composable SVG cards, every visual property editable.",
   "engines": {
     "node": ">=18"
   },
