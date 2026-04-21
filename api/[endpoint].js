@@ -32,13 +32,17 @@ const ENDPOINT_NAMES = [
 const ALLOWED = new Set(ENDPOINT_NAMES);
 
 module.exports = async (req, res) => {
-  const name = req.query && req.query.name;
-  if (!name || !ALLOWED.has(name)) {
+  // The dynamic segment is named [endpoint], not [name], on purpose:
+  // some handlers (hero, now, etc.) expect ?name= as a legitimate user
+  // parameter, and Vercel merges the captured segment into req.query.
+  // Using [endpoint] avoids clobbering ?name= at the URLSearchParams level.
+  const endpoint = req.query && req.query.endpoint;
+  if (!endpoint || !ALLOWED.has(endpoint)) {
     res.status(404).setHeader("Content-Type", "text/plain");
-    return res.send(`Unknown endpoint: ${name ?? "(missing)"}`);
+    return res.send(`Unknown endpoint: ${endpoint ?? "(missing)"}`);
   }
 
-  const handler = require(`../src/endpoints/${name}`);
+  const handler = require(`../src/endpoints/${endpoint}`);
   return handler(req, res);
 };
 
