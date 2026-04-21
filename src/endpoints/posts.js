@@ -1,13 +1,13 @@
-const { fetchPosts } = require("../src/fetchers/posts");
-const { renderPostsCard } = require("../src/cards/posts");
-const { renderError } = require("../src/common/card");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { fetchPosts } = require("../fetchers/posts");
+const { renderPostsCard } = require("../cards/posts");
+const { renderError } = require("../common/card");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
 const {
   parseIntSafe,
   cacheHeaders,
   errorCacheHeaders,
   classifyError,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

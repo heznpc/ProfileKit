@@ -1,6 +1,6 @@
-const { renderTimelineCard } = require("../src/cards/timeline");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { cacheHeaders } = require("../src/common/utils");
+const { renderTimelineCard } = require("../cards/timeline");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

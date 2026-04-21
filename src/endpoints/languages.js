@@ -1,7 +1,7 @@
-const { fetchLanguages } = require("../src/fetchers/languages");
-const { renderLanguagesCard } = require("../src/cards/languages");
-const { renderError } = require("../src/common/card");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { fetchLanguages } = require("../fetchers/languages");
+const { renderLanguagesCard } = require("../cards/languages");
+const { renderError } = require("../common/card");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
 const {
   parseBoolean,
   parseArray,
@@ -9,7 +9,7 @@ const {
   cacheHeaders,
   errorCacheHeaders,
   classifyError,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

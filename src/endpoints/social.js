@@ -1,7 +1,7 @@
-const { renderSocialCard } = require("../src/cards/social");
-const { renderError } = require("../src/common/card");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { cacheHeaders, errorCacheHeaders } = require("../src/common/utils");
+const { renderSocialCard } = require("../cards/social");
+const { renderError } = require("../common/card");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { cacheHeaders, errorCacheHeaders } = require("../common/utils");
 
 function parseLinks(params) {
   const types = {

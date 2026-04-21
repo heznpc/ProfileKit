@@ -1,6 +1,6 @@
-const { renderNowCard, NOW_FIELDS } = require("../src/cards/now");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { cacheHeaders } = require("../src/common/utils");
+const { renderNowCard, NOW_FIELDS } = require("../cards/now");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

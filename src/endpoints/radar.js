@@ -1,25 +1,25 @@
-const { renderMatrixCard } = require("../src/cards/matrix");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { renderRadarCard } = require("../cards/radar");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
 const {
   parseColor,
   parseFloatSafe,
   parseIntSafe,
   cacheHeaders,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
   const { opts, themeError } = await resolveCardOptions(params);
 
-  const svg = renderMatrixCard({
+  const svg = renderRadarCard({
     ...opts,
     text: params.get("text"),
     color: parseColor(params.get("color")),
-    width: parseIntSafe(params.get("width"), 600),
-    height: parseIntSafe(params.get("height"), 200),
-    density: parseFloatSafe(params.get("density"), 1),
-    speed: parseFloatSafe(params.get("speed"), 1),
-    seed: parseIntSafe(params.get("seed"), 42),
+    width: parseIntSafe(params.get("width"), 300),
+    height: parseIntSafe(params.get("height"), 300),
+    blips: parseIntSafe(params.get("blips"), 5),
+    speed: parseFloatSafe(params.get("speed"), 4),
+    seed: parseIntSafe(params.get("seed"), 23),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");
