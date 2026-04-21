@@ -1,13 +1,12 @@
-const { fetchStats } = require("../src/fetchers/stats");
-const { renderStatsCard } = require("../src/cards/stats");
-const { renderError } = require("../src/common/card");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { fetchLeetcode } = require("../fetchers/leetcode");
+const { renderLeetcodeCard } = require("../cards/leetcode");
+const { renderError } = require("../common/card");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
 const {
-  parseArray,
   cacheHeaders,
   errorCacheHeaders,
   classifyError,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
@@ -15,8 +14,6 @@ module.exports = async (req, res) => {
   const { colors, font } = opts;
 
   const username = params.get("username");
-  const hide = parseArray(params.get("hide"));
-  const layout = params.get("layout");
 
   res.setHeader("Content-Type", "image/svg+xml");
   if (themeError) res.setHeader("X-Theme-Error", themeError);
@@ -27,11 +24,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Token pool handling lives in src/common/github-token via withRotation
-    // inside fetchStats — missing/invalid/rate-limited tokens are surfaced
-    // here as thrown errors and rendered as the error card.
-    const stats = await fetchStats(username);
-    const svg = renderStatsCard(stats, { ...opts, hide, layout });
+    const stats = await fetchLeetcode(username);
+    const svg = renderLeetcodeCard(stats, opts);
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);

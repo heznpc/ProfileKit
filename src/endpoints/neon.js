@@ -1,6 +1,6 @@
-const { renderNeonCard } = require("../src/cards/neon");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { parseColor, parseIntSafe, cacheHeaders } = require("../src/common/utils");
+const { renderNeonCard } = require("../cards/neon");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseColor, parseIntSafe, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

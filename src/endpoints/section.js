@@ -1,6 +1,6 @@
-const { renderSectionCard } = require("../src/cards/section");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
-const { parseColor, parseIntSafe, cacheHeaders } = require("../src/common/utils");
+const { renderSectionCard } = require("../cards/section");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseColor, parseIntSafe, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);

@@ -1,11 +1,11 @@
-const { renderSnakeCard } = require("../src/cards/snake");
-const { parseSearchParams, resolveCardOptions } = require("../src/common/options");
+const { renderSnakeCard } = require("../cards/snake");
+const { parseSearchParams, resolveCardOptions } = require("../common/options");
 const {
   parseColor,
   parseFloatSafe,
   parseIntSafe,
   cacheHeaders,
-} = require("../src/common/utils");
+} = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
