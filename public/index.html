@@ -825,7 +825,7 @@ function buildCardList() {
 let currentCard = "stats";
 let currentValues = {};
 
-function selectCard(key) {
+function selectCard(key, overrides) {
   currentCard = key;
   const card = CARDS[key];
   cardName.textContent = card.label;
@@ -837,8 +837,19 @@ function selectCard(key) {
   for (const p of card.params) {
     if (p.default != null) currentValues[p.name] = p.default;
   }
+  if (overrides) Object.assign(currentValues, overrides);
   buildForm(card.params);
   render();
+}
+
+function cardUrl(card, values) {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(values)) {
+    if (v == null || v === "") continue;
+    params.set(k, v);
+  }
+  const qs = params.toString();
+  return `/api/${card}${qs ? "?" + qs : ""}`;
 }
 
 function buildForm(params) {
@@ -928,13 +939,7 @@ function buildForm(params) {
 }
 
 function buildUrl() {
-  const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(currentValues)) {
-    if (v == null || v === "") continue;
-    params.set(k, v);
-  }
-  const qs = params.toString();
-  return `/api/${currentCard}${qs ? "?" + qs : ""}`;
+  return cardUrl(currentCard, currentValues);
 }
 
 function absoluteUrl(rel) {
@@ -971,11 +976,6 @@ function copyText(text, button) {
 
 copyUrlBtn.addEventListener("click", () => copyText(urlOutput.textContent, copyUrlBtn));
 copyMdBtn.addEventListener("click", () => copyText(mdOutput.textContent, copyMdBtn));
-
-// ---------------------------------------------------------------------------
-// Templates (v1) — curated looks. v2 will add URL-encoded shareable presets;
-// v4 opens community contributions. For now, the maintainer's starter set.
-// ---------------------------------------------------------------------------
 
 const TEMPLATES = [
   {
@@ -1050,6 +1050,8 @@ const templatesView = document.getElementById("templates-view");
 const viewCardsBtn = document.getElementById("view-cards");
 const viewTemplatesBtn = document.getElementById("view-templates");
 
+let templatesBuilt = false;
+
 function buildTemplates() {
   templatesGrid.innerHTML = "";
   for (const tpl of TEMPLATES) {
@@ -1059,9 +1061,7 @@ function buildTemplates() {
     const thumb = document.createElement("div");
     thumb.className = "thumb";
     const img = document.createElement("img");
-    const qs = new URLSearchParams();
-    for (const [k, v] of Object.entries(tpl.params)) qs.set(k, v);
-    img.src = `/api/${tpl.card}?${qs.toString()}`;
+    img.src = cardUrl(tpl.card, tpl.params);
     img.alt = tpl.name;
     img.loading = "lazy";
     thumb.appendChild(img);
@@ -1097,15 +1097,15 @@ function loadTemplate(tpl) {
     return;
   }
   switchView("cards");
-  selectCard(tpl.card);
-  // Apply template params on top of the just-initialised defaults.
-  currentValues = { ...currentValues, ...tpl.params };
-  buildForm(CARDS[tpl.card].params);
-  render();
+  selectCard(tpl.card, tpl.params);
 }
 
 function switchView(view) {
   if (view === "templates") {
+    if (!templatesBuilt) {
+      buildTemplates();
+      templatesBuilt = true;
+    }
     cardsView.classList.add("hidden");
     templatesView.classList.remove("hidden");
     viewCardsBtn.classList.remove("active");
@@ -1122,7 +1122,6 @@ viewCardsBtn.addEventListener("click", () => switchView("cards"));
 viewTemplatesBtn.addEventListener("click", () => switchView("templates"));
 
 buildCardList();
-buildTemplates();
 selectCard("stats");
 </script>
 
