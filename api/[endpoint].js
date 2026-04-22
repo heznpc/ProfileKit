@@ -1,36 +1,6 @@
-const ENDPOINT_NAMES = [
-  "catalog",
-  "constellation",
-  "divider",
-  "equalizer",
-  "glitch",
-  "health",
-  "heartbeat",
-  "hero",
-  "languages",
-  "leetcode",
-  "matrix",
-  "neon",
-  "now",
-  "pin",
-  "posts",
-  "quote",
-  "radar",
-  "reviews",
-  "section",
-  "snake",
-  "social",
-  "stack",
-  "stats",
-  "tags",
-  "terminal",
-  "timeline",
-  "toc",
-  "typing",
-  "wave",
-];
+const { CARDS } = require("../src/endpoints/catalog");
 
-const ALLOWED = new Set(ENDPOINT_NAMES);
+const ALLOWED = new Set([...Object.keys(CARDS), "catalog"]);
 
 module.exports = async (req, res) => {
   // The dynamic segment is named [endpoint], not [name], on purpose:
@@ -47,4 +17,4 @@ module.exports = async (req, res) => {
   return handler(req, res);
 };
 
-module.exports.ALLOWED_ENDPOINTS = ENDPOINT_NAMES;
+module.exports.ALLOWED_ENDPOINTS = Array.from(ALLOWED).sort();
