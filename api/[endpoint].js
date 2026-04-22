@@ -1,4 +1,5 @@
 const ENDPOINT_NAMES = [
+  "catalog",
   "constellation",
   "divider",
   "equalizer",
