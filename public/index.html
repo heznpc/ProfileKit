@@ -285,6 +285,112 @@
       text-transform: none;
       letter-spacing: 0;
     }
+
+    /* View toggle (Cards vs Templates) */
+    .view-toggle {
+      display: inline-flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+      margin-left: 16px;
+    }
+    .view-toggle button {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .view-toggle button.active {
+      background: var(--accent);
+      color: #0d1117;
+    }
+
+    /* Templates view */
+    .templates-panel {
+      padding: 24px 32px;
+      overflow-y: auto;
+    }
+    .templates-panel h2 {
+      margin: 0 0 6px 0;
+      font-size: 20px;
+    }
+    .templates-panel .intro {
+      margin: 0 0 24px 0;
+      color: var(--muted);
+      font-size: 13px;
+      max-width: 720px;
+    }
+    .templates-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .template-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .template-card .thumb {
+      background: var(--surface-2);
+      border-radius: 4px;
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .template-card .thumb img {
+      max-width: 100%;
+      max-height: 200px;
+      display: block;
+    }
+    .template-card .meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .template-card h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .template-card .by {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .template-card p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .template-card button {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .template-card button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -292,15 +398,21 @@
 <header>
   <div>
     <h1>Profile<span>Kit</span></h1>
-    <p class="tagline">Designer-grade GitHub profile cards. Live preview, copy URL.</p>
+    <p class="tagline">Craft your GitHub profile. The human layer on top of AI-generated defaults.</p>
   </div>
-  <nav>
-    <a href="https://github.com/heznpc/ProfileKit" target="_blank" rel="noopener">GitHub</a>
-    <a href="https://github.com/heznpc/ProfileKit#endpoints" target="_blank" rel="noopener">Docs</a>
-  </nav>
+  <div style="display:flex; align-items:center;">
+    <div class="view-toggle" role="tablist">
+      <button type="button" id="view-cards" class="active" role="tab">Cards</button>
+      <button type="button" id="view-templates" role="tab">Templates</button>
+    </div>
+    <nav>
+      <a href="https://github.com/newtria/ProfileKit" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/newtria/ProfileKit#endpoints" target="_blank" rel="noopener">Docs</a>
+    </nav>
+  </div>
 </header>
 
-<main>
+<main id="cards-view">
   <aside class="card-list-panel">
     <h2>Catalog</h2>
     <div id="card-list-root"></div>
@@ -331,6 +443,15 @@
     <form id="params-form" class="params-form" onsubmit="return false;"></form>
   </aside>
 </main>
+
+<section id="templates-view" class="templates-panel hidden">
+  <h2>Templates</h2>
+  <p class="intro">
+    Curated looks from the maintainers. Click Load to copy the preset into the Cards editor — tweak every param, then copy the URL or markdown.
+    In v2 these become shareable URL presets; in v4 the community exchange opens so any dev can publish their own.
+  </p>
+  <div id="templates-grid" class="templates-grid"></div>
+</section>
 
 <script>
 // Card schema. Each card lists its tweakable params; rendering happens via the
@@ -851,7 +972,157 @@ function copyText(text, button) {
 copyUrlBtn.addEventListener("click", () => copyText(urlOutput.textContent, copyUrlBtn));
 copyMdBtn.addEventListener("click", () => copyText(mdOutput.textContent, copyMdBtn));
 
+// ---------------------------------------------------------------------------
+// Templates (v1) — curated looks. v2 will add URL-encoded shareable presets;
+// v4 opens community contributions. For now, the maintainer's starter set.
+// ---------------------------------------------------------------------------
+
+const TEMPLATES = [
+  {
+    id: "minimal-stats",
+    name: "Minimal Stats",
+    author: "heznpc",
+    description: "Borderless, no accent bar. Cleanest possible stats card.",
+    card: "stats",
+    params: { username: "heznpc", hide: "issues,contributed", hide_border: "true", hide_bar: "true" },
+  },
+  {
+    id: "tokyo-hero",
+    name: "Tokyo Night Hero",
+    author: "heznpc",
+    description: "Cool blues, wave background, space-grotesk. Great README opener.",
+    card: "hero",
+    params: { name: "Your Name", subtitle: "Your tagline here", bg: "wave", theme: "tokyo_night", font: "space-grotesk", width: 900, height: 220 },
+  },
+  {
+    id: "donut-langs",
+    name: "Languages Donut",
+    author: "heznpc",
+    description: "Six languages in a compact donut. Pairs well with Minimal Stats.",
+    card: "languages",
+    params: { username: "heznpc", layout: "donut", langs_count: 6, hide_border: "true" },
+  },
+  {
+    id: "kanagawa-stats",
+    name: "Kanagawa Warmth",
+    author: "heznpc",
+    description: "Muted ink-painted palette. For profiles that aren't in a hurry.",
+    card: "stats",
+    params: { username: "heznpc", theme: "kanagawa", hide: "issues,contributed" },
+  },
+  {
+    id: "rose-pine-pin",
+    name: "Rose Pine Pin",
+    author: "heznpc",
+    description: "Pin card in rose_pine. Drop-in repo spotlight.",
+    card: "pin",
+    params: { username: "heznpc", repo: "ProfileKit", theme: "rose_pine" },
+  },
+  {
+    id: "matrix-banner",
+    name: "Matrix Rain Banner",
+    author: "heznpc",
+    description: "Classic green rain with overlay text. Wide README hero.",
+    card: "matrix",
+    params: { text: "YOUR TEXT", width: 900, height: 200, density: 1 },
+  },
+  {
+    id: "gradient-divider",
+    name: "Gradient Divider",
+    author: "heznpc",
+    description: "Clean section separator. Use between any two ## headers.",
+    card: "divider",
+    params: { style: "gradient", width: 900 },
+  },
+  {
+    id: "neon-sign",
+    name: "Neon Sign",
+    author: "heznpc",
+    description: "Magenta flicker. Use sparingly — one per README max.",
+    card: "neon",
+    params: { text: "HELLO", width: 900, height: 200 },
+  },
+];
+
+const templatesGrid = document.getElementById("templates-grid");
+const cardsView = document.getElementById("cards-view");
+const templatesView = document.getElementById("templates-view");
+const viewCardsBtn = document.getElementById("view-cards");
+const viewTemplatesBtn = document.getElementById("view-templates");
+
+function buildTemplates() {
+  templatesGrid.innerHTML = "";
+  for (const tpl of TEMPLATES) {
+    const card = document.createElement("div");
+    card.className = "template-card";
+
+    const thumb = document.createElement("div");
+    thumb.className = "thumb";
+    const img = document.createElement("img");
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(tpl.params)) qs.set(k, v);
+    img.src = `/api/${tpl.card}?${qs.toString()}`;
+    img.alt = tpl.name;
+    img.loading = "lazy";
+    thumb.appendChild(img);
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const h3 = document.createElement("h3");
+    h3.textContent = tpl.name;
+    const by = document.createElement("div");
+    by.className = "by";
+    by.textContent = `by ${tpl.author} · ${tpl.card}`;
+    const desc = document.createElement("p");
+    desc.textContent = tpl.description;
+    meta.appendChild(h3);
+    meta.appendChild(by);
+    meta.appendChild(desc);
+
+    const loadBtn = document.createElement("button");
+    loadBtn.type = "button";
+    loadBtn.textContent = "Load into editor →";
+    loadBtn.addEventListener("click", () => loadTemplate(tpl));
+
+    card.appendChild(thumb);
+    card.appendChild(meta);
+    card.appendChild(loadBtn);
+    templatesGrid.appendChild(card);
+  }
+}
+
+function loadTemplate(tpl) {
+  if (!CARDS[tpl.card]) {
+    console.warn(`Template ${tpl.id} references unknown card ${tpl.card}`);
+    return;
+  }
+  switchView("cards");
+  selectCard(tpl.card);
+  // Apply template params on top of the just-initialised defaults.
+  currentValues = { ...currentValues, ...tpl.params };
+  buildForm(CARDS[tpl.card].params);
+  render();
+}
+
+function switchView(view) {
+  if (view === "templates") {
+    cardsView.classList.add("hidden");
+    templatesView.classList.remove("hidden");
+    viewCardsBtn.classList.remove("active");
+    viewTemplatesBtn.classList.add("active");
+  } else {
+    templatesView.classList.add("hidden");
+    cardsView.classList.remove("hidden");
+    viewTemplatesBtn.classList.remove("active");
+    viewCardsBtn.classList.add("active");
+  }
+}
+
+viewCardsBtn.addEventListener("click", () => switchView("cards"));
+viewTemplatesBtn.addEventListener("click", () => switchView("templates"));
+
 buildCardList();
+buildTemplates();
 selectCard("stats");
 </script>
 
