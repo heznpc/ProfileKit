@@ -435,6 +435,10 @@
         <code id="md-output"></code>
         <button id="copy-md" type="button">Copy Markdown</button>
       </div>
+      <div class="copy-row">
+        <code id="share-output"></code>
+        <button id="copy-share" type="button">Copy share link</button>
+      </div>
     </div>
   </section>
 
@@ -792,9 +796,11 @@ const cardDesc = document.getElementById("card-desc");
 const previewImg = document.getElementById("preview-img");
 const urlOutput = document.getElementById("url-output");
 const mdOutput = document.getElementById("md-output");
+const shareOutput = document.getElementById("share-output");
 const paramsForm = document.getElementById("params-form");
 const copyUrlBtn = document.getElementById("copy-url");
 const copyMdBtn = document.getElementById("copy-md");
+const copyShareBtn = document.getElementById("copy-share");
 
 // Build the sidebar grouped by category.
 function buildCardList() {
@@ -955,11 +961,54 @@ function render() {
   const abs = absoluteUrl(url);
   urlOutput.textContent = abs;
   mdOutput.textContent = `![${CARDS[currentCard].label}](${abs})`;
+  shareOutput.textContent = shareLink();
+  writeHashState();
   clearTimeout(renderTimer);
   renderTimer = setTimeout(() => {
     previewImg.src = url;
     previewImg.alt = CARDS[currentCard].label;
   }, 200);
+}
+
+// ---------------------------------------------------------------------------
+// Shareable URL presets. Every editor state reflects into the hash fragment
+// so anyone can bookmark / share / restore a specific look without a
+// backend. Card key lives in `card=` to avoid clobbering any user param.
+// ---------------------------------------------------------------------------
+
+function encodeHashState() {
+  const p = new URLSearchParams();
+  p.set("card", currentCard);
+  for (const [k, v] of Object.entries(currentValues)) {
+    if (v == null || v === "") continue;
+    p.set(k, v);
+  }
+  return p.toString();
+}
+
+function writeHashState() {
+  const next = "#" + encodeHashState();
+  if (window.location.hash !== next) {
+    history.replaceState(null, "", next);
+  }
+}
+
+function readHashState() {
+  const raw = window.location.hash.replace(/^#/, "");
+  if (!raw) return null;
+  const p = new URLSearchParams(raw);
+  const card = p.get("card");
+  if (!card || !CARDS[card]) return null;
+  const values = {};
+  for (const [k, v] of p.entries()) {
+    if (k === "card") continue;
+    values[k] = v;
+  }
+  return { card, values };
+}
+
+function shareLink() {
+  return window.location.origin + window.location.pathname + "#" + encodeHashState();
 }
 
 function copyText(text, button) {
@@ -976,6 +1025,14 @@ function copyText(text, button) {
 
 copyUrlBtn.addEventListener("click", () => copyText(urlOutput.textContent, copyUrlBtn));
 copyMdBtn.addEventListener("click", () => copyText(mdOutput.textContent, copyMdBtn));
+copyShareBtn.addEventListener("click", () => copyText(shareOutput.textContent, copyShareBtn));
+
+window.addEventListener("hashchange", () => {
+  const state = readHashState();
+  if (state && (state.card !== currentCard || JSON.stringify(state.values) !== JSON.stringify(currentValues))) {
+    selectCard(state.card, state.values);
+  }
+});
 
 const TEMPLATES = [
   {
@@ -1041,6 +1098,30 @@ const TEMPLATES = [
     description: "Magenta flicker. Use sparingly — one per README max.",
     card: "neon",
     params: { text: "HELLO", width: 900, height: 200 },
+  },
+  {
+    id: "research-stats",
+    name: "Research Profile Stats",
+    author: "heznpc",
+    description: "For academic profiles — hides community metrics, kanagawa palette.",
+    card: "stats",
+    params: { username: "heznpc", theme: "kanagawa", hide: "issues,contributed,prs", hide_border: "true" },
+  },
+  {
+    id: "research-themes",
+    name: "Research Themes",
+    author: "heznpc",
+    description: "Tag cloud for academic profiles. Edit tags to match your fields.",
+    card: "tags",
+    params: { tags: "HCI:7aa2f7,AI-ethics:bb9af7,Digital-hoarding:f7768e,Philosophy-of-tech:e0af68,LLM-reflexivity:9ece6a", width: 900 },
+  },
+  {
+    id: "paper-pin",
+    name: "Paper Repo Pin",
+    author: "heznpc",
+    description: "Pin card for a specific paper repository. Pairs well in a grid of three.",
+    card: "pin",
+    params: { username: "heznpc", repo: "z-gap", theme: "solarized_dark" },
   },
 ];
 
@@ -1122,7 +1203,12 @@ viewCardsBtn.addEventListener("click", () => switchView("cards"));
 viewTemplatesBtn.addEventListener("click", () => switchView("templates"));
 
 buildCardList();
-selectCard("stats");
+const initialState = readHashState();
+if (initialState) {
+  selectCard(initialState.card, initialState.values);
+} else {
+  selectCard("stats");
+}
 </script>
 
 </body>
