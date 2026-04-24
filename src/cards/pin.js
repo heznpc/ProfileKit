@@ -5,7 +5,7 @@ const { formatNumber, escapeHtml, truncate } = require("../common/utils");
 const LANG_LEAD = 18;   // circle + gap before language text
 const BLOCK_TRAIL = 20; // gap between footer blocks
 
-function wrapText(text, maxChars, maxLines) {
+function wrapText(text, maxChars) {
   if (!text) return [];
   const words = text.split(/\s+/);
   const lines = [];
@@ -15,43 +15,25 @@ function wrapText(text, maxChars, maxLines) {
     const test = current ? `${current} ${word}` : word;
     if (test.length > maxChars && current) {
       lines.push(current);
-      if (lines.length >= maxLines) {
-        current = "";
-        break;
-      }
       current = word;
     } else {
       current = test;
     }
   }
-  if (current && lines.length < maxLines) lines.push(current);
-
-  // Append an ellipsis to the last line if any text was dropped.
-  const consumed = lines.join(" ").length;
-  if (consumed < text.length && lines.length > 0) {
-    let last = lines[lines.length - 1];
-    const maxLast = Math.max(1, maxChars - 1);
-    if (last.length > maxLast) last = last.slice(0, maxLast).trimEnd();
-    lines[lines.length - 1] = last + "…";
-  }
-  return lines;
+  if (current) lines.push(current);
+  return lines.slice(0, 3);
 }
 
-function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWidth, description, font, maxDescLines }) {
+function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWidth, description, font }) {
   const width = cardWidth || 400;
   const maxChars = Math.floor((width - 50) / 7);
   const desc = description || repo.description;
-  // maxDescLines is the layout reserve — the card always allocates this many
-  // lines of vertical space, regardless of how much actual text fits. Lets
-  // caller pin three side-by-side pins to identical heights even when one has
-  // a long description and another has none.
-  const maxLines = Math.max(1, Math.min(maxDescLines || 3, 6));
-  const descLines = wrapText(desc, maxChars, maxLines);
+  const descLines = wrapText(desc, maxChars);
 
   const nameY = 35;
   const descStartY = 58;
   const descLineHeight = 18;
-  const footerY = descStartY + maxLines * descLineHeight + 15;
+  const footerY = descStartY + Math.max(descLines.length, 1) * descLineHeight + 15;
   const height = footerY + 30;
 
   const nameMarkup = `
@@ -73,12 +55,8 @@ function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWi
   // a long language name gets truncated rather than pushing them off-card.
   const footerParts = [];
   const footerEnd = width - 25;
-  // Always show stars/forks — even zero. Consistency of footer layout across
-  // cards beats saving a few pixels when a repo is new. People come to a
-  // profile to gauge social proof; hiding a "0" implies we're hiding
-  // something rather than admitting the repo is young.
-  const starsStr = formatNumber(repo.stars || 0);
-  const forksStr = formatNumber(repo.forks || 0);
+  const starsStr = repo.stars > 0 ? formatNumber(repo.stars) : "";
+  const forksStr = repo.forks > 0 ? formatNumber(repo.forks) : "";
   const starsW = starsStr ? 20 + starsStr.length * 7 + 20 : 0;
   const forksW = forksStr ? 20 + forksStr.length * 7 + 20 : 0;
   let fx = 25;
