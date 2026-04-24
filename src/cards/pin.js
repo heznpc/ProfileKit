@@ -5,7 +5,7 @@ const { formatNumber, escapeHtml, truncate } = require("../common/utils");
 const LANG_LEAD = 18;   // circle + gap before language text
 const BLOCK_TRAIL = 20; // gap between footer blocks
 
-function wrapText(text, maxChars) {
+function wrapText(text, maxChars, maxLines) {
   if (!text) return [];
   const words = text.split(/\s+/);
   const lines = [];
@@ -15,25 +15,43 @@ function wrapText(text, maxChars) {
     const test = current ? `${current} ${word}` : word;
     if (test.length > maxChars && current) {
       lines.push(current);
+      if (lines.length >= maxLines) {
+        current = "";
+        break;
+      }
       current = word;
     } else {
       current = test;
     }
   }
-  if (current) lines.push(current);
-  return lines.slice(0, 3);
+  if (current && lines.length < maxLines) lines.push(current);
+
+  // Append an ellipsis to the last line if any text was dropped.
+  const consumed = lines.join(" ").length;
+  if (consumed < text.length && lines.length > 0) {
+    let last = lines[lines.length - 1];
+    const maxLast = Math.max(1, maxChars - 1);
+    if (last.length > maxLast) last = last.slice(0, maxLast).trimEnd();
+    lines[lines.length - 1] = last + "…";
+  }
+  return lines;
 }
 
-function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWidth, description, font }) {
+function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWidth, description, font, maxDescLines }) {
   const width = cardWidth || 400;
   const maxChars = Math.floor((width - 50) / 7);
   const desc = description || repo.description;
-  const descLines = wrapText(desc, maxChars);
+  // max_desc_lines is the layout reserve: the card always allocates this many
+  // lines of vertical space regardless of how much actual text fits, so three
+  // pins in a row render at uniform height even when one description is long
+  // and another is short. Default 3 keeps prior behavior for existing URLs.
+  const maxLines = Math.max(1, Math.min(maxDescLines || 3, 6));
+  const descLines = wrapText(desc, maxChars, maxLines);
 
   const nameY = 35;
   const descStartY = 58;
   const descLineHeight = 18;
-  const footerY = descStartY + Math.max(descLines.length, 1) * descLineHeight + 15;
+  const footerY = descStartY + maxLines * descLineHeight + 15;
   const height = footerY + 30;
 
   const nameMarkup = `
