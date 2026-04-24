@@ -6,6 +6,7 @@ const {
   cacheHeaders,
   errorCacheHeaders,
   classifyError,
+  parseIntSafe,
 } = require("../common/utils");
 
 module.exports = async (req, res) => {
@@ -16,6 +17,7 @@ module.exports = async (req, res) => {
   const username = params.get("username");
   const repo = params.get("repo");
   const description = params.get("description");
+  const maxDescLines = parseIntSafe(params.get("max_desc_lines"), 0, 1, 6) || undefined;
 
   res.setHeader("Content-Type", "image/svg+xml");
   if (themeError) res.setHeader("X-Theme-Error", themeError);
@@ -30,7 +32,7 @@ module.exports = async (req, res) => {
   try {
     // Token pool resolution lives inside fetchRepo via withRotation.
     const repoData = await fetchRepo(username, repo);
-    const svg = renderPinCard(repoData, { ...opts, description });
+    const svg = renderPinCard(repoData, { ...opts, description, maxDescLines });
 
     res.setHeader("Cache-Control", cacheHeaders());
     return res.send(svg);
