@@ -2,7 +2,7 @@
   "name": "profilekit",
   "version": "1.0.0",
   "private": true,
-  "description": "Craft your GitHub profile. The human layer on top of AI-generated defaults — 28 composable SVG cards, every visual property editable.",
+  "description": "Cards for your GitHub README. 28 composable SVG card endpoints, every visual property exposed as a query parameter. No ratings, no rankings.",
   "engines": {
     "node": ">=20"
   },
