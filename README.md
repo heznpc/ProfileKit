@@ -23,31 +23,19 @@
 # ProfileKit
 
 <p align="center">
-  <img src="https://profilekit.vercel.app/api/hero?name=ProfileKit&subtitle=Craft+your+GitHub+profile.+The+human+layer.&bg=gradient&width=900&height=220&font=space-grotesk" alt="ProfileKit" />
+  <img src="https://profilekit.vercel.app/api/hero?name=ProfileKit&subtitle=Cards+for+your+GitHub+README.+Customize%2C+share%2C+adopt.&bg=gradient&width=900&height=220&font=space-grotesk" alt="ProfileKit" />
 </p>
 
-**Craft your GitHub profile — the human layer on top of AI-generated defaults.**
+**Cards for your GitHub README. Customize, share, adopt.**
 
-AI makes "nice" easy. ProfileKit makes it *yours*: 28 composable SVG cards, every visual property editable, share your craft through URL-encoded presets. Think Sims 3 Create-A-Style — for developer profiles.
+28 composable SVG card endpoints (stats, languages, hero, snake, terminal, ...) with every visual property exposed as a query parameter. Build a card in the [playground](https://profilekit.vercel.app), copy the URL, drop it into your README. No ratings, no rankings — just clean customizable cards.
 
-One service, many contexts. The same card renders in your GitHub README, your dev.to bio, your Hashnode post header, or your slide cover. Deploy once on Vercel, use everywhere.
+One service, many contexts. The same card renders in your GitHub README, dev.to bio, Hashnode post header, or slide cover. Deploy once on Vercel, use everywhere.
+
+A community gallery for sharing single-card presets and adopting others' designs as a starting point is in progress — see Roadmap below.
 
 <p align="center">
   <img src="https://profilekit.vercel.app/api/divider?style=wave&width=900" alt="" />
-</p>
-
-## Why ProfileKit
-
-AI generators nail "nice." They struggle with "yours." The thesis in three lines:
-
-- **Constrained creativity beats blank canvas.** Figma is too open (blank-canvas paralysis). AI prompts are too closed (your voice gets absorbed into the training set). ProfileKit sits in between — fixed components (hero, stats, snake, ...), every visual property editable.
-- **Craft as identity.** Your profile is the first thing other devs see. It should feel like *you* made it — even if the content is "just" stats + languages.
-- **Share your craft.** Roadmap v2 adds shareable URL presets ("looks"). v4 adds **The Exchange** — a community registry where devs post their looks and remix each other's. Sims 3 CAS + The Exchange, for developer profile walls.
-
-ProfileKit doesn't replace AI design tools. It's what you reach for when *"nice"* isn't enough.
-
-<p align="center">
-  <img src="https://profilekit.vercel.app/api/divider?style=dots&width=900" alt="" />
 </p>
 
 ## Data Cards
@@ -647,6 +635,12 @@ Copy any URL from the gallery, change the `name` / `subtitle` / `theme`, and dro
 2. Deploy to [Vercel](https://vercel.com/new)
 3. Add environment variable: `GITHUB_TOKEN` — [create one here](https://github.com/settings/tokens) (no scopes needed for public data)
 4. Done. Your endpoints are at `https://your-project.vercel.app/api/*`
+
+## Roadmap
+
+- **Now** — 28 card endpoints, 17 themes, playground at [profilekit.vercel.app](https://profilekit.vercel.app), MCP server at [`@heznpc/profilekit-mcp`](https://www.npmjs.com/package/@heznpc/profilekit-mcp), curated picks in the Templates tab.
+- **Next — Gallery.** Single-card presets shareable by URL or registered in a browseable index at `profilekit.vercel.app/gallery`. Adopting a preset opens it in the editor with the original params pre-filled so you tweak from a starting point instead of a blank canvas. Editing UX targets a Sims 3 Create-A-Style / Naver-blog-editor feel — direct manipulation on the preview, not just a form. **Explicit non-goals**: no ratings, no rankings, no remix lineage, no leaderboards.
+- **Parallel** — Cross-agent compile (one preset definition → Claude Code, Cursor, Codex CLI configs). Lives as a feature, not a roadmap tier.
 
 ## Tech
 
