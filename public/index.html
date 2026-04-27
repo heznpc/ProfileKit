@@ -391,6 +391,221 @@
     }
 
     .hidden { display: none !important; }
+
+    /* Compose view (v3 — CAS-style README composer) */
+    .compose-view {
+      display: grid;
+      grid-template-columns: 220px 1fr 320px;
+      min-height: calc(100vh - 78px);
+    }
+    @media (max-width: 1080px) {
+      .compose-view { grid-template-columns: 200px 1fr; }
+      .composer-inspector { grid-column: 1 / -1; border-left: none; border-top: 1px solid var(--border); }
+    }
+    @media (max-width: 720px) {
+      .compose-view { grid-template-columns: 1fr; }
+      .composer-inventory { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    .composer-inventory {
+      border-right: 1px solid var(--border);
+      padding: 20px 12px;
+      overflow-y: auto;
+    }
+    .composer-inventory h2 {
+      margin: 0 0 12px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+    .composer-inventory .group { margin-bottom: 18px; }
+    .composer-inventory .group h3 {
+      margin: 0 0 6px 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+    .composer-inventory ul { list-style: none; margin: 0; padding: 0; }
+    .composer-inventory li button {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 7px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      border-radius: 5px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .composer-inventory li button:hover { background: var(--surface); color: var(--accent); }
+    .composer-inventory li button[disabled] {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .composer-inventory li button[disabled]:hover { background: transparent; color: var(--text); }
+    .composer-inventory li button .add-icon {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1;
+    }
+
+    .composer-canvas {
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+      overflow-y: auto;
+    }
+    .composer-canvas .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 24px;
+      min-height: 280px;
+    }
+    .composer-canvas .empty-state strong {
+      display: block;
+      color: var(--text);
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .block.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .block .block-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .block .block-header .label { flex: 1; font-weight: 700; }
+    .block .block-header button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 14px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .block .block-header button:hover { background: var(--surface-2); color: var(--text); }
+    .block .block-header button.danger:hover { color: #f85149; }
+    .block .block-header button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .block .block-header button:disabled:hover { background: transparent; color: var(--muted); }
+
+    .block .block-body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60px;
+    }
+    .block .block-body img {
+      max-width: 100%;
+      display: block;
+    }
+    .block .block-body textarea {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 13px;
+      resize: vertical;
+      min-height: 60px;
+    }
+    .block .block-body textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .composer-canvas .canvas-footer {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .composer-canvas .canvas-footer button {
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .composer-canvas .canvas-footer button:hover { filter: brightness(1.1); }
+    .composer-canvas .canvas-footer button.copied {
+      background: #3fb950;
+      color: #fff;
+    }
+    .composer-canvas .canvas-footer button.secondary {
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+
+    .composer-inspector {
+      border-left: 1px solid var(--border);
+      padding: 24px 20px;
+      overflow-y: auto;
+    }
+    .composer-inspector h3 {
+      margin: 0 0 4px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+    .composer-inspector .selected-label {
+      margin: 0 0 16px 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .composer-inspector .empty {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 12px 0;
+    }
   </style>
 </head>
 <body>
@@ -404,6 +619,7 @@
     <div class="view-toggle" role="tablist">
       <button type="button" id="view-cards" class="active" role="tab">Cards</button>
       <button type="button" id="view-templates" role="tab">Templates</button>
+      <button type="button" id="view-compose" role="tab">Compose</button>
     </div>
     <nav>
       <a href="https://github.com/newtria/ProfileKit" target="_blank" rel="noopener">GitHub</a>
@@ -455,6 +671,33 @@
     Community submissions open once the gallery ships.
   </p>
   <div id="templates-grid" class="templates-grid"></div>
+</section>
+
+<section id="compose-view" class="compose-view hidden">
+  <aside class="composer-inventory">
+    <h2>Inventory</h2>
+    <div id="composer-inventory-root"></div>
+  </aside>
+
+  <section class="composer-canvas">
+    <div id="composer-blocks"></div>
+    <div id="composer-empty" class="empty-state">
+      <strong>No blocks yet.</strong>
+      Click an inventory item on the left to add a card or markdown block.
+    </div>
+    <div class="canvas-footer">
+      <button type="button" id="composer-clear" class="secondary">Clear</button>
+      <button type="button" id="composer-copy">Copy README markdown</button>
+    </div>
+  </section>
+
+  <aside class="composer-inspector">
+    <h3>Slot inspector</h3>
+    <p id="composer-selected-label" class="selected-label">No block selected</p>
+    <form id="composer-slot-form" class="params-form" onsubmit="return false;">
+      <div class="empty">Select a card block to edit its slots.</div>
+    </form>
+  </aside>
 </section>
 
 <script>
@@ -1181,6 +1424,345 @@ function loadTemplate(tpl) {
   selectCard(tpl.card, tpl.params);
 }
 
+// ---------------------------------------------------------------------------
+// Compose view (v3 MVP-C — CAS-style README composer)
+// Spec: docs/v3-cas-spec.md. Hero card only for MVP. Slot inspector + block
+// list + inventory; localStorage persistence; copy-markdown output.
+// ---------------------------------------------------------------------------
+
+const COMPOSER_THEMES = [
+  "dark", "dark_dimmed", "light", "tokyo_night", "nord", "gruvbox_dark",
+  "catppuccin_mocha", "catppuccin_latte", "dracula", "monokai", "one_dark",
+  "kanagawa", "synthwave", "solarized_dark", "solarized_light",
+  "rose_pine", "rose_pine_dawn",
+];
+
+const COMPOSER_SLOTS = {
+  hero: {
+    label: "Hero card",
+    group: "Blog Layout",
+    apiPath: "hero",
+    slots: [
+      { name: "name",     type: "text", default: "heznpc" },
+      { name: "subtitle", type: "text", default: "Building things that ship" },
+      { name: "bg",       type: "enum", options: ["gradient", "wave", "grid", "particles"], default: "gradient" },
+      { name: "theme",    type: "enum", options: COMPOSER_THEMES, default: "dark" },
+    ],
+  },
+};
+
+const COMPOSER_INVENTORY = [
+  { kind: "card", card_type: "hero", label: "Hero card", group: "Blog Layout" },
+  { kind: "markdown",                label: "Markdown text", group: "Plain" },
+];
+
+const COMPOSER_STORAGE_KEY = "profilekit.composition.draft";
+const composerState = {
+  blocks: [],
+  selectedIndex: -1,
+};
+
+function loadComposerDraft() {
+  try {
+    const raw = localStorage.getItem(COMPOSER_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed.blocks)) composerState.blocks = parsed.blocks;
+  } catch {
+    // ignore malformed draft
+  }
+}
+
+function saveComposerDraft() {
+  try {
+    localStorage.setItem(
+      COMPOSER_STORAGE_KEY,
+      JSON.stringify({ blocks: composerState.blocks })
+    );
+  } catch {
+    // quota or disabled storage — ignore
+  }
+}
+
+const inventoryRoot = document.getElementById("composer-inventory-root");
+const blocksRoot = document.getElementById("composer-blocks");
+const emptyState = document.getElementById("composer-empty");
+const slotForm = document.getElementById("composer-slot-form");
+const selectedLabel = document.getElementById("composer-selected-label");
+const copyComposerBtn = document.getElementById("composer-copy");
+const clearComposerBtn = document.getElementById("composer-clear");
+const viewComposeBtn = document.getElementById("view-compose");
+const composeView = document.getElementById("compose-view");
+
+function buildInventory() {
+  inventoryRoot.innerHTML = "";
+  const groups = {};
+  for (const item of COMPOSER_INVENTORY) {
+    (groups[item.group] = groups[item.group] || []).push(item);
+  }
+  for (const [groupName, items] of Object.entries(groups)) {
+    const groupDiv = document.createElement("div");
+    groupDiv.className = "group";
+    const h3 = document.createElement("h3");
+    h3.textContent = groupName;
+    groupDiv.appendChild(h3);
+    const ul = document.createElement("ul");
+    for (const item of items) {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = `<span>${item.label}</span><span class="add-icon">+</span>`;
+      btn.addEventListener("click", () => addBlock(item));
+      li.appendChild(btn);
+      ul.appendChild(li);
+    }
+    groupDiv.appendChild(ul);
+    inventoryRoot.appendChild(groupDiv);
+  }
+}
+
+function addBlock(item) {
+  let block;
+  if (item.kind === "card") {
+    const def = COMPOSER_SLOTS[item.card_type];
+    if (!def) return;
+    const slots = {};
+    for (const s of def.slots) slots[s.name] = s.default;
+    block = { type: "card", card_type: item.card_type, slots };
+  } else if (item.kind === "markdown") {
+    block = { type: "markdown", content: "## Section\n" };
+  }
+  composerState.blocks.push(block);
+  composerState.selectedIndex = composerState.blocks.length - 1;
+  persistAndRender();
+}
+
+function removeBlock(index) {
+  composerState.blocks.splice(index, 1);
+  if (composerState.selectedIndex === index) composerState.selectedIndex = -1;
+  else if (composerState.selectedIndex > index) composerState.selectedIndex--;
+  persistAndRender();
+}
+
+function moveBlock(index, delta) {
+  const target = index + delta;
+  if (target < 0 || target >= composerState.blocks.length) return;
+  const [b] = composerState.blocks.splice(index, 1);
+  composerState.blocks.splice(target, 0, b);
+  if (composerState.selectedIndex === index) composerState.selectedIndex = target;
+  else if (composerState.selectedIndex === target) composerState.selectedIndex = index;
+  persistAndRender();
+}
+
+function selectBlock(index) {
+  composerState.selectedIndex = index;
+  renderBlocks();
+  renderInspector();
+}
+
+function clearComposition() {
+  if (!composerState.blocks.length) return;
+  if (!confirm("Clear all blocks?")) return;
+  composerState.blocks = [];
+  composerState.selectedIndex = -1;
+  persistAndRender();
+}
+
+function persistAndRender() {
+  saveComposerDraft();
+  renderBlocks();
+  renderInspector();
+}
+
+function buildHeroUrl(slots, theme) {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(slots)) {
+    if (k === "theme") continue;
+    if (v == null || v === "") continue;
+    params.set(k, v);
+  }
+  params.set("theme", theme);
+  params.set("hide_border", "true");
+  return `/api/hero?${params.toString()}`;
+}
+
+function renderBlocks() {
+  blocksRoot.innerHTML = "";
+  if (!composerState.blocks.length) {
+    emptyState.classList.remove("hidden");
+    return;
+  }
+  emptyState.classList.add("hidden");
+
+  composerState.blocks.forEach((block, index) => {
+    const wrap = document.createElement("div");
+    wrap.className = "block";
+    if (composerState.selectedIndex === index) wrap.classList.add("selected");
+    wrap.addEventListener("click", (e) => {
+      if (!e.target.closest(".block-header button")) selectBlock(index);
+    });
+
+    const header = document.createElement("div");
+    header.className = "block-header";
+    const labelText =
+      block.type === "card" ? `${COMPOSER_SLOTS[block.card_type]?.label ?? block.card_type}` : "Markdown";
+    const label = document.createElement("span");
+    label.className = "label";
+    label.textContent = labelText;
+    header.appendChild(label);
+
+    const upBtn = document.createElement("button");
+    upBtn.type = "button";
+    upBtn.title = "Move up";
+    upBtn.textContent = "↑";
+    upBtn.disabled = index === 0;
+    upBtn.addEventListener("click", () => moveBlock(index, -1));
+    header.appendChild(upBtn);
+
+    const downBtn = document.createElement("button");
+    downBtn.type = "button";
+    downBtn.title = "Move down";
+    downBtn.textContent = "↓";
+    downBtn.disabled = index === composerState.blocks.length - 1;
+    downBtn.addEventListener("click", () => moveBlock(index, 1));
+    header.appendChild(downBtn);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.title = "Remove";
+    removeBtn.className = "danger";
+    removeBtn.textContent = "⊘";
+    removeBtn.addEventListener("click", () => removeBlock(index));
+    header.appendChild(removeBtn);
+
+    const body = document.createElement("div");
+    body.className = "block-body";
+
+    if (block.type === "card") {
+      const img = document.createElement("img");
+      img.src = buildHeroUrl(block.slots, block.slots.theme || "dark");
+      img.alt = labelText;
+      img.loading = "lazy";
+      body.appendChild(img);
+    } else if (block.type === "markdown") {
+      const ta = document.createElement("textarea");
+      ta.value = block.content;
+      ta.rows = Math.max(2, block.content.split("\n").length);
+      ta.addEventListener("input", () => {
+        block.content = ta.value;
+        saveComposerDraft();
+      });
+      ta.addEventListener("focus", () => selectBlock(index));
+      body.appendChild(ta);
+    }
+
+    wrap.appendChild(header);
+    wrap.appendChild(body);
+    blocksRoot.appendChild(wrap);
+  });
+}
+
+function renderInspector() {
+  slotForm.innerHTML = "";
+  const idx = composerState.selectedIndex;
+  if (idx < 0 || idx >= composerState.blocks.length) {
+    selectedLabel.textContent = "No block selected";
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Select a card block to edit its slots.";
+    slotForm.appendChild(empty);
+    return;
+  }
+  const block = composerState.blocks[idx];
+  if (block.type === "markdown") {
+    selectedLabel.textContent = "Markdown block";
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Edit text directly in the canvas.";
+    slotForm.appendChild(empty);
+    return;
+  }
+  const def = COMPOSER_SLOTS[block.card_type];
+  if (!def) {
+    selectedLabel.textContent = block.card_type;
+    return;
+  }
+  selectedLabel.textContent = def.label;
+
+  for (const slot of def.slots) {
+    const field = document.createElement("div");
+    field.className = "field";
+    const label = document.createElement("label");
+    label.textContent = slot.name;
+    field.appendChild(label);
+
+    let input;
+    if (slot.type === "enum") {
+      input = document.createElement("select");
+      for (const opt of slot.options) {
+        const o = document.createElement("option");
+        o.value = opt;
+        o.textContent = opt;
+        input.appendChild(o);
+      }
+      input.value = block.slots[slot.name] ?? slot.default;
+      input.addEventListener("change", () => {
+        block.slots[slot.name] = input.value;
+        persistAndRender();
+      });
+    } else if (slot.type === "text") {
+      input = document.createElement("input");
+      input.type = "text";
+      input.value = block.slots[slot.name] ?? "";
+      input.addEventListener("input", () => {
+        block.slots[slot.name] = input.value;
+        saveComposerDraft();
+        renderBlocks();
+      });
+    } else if (slot.type === "number") {
+      input = document.createElement("input");
+      input.type = "number";
+      input.value = block.slots[slot.name] ?? slot.default;
+      input.addEventListener("input", () => {
+        block.slots[slot.name] = input.value === "" ? slot.default : Number(input.value);
+        persistAndRender();
+      });
+    }
+    field.appendChild(input);
+    slotForm.appendChild(field);
+  }
+}
+
+function serializeComposition() {
+  const lines = [];
+  for (const block of composerState.blocks) {
+    if (block.type === "markdown") {
+      lines.push(block.content);
+      lines.push("");
+      continue;
+    }
+    if (block.type === "card") {
+      // Dark + light <picture> pair so the card matches the viewer's GitHub theme.
+      const darkUrl = absoluteUrl(buildHeroUrl(block.slots, "dark"));
+      const lightUrl = absoluteUrl(buildHeroUrl(block.slots, "light"));
+      const altText = block.card_type;
+      lines.push(`<picture>`);
+      lines.push(`  <source media="(prefers-color-scheme: dark)" srcset="${darkUrl}" />`);
+      lines.push(`  <img src="${lightUrl}" alt="${altText}" />`);
+      lines.push(`</picture>`);
+      lines.push("");
+    }
+  }
+  return lines.join("\n").trimEnd() + "\n";
+}
+
+copyComposerBtn.addEventListener("click", () => {
+  if (!composerState.blocks.length) return;
+  copyText(serializeComposition(), copyComposerBtn);
+});
+
+clearComposerBtn.addEventListener("click", clearComposition);
+
 function switchView(view) {
   if (view === "templates") {
     if (!templatesBuilt) {
@@ -1189,20 +1771,37 @@ function switchView(view) {
     }
     cardsView.classList.add("hidden");
     templatesView.classList.remove("hidden");
+    composeView.classList.add("hidden");
     viewCardsBtn.classList.remove("active");
     viewTemplatesBtn.classList.add("active");
+    viewComposeBtn.classList.remove("active");
+  } else if (view === "compose") {
+    cardsView.classList.add("hidden");
+    templatesView.classList.add("hidden");
+    composeView.classList.remove("hidden");
+    viewCardsBtn.classList.remove("active");
+    viewTemplatesBtn.classList.remove("active");
+    viewComposeBtn.classList.add("active");
   } else {
     templatesView.classList.add("hidden");
+    composeView.classList.add("hidden");
     cardsView.classList.remove("hidden");
     viewTemplatesBtn.classList.remove("active");
+    viewComposeBtn.classList.remove("active");
     viewCardsBtn.classList.add("active");
   }
 }
 
 viewCardsBtn.addEventListener("click", () => switchView("cards"));
 viewTemplatesBtn.addEventListener("click", () => switchView("templates"));
+viewComposeBtn.addEventListener("click", () => switchView("compose"));
 
 buildCardList();
+buildInventory();
+loadComposerDraft();
+renderBlocks();
+renderInspector();
+
 const initialState = readHashState();
 if (initialState) {
   selectCard(initialState.card, initialState.values);
