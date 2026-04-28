@@ -1442,7 +1442,6 @@ const COMPOSER_SLOTS = {
   hero: {
     label: "Hero card",
     group: "Blog Layout",
-    apiPath: "hero",
     slots: [
       { name: "name",     type: "text", default: "heznpc" },
       { name: "subtitle", type: "text", default: "Building things that ship" },
@@ -1450,11 +1449,56 @@ const COMPOSER_SLOTS = {
       { name: "theme",    type: "enum", options: COMPOSER_THEMES, default: "dark" },
     ],
   },
+  stats: {
+    label: "Stats",
+    group: "Data",
+    slots: [
+      { name: "username",    type: "text", default: "heznpc" },
+      { name: "layout",      type: "enum", options: ["default", "compact"], default: "default" },
+      { name: "theme",       type: "enum", options: COMPOSER_THEMES, default: "dark" },
+      { name: "hide_border", type: "bool", default: true },
+    ],
+  },
+  languages: {
+    label: "Languages",
+    group: "Data",
+    slots: [
+      { name: "username",    type: "text",   default: "heznpc" },
+      { name: "layout",      type: "enum",   options: ["default", "compact", "donut"], default: "default" },
+      { name: "langs_count", type: "number", default: 6, min: 1, max: 10 },
+      { name: "theme",       type: "enum",   options: COMPOSER_THEMES, default: "dark" },
+      { name: "hide_border", type: "bool",   default: true },
+    ],
+  },
+  pin: {
+    label: "Pin (repo)",
+    group: "Data",
+    slots: [
+      { name: "username",       type: "text",   default: "heznpc" },
+      { name: "repo",           type: "text",   default: "ProfileKit" },
+      { name: "card_width",     type: "number", default: 400, min: 280, max: 600 },
+      { name: "max_desc_lines", type: "number", default: 3,   min: 1,   max: 6 },
+      { name: "theme",          type: "enum",   options: COMPOSER_THEMES, default: "dark" },
+      { name: "hide_border",    type: "bool",   default: true },
+    ],
+  },
+  snake: {
+    label: "Snake",
+    group: "Animations",
+    slots: [
+      { name: "cols", type: "number", default: 53, min: 20, max: 80 },
+      { name: "rows", type: "number", default: 7,  min: 3,  max: 14 },
+    ],
+  },
 };
 
 const COMPOSER_INVENTORY = [
-  { kind: "card", card_type: "hero", label: "Hero card", group: "Blog Layout" },
-  { kind: "markdown",                label: "Markdown text", group: "Plain" },
+  { kind: "card",     card_type: "hero",      label: "Hero card",     group: "Blog Layout" },
+  { kind: "card",     card_type: "stats",     label: "Stats",         group: "Data" },
+  { kind: "card",     card_type: "languages", label: "Languages",     group: "Data" },
+  { kind: "card",     card_type: "pin",       label: "Pin (repo)",    group: "Data" },
+  { kind: "card",     card_type: "snake",     label: "Snake",         group: "Animations" },
+  { kind: "markdown",                         label: "Markdown text", group: "Plain" },
 ];
 
 const COMPOSER_STORAGE_KEY = "profilekit.composition.draft";
@@ -1575,16 +1619,27 @@ function persistAndRender() {
   renderInspector();
 }
 
-function buildHeroUrl(slots, theme) {
+function buildCardUrlForCompose(cardType, slots, themeOverride) {
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(slots)) {
-    if (k === "theme") continue;
+    if (k === "theme" && themeOverride !== undefined) continue;
     if (v == null || v === "") continue;
-    params.set(k, v);
+    if (typeof v === "boolean") {
+      if (v) params.set(k, "true");
+      continue;
+    }
+    params.set(k, String(v));
   }
-  params.set("theme", theme);
-  params.set("hide_border", "true");
-  return `/api/hero?${params.toString()}`;
+  if (themeOverride !== undefined) params.set("theme", themeOverride);
+  return `/api/${cardType}?${params.toString()}`;
+}
+
+// Cards that have a `theme` slot get a dark/light <picture> pair on export.
+// Cards without one (e.g. snake doesn't take theme today) ship as a single
+// <img> sourced from the slot values as-is.
+function cardSupportsTheme(cardType) {
+  const def = COMPOSER_SLOTS[cardType];
+  return def && def.slots.some((s) => s.name === "theme");
 }
 
 function renderBlocks() {
@@ -1641,7 +1696,7 @@ function renderBlocks() {
 
     if (block.type === "card") {
       const img = document.createElement("img");
-      img.src = buildHeroUrl(block.slots, block.slots.theme || "dark");
+      img.src = buildCardUrlForCompose(block.card_type, block.slots);
       img.alt = labelText;
       img.loading = "lazy";
       body.appendChild(img);
@@ -1723,11 +1778,32 @@ function renderInspector() {
     } else if (slot.type === "number") {
       input = document.createElement("input");
       input.type = "number";
+      if (slot.min != null) input.min = String(slot.min);
+      if (slot.max != null) input.max = String(slot.max);
       input.value = block.slots[slot.name] ?? slot.default;
       input.addEventListener("input", () => {
         block.slots[slot.name] = input.value === "" ? slot.default : Number(input.value);
         persistAndRender();
       });
+    } else if (slot.type === "bool") {
+      // Render as a checkbox row instead of a labeled column.
+      field.className = "field-row";
+      label.textContent = "";  // we'll re-wrap below
+      input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = !!(block.slots[slot.name] ?? slot.default);
+      input.addEventListener("change", () => {
+        block.slots[slot.name] = input.checked;
+        persistAndRender();
+      });
+      // Reorder: checkbox first, then a label that reads as the slot name
+      field.innerHTML = "";
+      field.appendChild(input);
+      const lbl = document.createElement("label");
+      lbl.textContent = slot.name;
+      field.appendChild(lbl);
+      slotForm.appendChild(field);
+      continue;
     }
     field.appendChild(input);
     slotForm.appendChild(field);
@@ -1743,14 +1819,20 @@ function serializeComposition() {
       continue;
     }
     if (block.type === "card") {
-      // Dark + light <picture> pair so the card matches the viewer's GitHub theme.
-      const darkUrl = absoluteUrl(buildHeroUrl(block.slots, "dark"));
-      const lightUrl = absoluteUrl(buildHeroUrl(block.slots, "light"));
       const altText = block.card_type;
-      lines.push(`<picture>`);
-      lines.push(`  <source media="(prefers-color-scheme: dark)" srcset="${darkUrl}" />`);
-      lines.push(`  <img src="${lightUrl}" alt="${altText}" />`);
-      lines.push(`</picture>`);
+      if (cardSupportsTheme(block.card_type)) {
+        // Dark + light <picture> pair so the card matches the viewer's GitHub theme.
+        const darkUrl = absoluteUrl(buildCardUrlForCompose(block.card_type, block.slots, "dark"));
+        const lightUrl = absoluteUrl(buildCardUrlForCompose(block.card_type, block.slots, "light"));
+        lines.push(`<picture>`);
+        lines.push(`  <source media="(prefers-color-scheme: dark)" srcset="${darkUrl}" />`);
+        lines.push(`  <img src="${lightUrl}" alt="${altText}" />`);
+        lines.push(`</picture>`);
+      } else {
+        // Card has no theme slot — single <img>, no mode switch.
+        const url = absoluteUrl(buildCardUrlForCompose(block.card_type, block.slots));
+        lines.push(`<img src="${url}" alt="${altText}" />`);
+      }
       lines.push("");
     }
   }
