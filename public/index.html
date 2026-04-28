@@ -457,6 +457,27 @@
       color: var(--muted);
       line-height: 1;
     }
+    .composer-inventory li button[draggable="true"] {
+      cursor: grab;
+    }
+    .composer-inventory li button[draggable="true"]:active {
+      cursor: grabbing;
+    }
+    .composer-inventory li button.dragging {
+      opacity: 0.5;
+    }
+
+    /* Drop indicators between blocks during drag-over */
+    .block.drop-before {
+      box-shadow: 0 -3px 0 var(--accent);
+    }
+    .block.drop-after {
+      box-shadow: 0 3px 0 var(--accent);
+    }
+    .composer-canvas .empty-state.drop-target {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
 
     .composer-canvas {
       padding: 28px 32px;
@@ -1556,14 +1577,45 @@ function buildInventory() {
       const li = document.createElement("li");
       const btn = document.createElement("button");
       btn.type = "button";
+      btn.draggable = true;
       btn.innerHTML = `<span>${item.label}</span><span class="add-icon">+</span>`;
       btn.addEventListener("click", () => addBlock(item));
+      btn.addEventListener("dragstart", (e) => {
+        btn.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.setData("application/x-pk-inventory", JSON.stringify(item));
+      });
+      btn.addEventListener("dragend", () => btn.classList.remove("dragging"));
       li.appendChild(btn);
       ul.appendChild(li);
     }
     groupDiv.appendChild(ul);
     inventoryRoot.appendChild(groupDiv);
   }
+}
+
+// addBlock(item) appends. addBlockAt(item, index) inserts; index of -1 or
+// past-end appends. Click-to-add path stays on addBlock; drag-to-canvas uses
+// addBlockAt with the computed insertion point.
+function addBlockAt(item, index) {
+  let block;
+  if (item.kind === "card") {
+    const def = COMPOSER_SLOTS[item.card_type];
+    if (!def) return;
+    const slots = {};
+    for (const s of def.slots) slots[s.name] = s.default;
+    block = { type: "card", card_type: item.card_type, slots };
+  } else if (item.kind === "markdown") {
+    block = { type: "markdown", content: "## Section\n" };
+  } else {
+    return;
+  }
+  const insertAt = index < 0 || index > composerState.blocks.length
+    ? composerState.blocks.length
+    : index;
+  composerState.blocks.splice(insertAt, 0, block);
+  composerState.selectedIndex = insertAt;
+  persistAndRender();
 }
 
 function addBlock(item) {
@@ -1845,6 +1897,79 @@ copyComposerBtn.addEventListener("click", () => {
 });
 
 clearComposerBtn.addEventListener("click", clearComposition);
+
+// ---------------------------------------------------------------------------
+// v3.3 — drag-from-inventory
+// Inventory items dragged onto the canvas are inserted at the position closest
+// to the drop point. Click-to-add path stays untouched as the keyboard / a11y
+// fallback.
+// ---------------------------------------------------------------------------
+
+function clearDropIndicators() {
+  blocksRoot
+    .querySelectorAll(".drop-before, .drop-after")
+    .forEach((el) => el.classList.remove("drop-before", "drop-after"));
+  emptyState.classList.remove("drop-target");
+}
+
+function computeDropIndex(clientY) {
+  const blockEls = blocksRoot.querySelectorAll(".block");
+  if (!blockEls.length) return 0;
+  for (let i = 0; i < blockEls.length; i++) {
+    const rect = blockEls[i].getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) return i;
+  }
+  return blockEls.length;
+}
+
+function decorateDropIndicator(clientY) {
+  clearDropIndicators();
+  if (!composerState.blocks.length) {
+    emptyState.classList.add("drop-target");
+    return;
+  }
+  const index = computeDropIndex(clientY);
+  const blockEls = blocksRoot.querySelectorAll(".block");
+  if (index >= blockEls.length) {
+    blockEls[blockEls.length - 1].classList.add("drop-after");
+  } else {
+    blockEls[index].classList.add("drop-before");
+  }
+}
+
+function isInventoryDrag(e) {
+  return Array.from(e.dataTransfer.types).includes("application/x-pk-inventory");
+}
+
+function handleDragOver(e) {
+  if (!isInventoryDrag(e)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  decorateDropIndicator(e.clientY);
+}
+
+function handleDrop(e) {
+  if (!isInventoryDrag(e)) return;
+  e.preventDefault();
+  clearDropIndicators();
+  let item;
+  try {
+    item = JSON.parse(e.dataTransfer.getData("application/x-pk-inventory"));
+  } catch {
+    return;
+  }
+  const index = composerState.blocks.length ? computeDropIndex(e.clientY) : 0;
+  addBlockAt(item, index);
+}
+
+const composerCanvas = document.querySelector(".composer-canvas");
+composerCanvas.addEventListener("dragover", handleDragOver);
+composerCanvas.addEventListener("drop", handleDrop);
+composerCanvas.addEventListener("dragleave", (e) => {
+  // Only clear when leaving the canvas entirely (not when crossing block
+  // boundaries inside it).
+  if (e.target === composerCanvas) clearDropIndicators();
+});
 
 // ---------------------------------------------------------------------------
 // v3.1 — URL share for compositions
