@@ -687,6 +687,7 @@
     </div>
     <div class="canvas-footer">
       <button type="button" id="composer-clear" class="secondary">Clear</button>
+      <button type="button" id="composer-share" class="secondary">Copy share link</button>
       <button type="button" id="composer-copy">Copy README markdown</button>
     </div>
   </section>
@@ -1763,6 +1764,53 @@ copyComposerBtn.addEventListener("click", () => {
 
 clearComposerBtn.addEventListener("click", clearComposition);
 
+// ---------------------------------------------------------------------------
+// v3.1 — URL share for compositions
+// Encode: base64(JSON of {blocks}) → #c=<b64>
+// On load, if #c= present, switch to Compose view and replace draft.
+// Coexists with Cards view's #card= hash; the two never collide because they
+// use different keys.
+// ---------------------------------------------------------------------------
+
+const COMPOSE_HASH_KEY = "c";
+
+function encodeCompositionToB64() {
+  const json = JSON.stringify({ v: 1, blocks: composerState.blocks });
+  // btoa needs Latin-1; route through UTF-8-safe path.
+  return btoa(unescape(encodeURIComponent(json)));
+}
+
+function decodeCompositionFromB64(b64) {
+  try {
+    const json = decodeURIComponent(escape(atob(b64)));
+    const parsed = JSON.parse(json);
+    if (!parsed || !Array.isArray(parsed.blocks)) return null;
+    return parsed.blocks;
+  } catch {
+    return null;
+  }
+}
+
+function makeShareLink() {
+  const b64 = encodeCompositionToB64();
+  return `${window.location.origin}/#${COMPOSE_HASH_KEY}=${b64}`;
+}
+
+function readSharedComposition() {
+  const raw = window.location.hash.replace(/^#/, "");
+  if (!raw) return null;
+  const params = new URLSearchParams(raw);
+  const b64 = params.get(COMPOSE_HASH_KEY);
+  if (!b64) return null;
+  return decodeCompositionFromB64(b64);
+}
+
+const shareComposerBtn = document.getElementById("composer-share");
+shareComposerBtn.addEventListener("click", () => {
+  if (!composerState.blocks.length) return;
+  copyText(makeShareLink(), shareComposerBtn);
+});
+
 function switchView(view) {
   if (view === "templates") {
     if (!templatesBuilt) {
@@ -1798,12 +1846,22 @@ viewComposeBtn.addEventListener("click", () => switchView("compose"));
 
 buildCardList();
 buildInventory();
-loadComposerDraft();
+
+const sharedBlocks = readSharedComposition();
+if (sharedBlocks) {
+  composerState.blocks = sharedBlocks;
+  composerState.selectedIndex = sharedBlocks.length ? 0 : -1;
+  saveComposerDraft();
+} else {
+  loadComposerDraft();
+}
 renderBlocks();
 renderInspector();
 
 const initialState = readHashState();
-if (initialState) {
+if (sharedBlocks) {
+  switchView("compose");
+} else if (initialState) {
   selectCard(initialState.card, initialState.values);
 } else {
   selectCard("stats");
