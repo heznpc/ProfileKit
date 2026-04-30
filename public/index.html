@@ -1748,8 +1748,12 @@ function persistAndRender() {
 // pane (full inline contenteditable on SVG <text> is browser-flaky;
 // click-to-jump is the v3.4 MVP, real text-in-canvas edit lives in v3.4.x).
 
-async function injectHeroSvg(container, slots, blockIndex) {
-  const url = buildCardUrlForCompose("hero", slots);
+// Card types that ship inline-edit hooks (data-cas-target attributes in
+// their SVG output) — render as inline <svg> in the canvas instead of <img>.
+const INLINE_EDIT_CARDS = new Set(["hero", "stats", "languages", "pin"]);
+
+async function injectCardSvg(container, cardType, slots, blockIndex) {
+  const url = buildCardUrlForCompose(cardType, slots);
   let svgText;
   try {
     const res = await fetch(url);
@@ -1769,18 +1773,20 @@ async function injectHeroSvg(container, slots, blockIndex) {
   }
   container.innerHTML = "";
   container.appendChild(svg);
-  attachCasHandlers(svg, blockIndex);
+  attachCasHandlers(svg, cardType, blockIndex);
 }
 
-function attachCasHandlers(svg, blockIndex) {
+function attachCasHandlers(svg, cardType, blockIndex) {
   svg.querySelectorAll("[data-cas-target]").forEach((target) => {
     const slotName = target.getAttribute("data-cas-target");
     target.addEventListener("click", (e) => {
       e.stopPropagation();
       selectBlock(blockIndex);
-      if (slotName === "bg") {
+      // bg picker is hero-specific. Everything else is text-ish — focus the
+      // matching slot input in the right pane and let the user edit there.
+      if (cardType === "hero" && slotName === "bg") {
         showBgPopover(target, blockIndex);
-      } else if (slotName === "name" || slotName === "subtitle") {
+      } else {
         focusSlotInput(slotName);
       }
     });
@@ -1940,12 +1946,11 @@ function renderBlocks() {
     body.className = "block-body";
 
     if (block.type === "card") {
-      if (block.card_type === "hero") {
-        // v3.4 — hero alone gets inline-SVG so click-to-edit hit regions
-        // can attach. Other card types still render as <img> (no inline
-        // editing on them yet).
+      if (INLINE_EDIT_CARDS.has(block.card_type)) {
+        // Cards that emit data-cas-target hooks render inline so click-to-edit
+        // handlers can attach. Other card types still render as <img>.
         body.innerHTML = '<div class="hero-loading">loading…</div>';
-        injectHeroSvg(body, block.slots, index);
+        injectCardSvg(body, block.card_type, block.slots, index);
       } else {
         const img = document.createElement("img");
         img.src = buildCardUrlForCompose(block.card_type, block.slots);
