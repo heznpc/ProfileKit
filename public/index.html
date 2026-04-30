@@ -1532,10 +1532,11 @@ const COMPOSER_SLOTS = {
     label: "Hero card",
     group: "Blog Layout",
     slots: [
-      { name: "name",     type: "text", default: "heznpc" },
-      { name: "subtitle", type: "text", default: "Building things that ship" },
-      { name: "bg",       type: "enum", options: ["gradient", "wave", "grid", "particles"], default: "gradient" },
-      { name: "theme",    type: "enum", options: COMPOSER_THEMES, default: "dark" },
+      { name: "name",     type: "text",  default: "heznpc" },
+      { name: "subtitle", type: "text",  default: "Building things that ship" },
+      { name: "bg",       type: "enum",  options: ["gradient", "wave", "grid", "particles"], default: "gradient" },
+      { name: "theme",    type: "enum",  options: COMPOSER_THEMES, default: "dark" },
+      { name: "color",    type: "color" },
     ],
   },
   stats: {
@@ -2043,6 +2044,38 @@ function renderInspector() {
         block.slots[slot.name] = input.value === "" ? slot.default : Number(input.value);
         persistAndRender();
       });
+    } else if (slot.type === "color") {
+      // Gated picker: a checkbox decides whether the value flows into the URL.
+      // Without the gate, a default-black HTML color input would silently
+      // override every theme's accent the moment the inspector mounts.
+      const wrap = document.createElement("div");
+      wrap.className = "color-wrap";
+      const toggle = document.createElement("input");
+      toggle.type = "checkbox";
+      toggle.checked = !!block.slots[slot.name];
+      const swatch = document.createElement("input");
+      swatch.type = "color";
+      swatch.value = "#" + ((block.slots[slot.name] ?? slot.default ?? "58a6ff").replace(/^#/, ""));
+      wrap.appendChild(toggle);
+      wrap.appendChild(swatch);
+
+      const apply = () => {
+        if (toggle.checked) {
+          block.slots[slot.name] = swatch.value.replace(/^#/, "");
+        } else {
+          delete block.slots[slot.name];
+        }
+        persistAndRender();
+      };
+      toggle.addEventListener("change", apply);
+      swatch.addEventListener("input", () => {
+        toggle.checked = true;
+        apply();
+      });
+
+      field.appendChild(wrap);
+      slotForm.appendChild(field);
+      continue;
     } else if (slot.type === "bool") {
       // Render as a checkbox row instead of a labeled column.
       field.className = "field-row";
