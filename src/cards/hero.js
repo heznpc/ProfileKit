@@ -139,15 +139,15 @@ function renderHeroCard({
       animate, animateTransform { display: none; }
     }
   </style>
-  <g clip-path="url(#hero-clip)" data-cas-target="bg">
+  <g clip-path="url(#hero-clip)">
     <rect x="0" y="0" width="${w}" height="${h}" fill="${colors.bg}"/>
     ${bgContent}
   </g>
   <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"
         fill="none" stroke="${colors.border}" stroke-opacity="${hideBorder ? 0 : 1}"/>
-  <text x="${tx}" y="${nameY}" text-anchor="${anchor}" class="hero-name" data-cas-target="name">${safeName}</text>
+  <text x="${tx}" y="${nameY}" text-anchor="${anchor}" class="hero-name">${safeName}</text>
   ${safeSub ? `<rect class="hero-bar" x="${accentBarX}" y="${accentBarY}" width="${accentBarW}" height="3" rx="1.5" fill="${c}"/>` : ""}
-  ${safeSub ? `<text x="${tx}" y="${subY}" text-anchor="${anchor}" class="hero-sub" data-cas-target="subtitle">${safeSub}</text>` : ""}
+  ${safeSub ? `<text x="${tx}" y="${subY}" text-anchor="${anchor}" class="hero-sub">${safeSub}</text>` : ""}
 </svg>`;
 }
 
