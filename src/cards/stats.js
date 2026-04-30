@@ -47,7 +47,7 @@ function renderDefault(stats, visible, { colors, hideBorder, hideTitle, hideBar,
     })
     .join("\n  ");
 
-  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: rows, font });
+  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: rows, font, titleTarget: "username" });
 }
 
 function renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font }) {
@@ -79,7 +79,7 @@ function renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar,
     })
     .join("\n  ");
 
-  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: cells, font });
+  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: cells, font, titleTarget: "username" });
 }
 
 module.exports = { renderStatsCard };
