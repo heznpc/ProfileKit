@@ -479,6 +479,74 @@
       color: var(--accent);
     }
 
+    /* v3.4 — inline direct-manipulation hooks on hero card preview */
+    .block-body .hero-svg-host { display: contents; }
+    .block-body svg [data-cas-target] {
+      cursor: pointer;
+    }
+    .block-body svg [data-cas-target]:hover {
+      opacity: 0.85;
+    }
+    .block-body svg [data-cas-target="name"]:hover,
+    .block-body svg [data-cas-target="subtitle"]:hover {
+      opacity: 1;
+      text-decoration: underline;
+      text-decoration-color: var(--accent);
+      text-decoration-thickness: 2px;
+    }
+    .block-body .hero-loading {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 24px;
+    }
+
+    .cas-popover {
+      position: fixed;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px;
+      min-width: 160px;
+      z-index: 100;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    }
+    .cas-popover .cas-popover-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      padding: 4px 8px 6px;
+    }
+    .cas-popover button {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .cas-popover button:hover { background: var(--surface); }
+    .cas-popover button.active {
+      background: var(--accent);
+      color: #0d1117;
+      font-weight: 600;
+    }
+
+    .composer-inspector .field input.flash,
+    .composer-inspector .field select.flash {
+      animation: flashHighlight 1.2s ease-out;
+    }
+    @keyframes flashHighlight {
+      0%   { box-shadow: 0 0 0 2px var(--accent); }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+
     .composer-canvas {
       padding: 28px 32px;
       display: flex;
@@ -1667,8 +1735,133 @@ function clearComposition() {
 
 function persistAndRender() {
   saveComposerDraft();
+  closeAllPopovers();
   renderBlocks();
   renderInspector();
+}
+
+// v3.4 — inline direct-manipulation
+//
+// Hero card blocks render as inline SVG so we can attach click handlers to
+// elements marked with data-cas-target. bg → small popover with the 4 bg
+// options. name / subtitle → focus the corresponding slot input in the right
+// pane (full inline contenteditable on SVG <text> is browser-flaky;
+// click-to-jump is the v3.4 MVP, real text-in-canvas edit lives in v3.4.x).
+
+async function injectHeroSvg(container, slots, blockIndex) {
+  const url = buildCardUrlForCompose("hero", slots);
+  let svgText;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`fetch ${res.status}`);
+    svgText = await res.text();
+  } catch (err) {
+    container.innerHTML = `<div class="hero-loading">preview unavailable: ${err.message}</div>`;
+    return;
+  }
+  // Bail if the block was removed or replaced while the request was in flight.
+  if (!container.isConnected) return;
+  const parsed = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  const svg = parsed.documentElement;
+  if (!svg || svg.nodeName.toLowerCase() !== "svg") {
+    container.innerHTML = `<div class="hero-loading">preview unavailable: malformed SVG</div>`;
+    return;
+  }
+  container.innerHTML = "";
+  container.appendChild(svg);
+  attachCasHandlers(svg, blockIndex);
+}
+
+function attachCasHandlers(svg, blockIndex) {
+  svg.querySelectorAll("[data-cas-target]").forEach((target) => {
+    const slotName = target.getAttribute("data-cas-target");
+    target.addEventListener("click", (e) => {
+      e.stopPropagation();
+      selectBlock(blockIndex);
+      if (slotName === "bg") {
+        showBgPopover(target, blockIndex);
+      } else if (slotName === "name" || slotName === "subtitle") {
+        focusSlotInput(slotName);
+      }
+    });
+  });
+}
+
+function showBgPopover(targetEl, blockIndex) {
+  closeAllPopovers();
+  const block = composerState.blocks[blockIndex];
+  if (!block || block.card_type !== "hero") return;
+
+  const popover = document.createElement("div");
+  popover.className = "cas-popover";
+  const title = document.createElement("div");
+  title.className = "cas-popover-title";
+  title.textContent = "Background";
+  popover.appendChild(title);
+
+  const options = ["gradient", "wave", "grid", "particles"];
+  const current = block.slots.bg;
+  for (const opt of options) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = opt;
+    if (opt === current) btn.classList.add("active");
+    btn.addEventListener("click", () => {
+      block.slots.bg = opt;
+      closeAllPopovers();
+      persistAndRender();
+    });
+    popover.appendChild(btn);
+  }
+
+  // Position below the clicked region; clamp to viewport.
+  const rect = targetEl.getBoundingClientRect();
+  document.body.appendChild(popover);
+  const pw = popover.offsetWidth;
+  const ph = popover.offsetHeight;
+  let left = rect.left + rect.width / 2 - pw / 2;
+  let top = rect.bottom + 8;
+  if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+  if (left < 8) left = 8;
+  if (top + ph > window.innerHeight - 8) top = rect.top - ph - 8;
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+
+  // Defer outside-click registration so this same click doesn't immediately
+  // close the popover we just opened.
+  setTimeout(() => {
+    const dismiss = (e) => {
+      if (!popover.contains(e.target)) closeAllPopovers();
+    };
+    popover._dismiss = dismiss;
+    document.addEventListener("click", dismiss);
+  }, 0);
+}
+
+function closeAllPopovers() {
+  document.querySelectorAll(".cas-popover").forEach((p) => {
+    if (p._dismiss) document.removeEventListener("click", p._dismiss);
+    p.remove();
+  });
+}
+
+function focusSlotInput(slotName) {
+  const field = slotForm.querySelector(`label`);
+  // The slot inspector renders fields in declaration order. Find the input
+  // whose preceding label text matches the slot name.
+  const labels = slotForm.querySelectorAll("label");
+  for (const lbl of labels) {
+    if (lbl.textContent.trim() === slotName) {
+      const input = lbl.parentElement.querySelector("input, select, textarea");
+      if (input) {
+        input.focus();
+        if (input.select) input.select();
+        input.classList.add("flash");
+        setTimeout(() => input.classList.remove("flash"), 1200);
+      }
+      return;
+    }
+  }
 }
 
 function buildCardUrlForCompose(cardType, slots, themeOverride) {
@@ -1747,11 +1940,19 @@ function renderBlocks() {
     body.className = "block-body";
 
     if (block.type === "card") {
-      const img = document.createElement("img");
-      img.src = buildCardUrlForCompose(block.card_type, block.slots);
-      img.alt = labelText;
-      img.loading = "lazy";
-      body.appendChild(img);
+      if (block.card_type === "hero") {
+        // v3.4 — hero alone gets inline-SVG so click-to-edit hit regions
+        // can attach. Other card types still render as <img> (no inline
+        // editing on them yet).
+        body.innerHTML = '<div class="hero-loading">loading…</div>';
+        injectHeroSvg(body, block.slots, index);
+      } else {
+        const img = document.createElement("img");
+        img.src = buildCardUrlForCompose(block.card_type, block.slots);
+        img.alt = labelText;
+        img.loading = "lazy";
+        body.appendChild(img);
+      }
     } else if (block.type === "markdown") {
       const ta = document.createElement("textarea");
       ta.value = block.content;
