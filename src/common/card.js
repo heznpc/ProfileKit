@@ -45,13 +45,16 @@ function buildAccentStops(colors) {
     .join("\n      ");
 }
 
-function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideTitle, hideBar, borderRadius, body, font }) {
+function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideTitle, hideBar, borderRadius, body, font, titleTarget }) {
   const rx = borderRadius != null ? borderRadius : 6;
   const { embedCss, family } = resolveFont(font);
 
+  // titleTarget is an optional data-cas-target hook for the playground
+  // composer's inline-edit feature. Pure HTML attribute, no visual effect.
+  const titleAttr = titleTarget ? ` data-cas-target="${titleTarget}"` : "";
   const titleMarkup = hideTitle
     ? ""
-    : `<text x="25" y="35" class="header">${escapeHtml(title)}</text>`;
+    : `<text x="25" y="35" class="header"${titleAttr}>${escapeHtml(title)}</text>`;
 
   const accentStops = buildAccentStops(colors);
 

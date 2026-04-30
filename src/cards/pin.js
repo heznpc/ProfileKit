@@ -55,19 +55,22 @@ function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWi
   const height = footerY + 30;
 
   const nameMarkup = `
-    <g transform="translate(25, ${nameY})">
+    <g transform="translate(25, ${nameY})" data-cas-target="repo">
       <svg x="0" y="-12" viewBox="0 0 16 16" width="16" height="16" fill="${colors.icon}">
         ${icons.repos}
       </svg>
       <text x="22" y="0" class="header">${escapeHtml(repo.name)}</text>
     </g>`;
 
-  const descMarkup = descLines
+  const descLineMarkup = descLines
     .map((line, i) => {
       const y = descStartY + i * descLineHeight;
       return `<text x="25" y="${y}" class="stat-label">${escapeHtml(line)}</text>`;
     })
-    .join("\n    ");
+    .join("\n      ");
+  const descMarkup = descLines.length
+    ? `<g data-cas-target="description">\n      ${descLineMarkup}\n    </g>`
+    : "";
 
   // Layout the footer left-to-right but reserve space for stars/forks first so
   // a long language name gets truncated rather than pushing them off-card.
