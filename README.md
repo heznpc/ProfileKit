@@ -34,6 +34,18 @@ One service, many contexts. The same card renders in your GitHub README, dev.to 
 
 A community gallery for sharing single-card presets and adopting others' designs as a starting point is in progress — see Roadmap below.
 
+## About this project
+
+**Currently implemented.** 28 SVG card endpoints (`/api/*`), 17 built-in themes plus gist-hosted custom palettes via `theme_url=`, five bundled variable fonts, `/api/stack` composition with namespaced child IDs, a live playground at [profilekit.vercel.app](https://profilekit.vercel.app), and an MCP wrapper at [`@heznpc/profilekit-mcp`](https://www.npmjs.com/package/@heznpc/profilekit-mcp). Zero runtime dependencies, 30-minute CDN cache, deployed on Vercel.
+
+**Planned.** A single-card preset gallery at `/gallery` — adopt someone else's design URL as a starting point, then tweak parameters in the editor. Cross-agent preset compile (one preset → Claude Code, Cursor, Codex CLI configs). `theme_url=` adoption across the rest of the catalog.
+
+**Design intent.** *No ranking, composable presentation.* Each card is a parameter-only URL — every visual property exposed as a query string so the same endpoint renders in a GitHub README, a dev.to bio, a Hashnode header, or a slide cover with no template forking. The gallery is for *adoption*, not voting: you start from someone else's preset and edit it; we do not show which preset is "most popular." Pure SVG with CSS / SMIL keeps animations alive inside GitHub's image proxy and removes the JavaScript attack surface.
+
+**Non-goals.** No ratings. No rankings. No leaderboards. No remix lineage / fork trees. No raster fallback for upload-only platforms (LinkedIn, Discord, X, Medium) — export to PNG yourself if you need one; we will not pretend the SVG works there. No tracking pixels, no per-view analytics.
+
+**Redacted.** None.
+
 <p align="center">
   <img src="https://profilekit.vercel.app/api/divider?style=wave&width=900" alt="" />
 </p>
