@@ -13,16 +13,19 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # engines is ">=22 <25". Node 22 is Maintenance LTS (EOL 2027-04-30);
+        # Node 24 is Active LTS. Self-hosters on either should get CI signal.
+        node-version: ['22', '24']
 
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
-          # Node 20 EOL'd 2026-04-30. 22 is the current Maintenance LTS
-          # (EOL 2027-04-30); 24 is Active LTS. We pin to the LTS line we
-          # test against.
-          node-version: '22'
+          node-version: ${{ matrix.node-version }}
 
       # tests/ uses the node:test runner with zero deps — no install needed.
       - name: Syntax check

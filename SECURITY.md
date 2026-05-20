@@ -26,13 +26,12 @@ Please do **not** open a public issue for security reports.
 
 | Stage | Target |
 |---|---|
-| Acknowledgement | 7 days |
-| Initial assessment | 14 days |
-| Fix or mitigation plan | 30 days |
+| Acknowledgement | within 7 days |
 | Coordinated disclosure | up to 90 days from report |
 
-If a fix lands before 90 days, disclosure happens at fix time. If a fix
-needs more than 90 days (e.g., upstream dependency), we coordinate a longer
+Single-maintainer project — only the two endpoints above are committed.
+If a fix lands earlier, disclosure happens at fix time. If a fix needs
+more than 90 days (e.g., upstream dependency), we coordinate a longer
 window with the reporter.
 
 ## Supported versions
