@@ -1,0 +1,20 @@
+# Dependabot v2 — github-actions ecosystem only.
+#
+# ProfileKit has zero runtime/dev npm dependencies (see package.json: no
+# `dependencies` or `devDependencies` keys), so the npm ecosystem has no
+# nodes to scan. We only track GitHub Actions versions here — actions
+# like checkout/setup-node release majors roughly yearly and we want
+# alerts when a deprecation window opens.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      # Roll non-major action updates into a single PR each month.
+      actions-minor:
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(actions)"
