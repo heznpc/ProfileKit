@@ -1,0 +1,1147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ProfileKit — v3 Composer (design mockup)</title>
+  <meta name="description" content="Clickable design mockup for v3 CAS-style README composer (MVP scope C)." />
+  <style>
+    /* Tokens copied from public/index.html so this mockup reads as the same surface. */
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-2: #1c222b;
+      --surface-3: #232a35;
+      --border: #21262d;
+      --border-strong: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --muted-2: #6e7681;
+      --accent: #58a6ff;
+      --accent-soft: rgba(88, 166, 255, 0.12);
+      --warn: #d29922;
+      --danger: #f85149;
+      --radius: 8px;
+      --radius-sm: 5px;
+      --pad: 16px;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, kbd { font-family: var(--mono); font-size: 12.5px; }
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    header {
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+    }
+    header h1 span { color: var(--accent); }
+    header .tagline {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .tabs button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 12.5px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tabs button.active {
+      background: var(--surface-2);
+      color: var(--text);
+      box-shadow: 0 0 0 1px var(--border-strong) inset;
+    }
+    .scope-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(88,166,255,0.25);
+      letter-spacing: 0.3px;
+      font-weight: 600;
+    }
+
+    /* ── Main 3-pane ─────────────────────────────────────────────────── */
+    main {
+      display: grid;
+      grid-template-columns: 240px 1fr 340px;
+      min-height: calc(100vh - 78px);
+    }
+    @media (max-width: 1080px) {
+      main { grid-template-columns: 200px 1fr; }
+      .inspector { grid-column: 1 / -1; border-left: none; border-top: 1px solid var(--border); }
+    }
+    @media (max-width: 720px) {
+      main { grid-template-columns: 1fr; }
+      .inventory { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    /* ── Inventory (left) ────────────────────────────────────────────── */
+    .inventory {
+      border-right: 1px solid var(--border);
+      padding: 18px 12px;
+      overflow-y: auto;
+      max-height: calc(100vh - 78px);
+    }
+    .inventory h2 {
+      margin: 0 0 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+    .inventory .hint {
+      margin: 0 0 14px 12px;
+      font-size: 11.5px;
+      color: var(--muted-2);
+    }
+    .group { margin-bottom: 18px; }
+    .group h3 {
+      margin: 0 0 4px 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+    .item-list { list-style: none; margin: 0; padding: 0; }
+    .item-list button {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 6px 12px;
+      font: inherit;
+      font-size: 13px;
+      border-radius: 5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .item-list button:hover { background: var(--surface); }
+    .item-list .label { flex: 1; }
+    .item-list .badge {
+      font-size: 9.5px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted-2);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .item-list .badge.live {
+      background: rgba(88,166,255,0.12);
+      color: var(--accent);
+    }
+    .item-list .badge.soon {
+      background: rgba(210,153,34,0.12);
+      color: var(--warn);
+    }
+
+    /* ── Canvas (center) ─────────────────────────────────────────────── */
+    .canvas {
+      padding: 22px 28px 100px;
+      overflow-y: auto;
+      max-height: calc(100vh - 78px);
+      display: flex;
+      flex-direction: column;
+    }
+    .canvas h2 {
+      margin: 0 0 4px 0;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+    .canvas .canvas-hint {
+      margin: 0 0 18px 0;
+      color: var(--muted-2);
+      font-size: 12.5px;
+    }
+    .empty-state {
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .empty-state strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .blocks { display: flex; flex-direction: column; gap: 12px; }
+    .block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 100ms ease, box-shadow 100ms ease;
+      cursor: pointer;
+    }
+    .block:hover { border-color: var(--border-strong); }
+    .block.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+    .block-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-2);
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .block-header .type-pill {
+      font-size: 10.5px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--surface-3);
+      color: var(--text);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .block-header .type-pill.markdown { color: var(--warn); }
+    .block-header .summary {
+      flex: 1;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11.5px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .block-actions { display: flex; gap: 4px; }
+    .block-actions button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .block-actions button:hover { background: var(--surface-3); color: var(--text); }
+    .block-actions button.danger:hover { color: var(--danger); }
+    .block-body {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100px;
+      background:
+        repeating-linear-gradient(45deg,
+          transparent 0 8px,
+          rgba(255,255,255,0.015) 8px 16px);
+    }
+    .block-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      display: block;
+    }
+    .block-body .markdown-preview {
+      width: 100%;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--muted);
+      white-space: pre-wrap;
+      padding: 4px 8px;
+      min-height: 40px;
+    }
+    .block-body .placeholder {
+      color: var(--muted-2);
+      font-size: 12px;
+      text-align: center;
+    }
+    .block-body .placeholder kbd {
+      background: var(--surface-3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: var(--text);
+    }
+
+    .canvas-footer {
+      margin-top: 24px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .canvas-footer .spacer { flex: 1; }
+    .canvas-footer .save-status {
+      font-size: 11.5px;
+      color: var(--muted-2);
+      font-family: var(--mono);
+    }
+    button.primary, button.secondary {
+      font: inherit;
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    button.primary {
+      background: var(--accent);
+      color: #0d1117;
+      font-weight: 600;
+    }
+    button.primary:hover { filter: brightness(1.1); }
+    button.secondary {
+      background: var(--surface);
+      border-color: var(--border-strong);
+      color: var(--text);
+    }
+    button.secondary:hover { background: var(--surface-2); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Inspector (right) ───────────────────────────────────────────── */
+    .inspector {
+      border-left: 1px solid var(--border);
+      padding: 22px 20px;
+      overflow-y: auto;
+      max-height: calc(100vh - 78px);
+      background: linear-gradient(to bottom, var(--bg), var(--surface) 80%);
+    }
+    .inspector h3 {
+      margin: 0 0 6px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+    .inspector .selected-label {
+      margin: 0 0 16px 0;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .inspector .selected-label strong {
+      color: var(--text);
+      font-size: 13px;
+    }
+    .inspector .empty {
+      color: var(--muted-2);
+      font-size: 12.5px;
+      padding: 24px 0;
+      border-top: 1px dashed var(--border);
+      text-align: center;
+    }
+    .slot-row { margin-bottom: 14px; }
+    .slot-row label {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .slot-row .slot-meta {
+      font-size: 11px;
+      color: var(--muted-2);
+      margin-top: 4px;
+      font-family: var(--mono);
+    }
+    .slot-row input[type="text"],
+    .slot-row input[type="number"],
+    .slot-row select,
+    .slot-row textarea {
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border-strong);
+      border-radius: 5px;
+      padding: 7px 9px;
+      font: inherit;
+      font-size: 13px;
+    }
+    .slot-row textarea {
+      font-family: var(--mono);
+      font-size: 12px;
+      min-height: 120px;
+      resize: vertical;
+    }
+    .slot-row select { appearance: none; padding-right: 26px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%238b949e' d='M2 4l4 4 4-4z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+    .slot-row input:focus,
+    .slot-row select:focus,
+    .slot-row textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+    .deferred-note {
+      margin-top: 16px;
+      padding: 10px 12px;
+      background: rgba(210,153,34,0.08);
+      border: 1px solid rgba(210,153,34,0.25);
+      border-radius: 5px;
+      font-size: 11.5px;
+      color: var(--warn);
+      line-height: 1.5;
+    }
+    .global-controls {
+      border-top: 1px dashed var(--border);
+      margin-top: 22px;
+      padding-top: 16px;
+    }
+    .global-controls h4 {
+      margin: 0 0 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    /* ── Toast ──────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface-2);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms ease, transform 150ms ease;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Markdown output modal ──────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      width: min(680px, 92vw);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h3 {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .modal-header button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+    .modal-body {
+      padding: 16px 18px;
+    }
+    .modal-body textarea {
+      width: 100%;
+      min-height: 240px;
+      background: var(--bg);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.55;
+      resize: vertical;
+    }
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    /* ── Sidebar legend at bottom of inventory ───────────────────────── */
+    .legend {
+      margin-top: 24px;
+      padding: 12px;
+      border-top: 1px dashed var(--border);
+      font-size: 11px;
+      color: var(--muted-2);
+      line-height: 1.6;
+    }
+    .legend code { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Profile<span>Kit</span></h1>
+    <p class="tagline">v3 Composer — design mockup (CAS-style README composer)</p>
+  </div>
+  <div class="tabs">
+    <button>Cards</button>
+    <button>Templates</button>
+    <button class="active">Compose</button>
+  </div>
+  <span class="scope-pill">MVP scope C · hero only</span>
+</header>
+
+<main>
+  <!-- ── INVENTORY ───────────────────────────────────────────────────── -->
+  <aside class="inventory">
+    <h2>Inventory</h2>
+    <p class="hint">Click an item to add it as a block.</p>
+    <div id="inventory-root"></div>
+    <div class="legend">
+      <strong style="color: var(--muted);">Legend</strong><br>
+      <span class="badge" style="background: rgba(88,166,255,0.12); color: var(--accent); padding:1px 6px; border-radius:999px; font-size:9.5px; font-weight:700;">LIVE</span>
+      slot-defined, editable now.<br>
+      <span class="badge" style="background: rgba(210,153,34,0.12); color: var(--warn); padding:1px 6px; border-radius:999px; font-size:9.5px; font-weight:700;">v3.2</span>
+      renders with defaults; slot inspector lands later.
+    </div>
+  </aside>
+
+  <!-- ── CANVAS ──────────────────────────────────────────────────────── -->
+  <section class="canvas">
+    <h2>Composition</h2>
+    <p class="canvas-hint">Reorder with ↑↓. Click a block to edit its slots on the right.</p>
+
+    <div id="empty-state" class="empty-state">
+      <strong>No blocks yet</strong>
+      Click an inventory item on the left to start composing.<br>
+      Try <kbd style="background:var(--surface-3); padding:2px 6px; border-radius:3px; color:var(--text);">hero</kbd> first — it's the MVP scope.
+    </div>
+
+    <div id="blocks" class="blocks" hidden></div>
+
+    <div class="canvas-footer">
+      <button class="secondary" id="btn-clear">Clear</button>
+      <button class="secondary" id="btn-share" disabled title="v3.1 — URL-encoded share links">Copy share link</button>
+      <span class="spacer"></span>
+      <span class="save-status" id="save-status">Saved locally · 0 blocks</span>
+      <button class="primary" id="btn-copy">Copy README markdown</button>
+    </div>
+  </section>
+
+  <!-- ── INSPECTOR ───────────────────────────────────────────────────── -->
+  <aside class="inspector">
+    <h3>Slot inspector</h3>
+    <p class="selected-label" id="selected-label">No block selected</p>
+    <form id="slot-form" onsubmit="return false;">
+      <div class="empty">Select a card or markdown block to edit its slots.</div>
+    </form>
+
+    <div class="global-controls">
+      <h4>Composition defaults</h4>
+      <p style="color: var(--muted-2); font-size: 11.5px; margin: 0 0 12px;">
+        Applied to any new block. Today's playground forces you to re-pick theme + font on every card; the composer remembers them.
+      </p>
+      <div class="slot-row">
+        <label>theme</label>
+        <select id="default-theme"></select>
+        <div class="slot-meta">→ ?theme=… on every new card</div>
+      </div>
+      <div class="slot-row">
+        <label>font</label>
+        <select id="default-font"></select>
+        <div class="slot-meta">→ ?font=… on every new card</div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast">Copied</div>
+
+<div class="modal-backdrop" id="markdown-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>README markdown</h3>
+      <button id="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin: 0 0 10px; font-size: 12px; color: var(--muted);">
+        Each card is wrapped in a <code>&lt;picture&gt;</code> with a <code>prefers-color-scheme</code> source pair so your README respects the reader's OS theme. Markdown blocks pass through verbatim.
+      </p>
+      <textarea id="markdown-output" readonly></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="secondary" id="modal-cancel">Close</button>
+      <button class="primary" id="modal-copy">Copy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================================================
+// v3 Composer — design mockup
+//
+// Implements the data model from docs/v3-cas-spec.md (MVP scope C):
+//   - Card slot declarations (hero is "live"; others use preset defaults
+//     and are flagged as v3.2)
+//   - Block list with reorder / remove / select
+//   - Slot inspector for the selected block
+//   - Composition defaults (theme/font) that bridge across cards
+//   - Markdown serialization with <picture> dark/light pair
+//   - localStorage persistence under "profilekit.composition.draft"
+//
+// Live preview pulls SVG from https://profilekit.vercel.app/api/<endpoint>
+// — same surface as the production playground.
+// =============================================================================
+
+const API_BASE = "https://profilekit.vercel.app/api";
+
+// ── Theme pairs ────────────────────────────────────────────────────────────
+// Used by the markdown <picture> serializer to pick a sensible light variant
+// for any chosen dark theme (and vice versa). Values must match the theme
+// names in src/common/themes.js.
+const THEME_PAIR = {
+  dark:               "light",
+  dark_dimmed:        "light",
+  tokyo_night:        "rose_pine_dawn",
+  nord:               "rose_pine_dawn",
+  gruvbox_dark:       "solarized_light",
+  catppuccin_mocha:   "catppuccin_latte",
+  dracula:            "rose_pine_dawn",
+  monokai:            "solarized_light",
+  one_dark:           "rose_pine_dawn",
+  kanagawa:           "rose_pine_dawn",
+  synthwave:          "solarized_light",
+  solarized_dark:     "solarized_light",
+  rose_pine:          "rose_pine_dawn",
+  // light themes pair to themselves on the "dark" slot (no-op pair)
+  light:              "dark",
+  catppuccin_latte:   "catppuccin_mocha",
+  solarized_light:    "solarized_dark",
+  rose_pine_dawn:     "rose_pine",
+};
+const ALL_THEMES = Object.keys(THEME_PAIR);
+const ALL_FONTS = ["", "inter", "space-grotesk", "jetbrains-mono", "ibm-plex-sans", "manrope"];
+
+// ── Slot declarations ─────────────────────────────────────────────────────
+// Spec says MVP-C exposes hero slots only. Other cards still render — they
+// just use their endpoint defaults until v3.2 ships their slot decl.
+const SLOT_DECLS = {
+  hero: {
+    bg:       { type: "enum",   options: ["gradient", "wave", "grid", "particles"], default: "wave" },
+    name:     { type: "text",   default: "Hi, I'm Ren" },
+    subtitle: { type: "text",   default: "I build small sharp tools" },
+    theme:    { type: "enum",   options: ALL_THEMES,                                  default: null /* ← inherits composition default */ },
+    font:     { type: "enum",   options: ALL_FONTS,                                   default: null },
+    width:    { type: "number", default: 1200, range: [400, 1600] },
+    height:   { type: "number", default: 280,  range: [120, 480]  },
+  },
+};
+
+// ── Inventory ─────────────────────────────────────────────────────────────
+const INVENTORY = [
+  {
+    group: "Composition",
+    items: [
+      { id: "markdown", label: "Markdown", desc: "Raw markdown text", type: "markdown", status: "live" },
+    ],
+  },
+  {
+    group: "Blog Layout",
+    items: [
+      { id: "hero",     label: "Hero",     desc: "Banner with name + bg",          type: "card", status: "live" },
+      { id: "section",  label: "Section",  desc: "Section header",                  type: "card", status: "soon" },
+      { id: "divider",  label: "Divider",  desc: "Visual separator",                type: "card", status: "soon" },
+      { id: "now",      label: "Now",      desc: "What I'm working on",             type: "card", status: "soon" },
+      { id: "timeline", label: "Timeline", desc: "Career / life timeline",          type: "card", status: "soon" },
+      { id: "tags",     label: "Tags",     desc: "Tech stack pills",                type: "card", status: "soon" },
+      { id: "toc",      label: "TOC",      desc: "Table of contents",               type: "card", status: "soon" },
+      { id: "quote",    label: "Quote",    desc: "Pull-quote block",                type: "card", status: "soon" },
+      { id: "posts",    label: "Posts",    desc: "Latest blog posts",               type: "card", status: "soon" },
+    ],
+  },
+  {
+    group: "Data",
+    items: [
+      { id: "stats",     label: "Stats",     desc: "GitHub stats",            type: "card", status: "soon" },
+      { id: "languages", label: "Languages", desc: "Top languages",           type: "card", status: "soon" },
+      { id: "pin",       label: "Pin",       desc: "Repository card",         type: "card", status: "soon" },
+      { id: "leetcode",  label: "LeetCode",  desc: "LeetCode stats",          type: "card", status: "soon" },
+      { id: "reviews",   label: "Reviews",   desc: "Code review stats",       type: "card", status: "soon" },
+      { id: "social",    label: "Social",    desc: "Social link strip",       type: "card", status: "soon" },
+    ],
+  },
+  {
+    group: "Animations",
+    items: [
+      { id: "typing",        label: "Typing",        desc: "Typewriter effect",          type: "card", status: "soon" },
+      { id: "wave",          label: "Wave",          desc: "Animated waves",             type: "card", status: "soon" },
+      { id: "terminal",      label: "Terminal",      desc: "Terminal animation",         type: "card", status: "soon" },
+      { id: "neon",          label: "Neon",          desc: "Neon sign text",             type: "card", status: "soon" },
+      { id: "glitch",        label: "Glitch",        desc: "Glitch text effect",         type: "card", status: "soon" },
+      { id: "matrix",        label: "Matrix",        desc: "Matrix rain",                type: "card", status: "soon" },
+      { id: "snake",         label: "Snake",         desc: "Snake on contribution grid", type: "card", status: "soon" },
+      { id: "equalizer",     label: "Equalizer",     desc: "Audio equalizer bars",       type: "card", status: "soon" },
+      { id: "heartbeat",     label: "Heartbeat",     desc: "Heartbeat trace",            type: "card", status: "soon" },
+      { id: "constellation", label: "Constellation", desc: "Star constellation",         type: "card", status: "soon" },
+      { id: "radar",         label: "Radar",         desc: "Radar sweep",                type: "card", status: "soon" },
+    ],
+  },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────
+const STORAGE_KEY = "profilekit.composition.draft";
+const initialState = loadState() || {
+  defaults: { theme: "tokyo_night", font: "space-grotesk" },
+  blocks: [],
+  selectedId: null,
+};
+const state = initialState;
+
+let blockIdCounter = state.blocks.reduce((m, b) => Math.max(m, b._id || 0), 0);
+function nextId() { return ++blockIdCounter; }
+
+// ── Persistence ───────────────────────────────────────────────────────────
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+  document.getElementById("save-status").textContent =
+    `Saved locally · ${state.blocks.length} block${state.blocks.length === 1 ? "" : "s"}`;
+}
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); }
+  catch (_) { return null; }
+}
+
+// ── URL building ──────────────────────────────────────────────────────────
+function buildCardUrl(block, themeOverride) {
+  const params = new URLSearchParams();
+  // Apply slot values (only the ones that have an explicit value — falsy null means "inherit").
+  const slots = block.slots || {};
+  for (const [k, v] of Object.entries(slots)) {
+    if (v === null || v === undefined || v === "") continue;
+    if (k === "theme" && themeOverride) continue; // overridden below
+    params.set(k, String(v));
+  }
+  // Composition defaults fill in theme/font if the slot didn't.
+  if (!params.has("theme")) params.set("theme", themeOverride || state.defaults.theme);
+  if (!params.has("font") && state.defaults.font) params.set("font", state.defaults.font);
+  return `${API_BASE}/${block.card_type}?${params.toString()}`;
+}
+
+// ── Markdown serialization ────────────────────────────────────────────────
+function blockToMarkdown(block) {
+  if (block.type === "markdown") {
+    return block.content || "";
+  }
+  // <picture> with dark/light theme pair so the README respects OS theme.
+  const userTheme = (block.slots && block.slots.theme) || state.defaults.theme;
+  const pairTheme = THEME_PAIR[userTheme] || userTheme;
+  const isUserDark = isDarkTheme(userTheme);
+  const darkUrl  = buildCardUrl(block, isUserDark ? userTheme : pairTheme);
+  const lightUrl = buildCardUrl(block, isUserDark ? pairTheme : userTheme);
+  const alt = `${block.card_type} card`;
+  return [
+    `<picture>`,
+    `  <source media="(prefers-color-scheme: dark)"  srcset="${darkUrl}">`,
+    `  <source media="(prefers-color-scheme: light)" srcset="${lightUrl}">`,
+    `  <img alt="${alt}" src="${darkUrl}">`,
+    `</picture>`,
+  ].join("\n");
+}
+function compositionToMarkdown() {
+  return state.blocks.map(blockToMarkdown).join("\n\n");
+}
+function isDarkTheme(name) {
+  // Cheap classifier — matches the conventional naming in src/common/themes.js.
+  return /(?:^|_)(dark|night|mocha|dracula|monokai|kanagawa|synthwave|nord|gruvbox|tokyo|rose_pine$|one_dark)/.test(name);
+}
+
+// ── Render: inventory ────────────────────────────────────────────────────
+function renderInventory() {
+  const root = document.getElementById("inventory-root");
+  root.innerHTML = INVENTORY.map(group => `
+    <div class="group">
+      <h3>${group.group}</h3>
+      <ul class="item-list">
+        ${group.items.map(item => `
+          <li>
+            <button data-item-id="${item.id}" data-item-type="${item.type}" title="${item.desc}">
+              <span class="label">${item.label}</span>
+              <span class="badge ${item.status}">${item.status === "live" ? "LIVE" : "v3.2"}</span>
+            </button>
+          </li>
+        `).join("")}
+      </ul>
+    </div>
+  `).join("");
+  root.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-item-id]");
+    if (!btn) return;
+    addBlock(btn.dataset.itemId, btn.dataset.itemType);
+  });
+}
+
+// ── Block ops ─────────────────────────────────────────────────────────────
+function addBlock(itemId, type) {
+  const id = nextId();
+  let block;
+  if (type === "markdown") {
+    block = { _id: id, type: "markdown", content: "## Foundation\n\nA short note about this section." };
+  } else {
+    const decl = SLOT_DECLS[itemId];
+    const slots = {};
+    if (decl) {
+      for (const [k, s] of Object.entries(decl)) {
+        if (s.default !== null && s.default !== undefined) slots[k] = s.default;
+      }
+    }
+    block = { _id: id, type: "card", card_type: itemId, slots };
+  }
+  state.blocks.push(block);
+  state.selectedId = id;
+  saveState();
+  renderBlocks();
+  renderInspector();
+}
+
+function removeBlock(id) {
+  const idx = state.blocks.findIndex(b => b._id === id);
+  if (idx < 0) return;
+  state.blocks.splice(idx, 1);
+  if (state.selectedId === id) state.selectedId = null;
+  saveState();
+  renderBlocks();
+  renderInspector();
+}
+
+function moveBlock(id, dir) {
+  const idx = state.blocks.findIndex(b => b._id === id);
+  if (idx < 0) return;
+  const j = idx + dir;
+  if (j < 0 || j >= state.blocks.length) return;
+  [state.blocks[idx], state.blocks[j]] = [state.blocks[j], state.blocks[idx]];
+  saveState();
+  renderBlocks();
+}
+
+function selectBlock(id) {
+  state.selectedId = id;
+  renderBlocks();
+  renderInspector();
+}
+
+// ── Render: blocks ───────────────────────────────────────────────────────
+function renderBlocks() {
+  const wrap = document.getElementById("blocks");
+  const empty = document.getElementById("empty-state");
+  if (state.blocks.length === 0) {
+    wrap.hidden = true;
+    empty.hidden = false;
+    return;
+  }
+  empty.hidden = true;
+  wrap.hidden = false;
+  wrap.innerHTML = state.blocks.map((b, i) => renderBlock(b, i)).join("");
+  wrap.querySelectorAll(".block").forEach(node => {
+    const id = Number(node.dataset.id);
+    node.addEventListener("click", e => {
+      // Ignore action button clicks
+      if (e.target.closest("button")) return;
+      selectBlock(id);
+    });
+    node.querySelector(".btn-up").addEventListener("click", () => moveBlock(id, -1));
+    node.querySelector(".btn-down").addEventListener("click", () => moveBlock(id, +1));
+    node.querySelector(".btn-remove").addEventListener("click", () => removeBlock(id));
+  });
+}
+function renderBlock(b, i) {
+  const isSel = b._id === state.selectedId;
+  const summary = b.type === "markdown"
+    ? `markdown · ${(b.content || "").split("\n")[0].slice(0, 60) || "(empty)"}`
+    : `${b.card_type} · ${shortParams(b)}`;
+  const body = b.type === "markdown"
+    ? `<div class="markdown-preview">${escapeHtml(b.content || "")}</div>`
+    : (SLOT_DECLS[b.card_type]
+        ? `<img loading="lazy" src="${buildCardUrl(b)}" alt="${b.card_type}">`
+        : `<div class="placeholder">
+            <strong style="color: var(--text); display:block; margin-bottom:6px;">${b.card_type}</strong>
+            Will render with endpoint defaults.<br>
+            Slot inspector lands in <kbd>v3.2</kbd>.
+          </div>`);
+  return `
+    <article class="block ${isSel ? "selected" : ""}" data-id="${b._id}">
+      <header class="block-header">
+        <span class="type-pill ${b.type}">${b.type === "markdown" ? "MD" : "CARD"}</span>
+        <span class="summary">${escapeHtml(summary)}</span>
+        <span class="block-actions">
+          <button class="btn-up"     title="Move up"   ${i === 0 ? "disabled" : ""}>↑</button>
+          <button class="btn-down"   title="Move down" ${i === state.blocks.length - 1 ? "disabled" : ""}>↓</button>
+          <button class="btn-remove danger" title="Remove">⊘</button>
+        </span>
+      </header>
+      <div class="block-body">${body}</div>
+    </article>
+  `;
+}
+function shortParams(b) {
+  const slots = b.slots || {};
+  const keys = ["name", "bg", "theme"];
+  const out = [];
+  for (const k of keys) {
+    if (slots[k] !== undefined && slots[k] !== null && slots[k] !== "") out.push(`${k}=${String(slots[k]).slice(0, 24)}`);
+  }
+  return out.join(" · ") || "(defaults)";
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+// ── Render: inspector ────────────────────────────────────────────────────
+function renderInspector() {
+  const label = document.getElementById("selected-label");
+  const form = document.getElementById("slot-form");
+
+  if (!state.selectedId) {
+    label.innerHTML = "No block selected";
+    form.innerHTML = `<div class="empty">Select a card or markdown block to edit its slots.</div>`;
+    return;
+  }
+  const b = state.blocks.find(x => x._id === state.selectedId);
+  if (!b) { label.textContent = "No block selected"; form.innerHTML = ""; return; }
+
+  if (b.type === "markdown") {
+    label.innerHTML = `<strong>Markdown block</strong> &nbsp;·&nbsp; raw passthrough`;
+    form.innerHTML = `
+      <div class="slot-row">
+        <label>content</label>
+        <textarea data-slot="content" placeholder="## Heading&#10;&#10;Body text…">${escapeHtml(b.content || "")}</textarea>
+        <div class="slot-meta">passes through to README verbatim</div>
+      </div>
+    `;
+    form.querySelector("textarea").addEventListener("input", e => {
+      b.content = e.target.value;
+      saveState();
+      // Update only the changed block's preview without re-rendering everything.
+      const node = document.querySelector(`.block[data-id="${b._id}"]`);
+      if (node) node.querySelector(".markdown-preview").textContent = b.content;
+      const sum = node && node.querySelector(".summary");
+      if (sum) sum.textContent = `markdown · ${(b.content || "").split("\n")[0].slice(0, 60) || "(empty)"}`;
+    });
+    return;
+  }
+
+  const decl = SLOT_DECLS[b.card_type];
+  label.innerHTML = `<strong>${b.card_type}</strong> &nbsp;·&nbsp; ${decl ? "MVP slots" : "preset defaults"}`;
+
+  if (!decl) {
+    form.innerHTML = `
+      <div class="deferred-note">
+        <strong>${b.card_type}</strong> renders with its endpoint defaults today.
+        Slot inspector for this card ships in <strong>v3.2</strong> — once <code>hero</code> proves the model.
+        <br><br>
+        It will still respect the composition defaults you set below (theme + font).
+      </div>
+    `;
+    return;
+  }
+
+  // Real slot inspector
+  form.innerHTML = Object.entries(decl).map(([k, s]) => slotRow(k, s, b.slots[k])).join("");
+  form.querySelectorAll("[data-slot]").forEach(el => {
+    el.addEventListener("input", e => {
+      const key = e.target.dataset.slot;
+      let v = e.target.value;
+      if (decl[key].type === "number") v = v === "" ? null : Number(v);
+      if (v === "") v = null;
+      b.slots[key] = v;
+      saveState();
+      // Re-render just the affected block + its summary.
+      const node = document.querySelector(`.block[data-id="${b._id}"]`);
+      if (node) {
+        const img = node.querySelector("img");
+        if (img) img.src = buildCardUrl(b);
+        const sum = node.querySelector(".summary");
+        if (sum) sum.textContent = `${b.card_type} · ${shortParams(b)}`;
+      }
+    });
+  });
+}
+function slotRow(key, s, value) {
+  const v = value === undefined ? "" : (value === null ? "" : value);
+  if (s.type === "enum") {
+    const opts = s.options.map(o => {
+      const label = o === "" ? "(inherit)" : o;
+      return `<option value="${escapeHtml(o)}" ${String(v) === o ? "selected" : ""}>${label}</option>`;
+    }).join("");
+    return `
+      <div class="slot-row">
+        <label>${key}</label>
+        <select data-slot="${key}">${opts}</select>
+        <div class="slot-meta">→ ?${key}=… &nbsp;·&nbsp; ${s.options.length} options</div>
+      </div>`;
+  }
+  if (s.type === "number") {
+    const [lo, hi] = s.range || [];
+    return `
+      <div class="slot-row">
+        <label>${key}</label>
+        <input type="number" data-slot="${key}" value="${v}" ${lo != null ? `min="${lo}"` : ""} ${hi != null ? `max="${hi}"` : ""}>
+        <div class="slot-meta">→ ?${key}=… ${lo != null ? `&nbsp;·&nbsp; range ${lo}–${hi}` : ""}</div>
+      </div>`;
+  }
+  // text
+  return `
+    <div class="slot-row">
+      <label>${key}</label>
+      <input type="text" data-slot="${key}" value="${escapeHtml(String(v))}">
+      <div class="slot-meta">→ ?${key}=…</div>
+    </div>`;
+}
+
+// ── Composition defaults (theme + font, bridges across cards) ────────────
+function renderDefaults() {
+  const ts = document.getElementById("default-theme");
+  const fs = document.getElementById("default-font");
+  ts.innerHTML = ALL_THEMES.map(t => `<option value="${t}" ${t === state.defaults.theme ? "selected" : ""}>${t}</option>`).join("");
+  fs.innerHTML = ALL_FONTS.map(f => `<option value="${f}" ${f === state.defaults.font ? "selected" : ""}>${f || "(system)"}</option>`).join("");
+  ts.addEventListener("change", e => { state.defaults.theme = e.target.value; saveState(); refreshCardImages(); });
+  fs.addEventListener("change", e => { state.defaults.font  = e.target.value; saveState(); refreshCardImages(); });
+}
+function refreshCardImages() {
+  document.querySelectorAll(".block").forEach(node => {
+    const id = Number(node.dataset.id);
+    const b = state.blocks.find(x => x._id === id);
+    if (!b || b.type !== "card") return;
+    const img = node.querySelector("img");
+    if (img) img.src = buildCardUrl(b);
+  });
+}
+
+// ── Modal / clipboard ────────────────────────────────────────────────────
+const modal = document.getElementById("markdown-modal");
+const modalOut = document.getElementById("markdown-output");
+function showMarkdown() {
+  if (state.blocks.length === 0) { toast("Add at least one block first"); return; }
+  modalOut.value = compositionToMarkdown();
+  modal.classList.add("show");
+  setTimeout(() => modalOut.select(), 50);
+}
+function closeModal() { modal.classList.remove("show"); }
+async function copyMarkdown() {
+  try {
+    await navigator.clipboard.writeText(modalOut.value);
+    toast("Copied to clipboard");
+  } catch (_) {
+    modalOut.select();
+    document.execCommand("copy");
+    toast("Copied (fallback)");
+  }
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1400);
+}
+
+// ── Wire up ──────────────────────────────────────────────────────────────
+document.getElementById("btn-clear").addEventListener("click", () => {
+  if (state.blocks.length === 0) return;
+  if (!confirm("Clear all blocks? This can't be undone.")) return;
+  state.blocks = [];
+  state.selectedId = null;
+  saveState();
+  renderBlocks();
+  renderInspector();
+});
+document.getElementById("btn-copy").addEventListener("click", showMarkdown);
+document.getElementById("modal-close").addEventListener("click", closeModal);
+document.getElementById("modal-cancel").addEventListener("click", closeModal);
+document.getElementById("modal-copy").addEventListener("click", copyMarkdown);
+modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+
+// First paint
+renderInventory();
+renderBlocks();
+renderInspector();
+renderDefaults();
+saveState();
+</script>
+</body>
+</html>
