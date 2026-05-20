@@ -1,0 +1,5 @@
+# Single maintainer — every path defaults to @heznpc.
+# When the project takes outside contributors, split this by directory
+# (e.g., src/endpoints/, src/fetchers/, .github/) so PRs auto-request the
+# right reviewer.
+*       @heznpc

@@ -4,10 +4,11 @@
   "private": true,
   "description": "Cards for your GitHub README. 28 composable SVG card endpoints, every visual property exposed as a query parameter. No ratings, no rankings.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22 <25"
   },
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "check": "node --check api/[endpoint].js && find src -name '*.js' -exec node --check {} +"
   },
   "license": "MIT"
 }

@@ -6,17 +6,27 @@ on:
   pull_request:
     branches: [main]
 
+# Least-privilege: this workflow only reads the repo and runs tests.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          # Node 20 EOL'd 2026-04-30. 22 is the current Maintenance LTS
+          # (EOL 2027-04-30); 24 is Active LTS. We pin to the LTS line we
+          # test against.
+          node-version: '22'
 
       # tests/ uses the node:test runner with zero deps — no install needed.
+      - name: Syntax check
+        run: npm run check
+
       - name: Run tests
         run: npm test
