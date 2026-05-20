@@ -12,7 +12,6 @@ updates:
     schedule:
       interval: "monthly"
     groups:
-      # Roll non-major action updates into a single PR each month.
       actions-minor:
         update-types: ["minor", "patch"]
     open-pull-requests-limit: 5
