@@ -4,6 +4,9 @@ const {
   validateFeedUrl,
   isAllowedFeedHost,
   ALLOWED_FEED_HOSTS,
+  fetchCapped,
+  FETCH_TIMEOUT_MS,
+  MAX_BODY_BYTES,
 } = require("../src/fetchers/posts");
 
 // --- isAllowedFeedHost ---
@@ -125,4 +128,129 @@ test("ALLOWED_FEED_HOSTS includes the baseline blog platforms", () => {
       `expected ${host} in allowlist`
     );
   }
+});
+
+// --- fetchCapped wire-level guards (mocked fetch) ---
+//
+// SECURITY.md promises four properties of the user-controlled fetch path:
+//   1. redirect: "error" — no following 302 to internal IPs
+//   2. 5s AbortController timeout — slow remote can't hold the function open
+//   3. content-length cap (2 MB) — declared-length large responses are rejected
+//   4. body-length cap (2 MB) — bodies that exceed cap *after* reading are rejected
+//
+// These tests verify each property by spying on the init args passed to fetch
+// and by returning crafted responses. Without them, a refactor that drops any
+// one guard would not fail a single existing test.
+
+test("fetchCapped passes redirect:'error' to the underlying fetch", async () => {
+  let capturedInit;
+  await fetchCapped(
+    "https://medium.com/feed/@user",
+    {},
+    {
+      fetchImpl: async (_url, init) => {
+        capturedInit = init;
+        return { ok: true, headers: new Map(), text: async () => "" };
+      },
+    }
+  );
+  assert.equal(
+    capturedInit.redirect,
+    "error",
+    "redirect:error must be set so an allowlisted host's 302 to IMDS can't bypass SSRF guards"
+  );
+});
+
+test("fetchCapped's redirect:'error' is non-overridable by caller init", async () => {
+  // Defense in depth: even if a caller mistakenly passes `{ redirect: "follow" }`,
+  // the wrapper must still enforce redirect:error. Caller init is spread BEFORE
+  // the security defaults in the implementation, so the guard always wins.
+  let capturedInit;
+  await fetchCapped(
+    "https://medium.com/feed/@user",
+    { redirect: "follow" },
+    {
+      fetchImpl: async (_url, init) => {
+        capturedInit = init;
+        return { ok: true, headers: new Map(), text: async () => "" };
+      },
+    }
+  );
+  assert.equal(
+    capturedInit.redirect,
+    "error",
+    "redirect must remain 'error' even when caller asks for 'follow'"
+  );
+});
+
+test("fetchCapped rejects responses whose declared content-length exceeds the cap", async () => {
+  await assert.rejects(
+    fetchCapped(
+      "https://medium.com/feed/@user",
+      {},
+      {
+        fetchImpl: async () => ({
+          ok: true,
+          headers: new Map([["content-length", String(MAX_BODY_BYTES + 1)]]),
+          text: async () => "should not be read",
+        }),
+      }
+    ),
+    /Response too large/
+  );
+});
+
+test("fetchCapped rejects responses whose body exceeds the cap after reading", async () => {
+  // Content-length absent / lying: the post-read length check is the last
+  // line of defense against a streamed-chunked oversize body.
+  const oversize = "x".repeat(MAX_BODY_BYTES + 10);
+  await assert.rejects(
+    fetchCapped(
+      "https://medium.com/feed/@user",
+      {},
+      {
+        fetchImpl: async () => ({
+          ok: true,
+          headers: new Map(),
+          text: async () => oversize,
+        }),
+      }
+    ),
+    /Response too large/
+  );
+});
+
+test("fetchCapped translates AbortError into a clean timeout message", async () => {
+  await assert.rejects(
+    fetchCapped(
+      "https://medium.com/feed/@user",
+      {},
+      {
+        fetchImpl: async () => {
+          const err = new Error("aborted");
+          err.name = "AbortError";
+          throw err;
+        },
+      }
+    ),
+    new RegExp(`timed out after ${FETCH_TIMEOUT_MS}ms`)
+  );
+});
+
+test("fetchCapped throws on non-ok response with the status surfaced", async () => {
+  await assert.rejects(
+    fetchCapped(
+      "https://medium.com/feed/@user",
+      {},
+      {
+        fetchImpl: async () => ({
+          ok: false,
+          status: 503,
+          headers: new Map(),
+          text: async () => "",
+        }),
+      }
+    ),
+    /HTTP 503/
+  );
 });

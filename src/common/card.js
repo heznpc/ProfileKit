@@ -51,6 +51,10 @@ function renderCard({ width, height, title, ariaLabel, colors, hideBorder, hideT
 
   // titleTarget is an optional data-cas-target hook for the playground
   // composer's inline-edit feature. Pure HTML attribute, no visual effect.
+  // TODO(2nd-pass-audit-2026-05-21): wrap titleTarget in escapeHtml as
+  // defense-in-depth. All current callers pass the literal "username", but
+  // an attribute interpolation without escape is a latent XSS regression
+  // path if a future caller threads user input through here.
   const titleAttr = titleTarget ? ` data-cas-target="${titleTarget}"` : "";
   const titleMarkup = hideTitle
     ? ""
