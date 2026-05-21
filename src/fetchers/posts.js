@@ -3,6 +3,10 @@
 // and a body cap (a 100 MB feed would OOM the function). The timer must stay
 // alive across the body read — drip-fed responses can otherwise hold the
 // connection open after fetch() resolves.
+// TODO(2nd-pass-audit-2026-05-21): FETCH_TIMEOUT_MS is also defined in
+// src/common/theme-url.js with the same value. Drift risk if one is tuned
+// without the other. Lift to src/common/utils.js as SHARED_FETCH_TIMEOUT_MS
+// when a third caller appears.
 const FETCH_TIMEOUT_MS = 5000;
 const MAX_BODY_BYTES = 2_000_000;
 const HEADERS = { "User-Agent": "profilekit-posts-card" };
@@ -64,17 +68,18 @@ function validateFeedUrl(raw) {
   return url;
 }
 
-async function fetchCapped(url, init = {}) {
+async function fetchCapped(url, init = {}, { fetchImpl = globalThis.fetch } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     // `redirect: "error"` defends against a classic SSRF bypass where an
     // allowlisted host returns a 302 pointing at an internal resource — we
-    // refuse to follow any redirect at all. A caller that needs to follow
-    // redirects has to override this explicitly.
-    const res = await fetch(url, {
-      redirect: "error",
+    // refuse to follow any redirect at all. Caller's init is spread FIRST so
+    // `redirect` and `signal` are non-overridable — any future caller passing
+    // `{ redirect: "follow" }` cannot weaken this guard.
+    const res = await fetchImpl(url, {
       ...init,
+      redirect: "error",
       signal: controller.signal,
     });
     if (!res.ok) {
@@ -267,4 +272,7 @@ module.exports = {
   validateFeedUrl,
   isAllowedFeedHost,
   ALLOWED_FEED_HOSTS,
+  fetchCapped,
+  FETCH_TIMEOUT_MS,
+  MAX_BODY_BYTES,
 };

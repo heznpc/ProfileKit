@@ -38,7 +38,7 @@ A community gallery for sharing single-card presets and adopting others' designs
 
 **Currently implemented.** 28 SVG card endpoints (`/api/*`), 17 built-in themes plus gist-hosted custom palettes via `theme_url=`, five bundled variable fonts, `/api/stack` composition with namespaced child IDs, a live playground at [profilekit.vercel.app](https://profilekit.vercel.app), and an MCP wrapper at [`@heznpc/profilekit-mcp`](https://www.npmjs.com/package/@heznpc/profilekit-mcp). Zero runtime dependencies, 30-minute CDN cache, deployed on Vercel.
 
-**Planned.** A single-card preset gallery at `/gallery` — adopt someone else's design URL as a starting point, then tweak parameters in the editor. Cross-agent preset compile (one preset → Claude Code, Cursor, Codex CLI configs). `theme_url=` adoption across the rest of the catalog.
+**Planned.** A single-card preset gallery at `/gallery` — adopt someone else's design URL as a starting point, then tweak parameters in the editor. Cross-agent preset compile (one preset → Claude Code, Cursor, Codex CLI configs).
 
 **Design intent.** *No ranking, composable presentation.* Each card is a parameter-only URL — every visual property exposed as a query string so the same endpoint renders in a GitHub README, a dev.to bio, a Hashnode header, or a slide cover with no template forking. The gallery is for *adoption*, not voting: you start from someone else's preset and edit it; we do not show which preset is "most popular." Pure SVG with CSS / SMIL keeps animations alive inside GitHub's image proxy and removes the JavaScript attack surface.
 
@@ -277,7 +277,7 @@ The JSON shape mirrors the entries in `src/common/themes.js`:
 - Responses are cached for 30 minutes per URL.
 - On any failure (host not allowed, network, schema mismatch) the card falls back to the default `dark` palette and the response carries an `X-Theme-Error` header explaining why.
 
-**Currently supported by**: `/api/stats`, `/api/stack` (and any cards rendered through `/api/stack`). Other endpoints will adopt `theme_url=` as a follow-up — no behavior change for callers that don't use the parameter.
+**Currently supported by**: every card endpoint — `?theme_url=` is parsed by the shared option resolver (`src/common/options.js`), so `/api/stats`, `/api/hero`, `/api/posts`, `/api/stack`, and the rest all accept it. Cards rendered through `/api/stack` inherit the resolved palette.
 
 ## Common Options
 
