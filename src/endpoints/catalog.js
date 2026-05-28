@@ -83,7 +83,7 @@ const CARDS = {
     common_params: ["theme", "width"],
   },
   posts: {
-    description: "Latest posts from devto/hashnode/medium/rss",
+    description: "Latest posts from devto/medium/rss (hashnode source retired 2026-05 — use rss against your Hashnode blog's /rss feed)",
     required: ["source"],
     common_params: ["username", "url", "count", "theme"],
   },
@@ -160,21 +160,56 @@ const CARDS = {
   },
 };
 
+// Params accepted by every card endpoint via the shared option resolver in
+// src/common/options.js. Injected into each card's common_params at response
+// time rather than duplicated into every CARDS entry — single edit if a new
+// universal param appears.
+const UNIVERSAL_PARAMS = [
+  "theme",
+  "theme_url",
+  "font",
+  "bg_color",
+  "text_color",
+  "title_color",
+  "icon_color",
+  "border_color",
+  "accent_color",
+  "hide_border",
+  "hide_title",
+  "hide_bar",
+  "border_radius",
+  "card_width",
+];
+
+function buildCatalogResponse() {
+  const cards = {};
+  for (const [name, entry] of Object.entries(CARDS)) {
+    // health/catalog are utility endpoints — they don't render cards, so
+    // they don't accept the universal card-rendering params.
+    if (name === "health" || name === "catalog") {
+      cards[name] = entry;
+      continue;
+    }
+    const merged = new Set([
+      ...(entry.common_params || []),
+      ...UNIVERSAL_PARAMS,
+    ]);
+    cards[name] = { ...entry, common_params: Array.from(merged) };
+  }
+  return {
+    version: CATALOG_VERSION,
+    cards,
+    themes: Object.keys(themes),
+  };
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", cacheHeaders());
-  return res.send(
-    JSON.stringify(
-      {
-        version: CATALOG_VERSION,
-        cards: CARDS,
-        themes: Object.keys(themes),
-      },
-      null,
-      2
-    )
-  );
+  return res.send(JSON.stringify(buildCatalogResponse(), null, 2));
 };
 
 module.exports.CATALOG_VERSION = CATALOG_VERSION;
 module.exports.CARDS = CARDS;
+module.exports.UNIVERSAL_PARAMS = UNIVERSAL_PARAMS;
+module.exports.buildCatalogResponse = buildCatalogResponse;

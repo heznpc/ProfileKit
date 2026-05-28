@@ -29,6 +29,10 @@ const ALLOWED_HOSTS = new Set(["gist.githubusercontent.com"]);
 const REQUIRED_KEYS = ["bg", "title", "text", "muted", "icon", "border", "accentStops"];
 const TTL_MS = 30 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 5000;
+// Real theme palettes are ~500 bytes. 256 KB is a generous ceiling that still
+// bounds the body buffer so a hostile or malformed gist cannot OOM the
+// function via a multi-MB JSON payload.
+const MAX_BODY_BYTES = 256 * 1024;
 const MAX_CACHE_ENTRIES = 128;
 
 // Insertion-ordered Map → cheapest possible LRU. On every set() we drop the
@@ -91,7 +95,7 @@ function validatePalette(json) {
 
 async function fetchExternalTheme(
   rawUrl,
-  { now = Date.now, fetchImpl = globalThis.fetch } = {}
+  { now = Date.now, fetchImpl = globalThis.fetch, timeoutMs = FETCH_TIMEOUT_MS } = {}
 ) {
   const url = validateUrl(rawUrl);
   const cached = cache.get(url.href);
@@ -100,42 +104,93 @@ async function fetchExternalTheme(
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  let res;
+  let palette;
   try {
-    res = await fetchImpl(url.href, {
+    // The timer MUST stay alive across the body read — a drip-fed body would
+    // otherwise hold the connection open after the fetch promise resolved.
+    // Both the headers-only fetch AND the body read are inside this try;
+    // clearTimeout fires in the outer finally only.
+    const res = await fetchImpl(url.href, {
       headers: { "User-Agent": "ProfileKit/1.0 (+theme_url)" },
       redirect: "error",
       signal: controller.signal,
     });
+    if (!res.ok) {
+      throw new ThemeUrlError(`theme_url fetch failed: HTTP ${res.status}`);
+    }
+    // Pre-read body cap. Sanitized as non-negative integer so a
+    // `Content-Length: -1` from a buggy upstream can't bypass the check.
+    const declaredLen = Number(res.headers.get("content-length"));
+    if (Number.isInteger(declaredLen) && declaredLen >= 0 && declaredLen > MAX_BODY_BYTES) {
+      throw new ThemeUrlError(`theme_url payload too large: ${declaredLen} bytes`);
+    }
+    // Streaming byte counter — caps memory even for chunked / lying-content-
+    // length responses. Aborts mid-read once the cap is exceeded.
+    const text = await readBodyCapped(res, controller);
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new ThemeUrlError("theme_url payload is not valid JSON");
+    }
+    palette = validatePalette(json);
   } catch (err) {
-    if (err.name === "AbortError") {
+    // Distinguish timer-induced aborts from upstream-surfaced AbortErrors by
+    // consulting the controller, not just the duck-typed error name. Undici
+    // can surface AbortError for non-timeout reasons (mid-stream server
+    // reset) and we don't want to mislabel those as timeouts.
+    if (controller.signal.aborted && err.name === "AbortError") {
       throw new ThemeUrlError("theme_url fetch timed out");
     }
+    if (err instanceof ThemeUrlError) throw err;
     throw new ThemeUrlError(`theme_url fetch failed: ${err.message}`);
   } finally {
     clearTimeout(timeoutId);
   }
 
-  if (!res.ok) {
-    throw new ThemeUrlError(`theme_url fetch failed: HTTP ${res.status}`);
-  }
-
-  const text = await res.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new ThemeUrlError("theme_url payload is not valid JSON");
-  }
-
-  const palette = validatePalette(json);
   cache.set(url.href, { palette, expiresAt: now() + TTL_MS });
   if (cache.size > MAX_CACHE_ENTRIES) {
     cache.delete(cache.keys().next().value);
   }
   return palette;
+}
+
+// Read a Response body chunk by chunk, tracking bytes against the cap.
+// Aborts the underlying controller and throws if the cap is exceeded mid-
+// stream. Falls back to res.text() for mocks / older Response shapes that
+// don't expose a streamable body — in that case the cap is enforced after
+// the read using Buffer.byteLength (UTF-8), which is correct for bytes but
+// only as good as the mock's willingness to materialize the whole body.
+async function readBodyCapped(res, controller) {
+  if (!res.body || typeof res.body.getReader !== "function") {
+    const text = await res.text();
+    if (Buffer.byteLength(text, "utf8") > MAX_BODY_BYTES) {
+      throw new ThemeUrlError(`theme_url payload too large: ${Buffer.byteLength(text, "utf8")} bytes`);
+    }
+    return text;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  const parts = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_BODY_BYTES) {
+        try { controller.abort(); } catch { /* ignore */ }
+        throw new ThemeUrlError(`theme_url payload too large: ${bytes} bytes`);
+      }
+      parts.push(decoder.decode(value, { stream: true }));
+    }
+    parts.push(decoder.decode());
+    return parts.join("");
+  } finally {
+    try { reader.releaseLock(); } catch { /* ignore */ }
+  }
 }
 
 function clearCache() {
@@ -152,5 +207,6 @@ module.exports = {
   REQUIRED_KEYS,
   TTL_MS,
   FETCH_TIMEOUT_MS,
+  MAX_BODY_BYTES,
   MAX_CACHE_ENTRIES,
 };

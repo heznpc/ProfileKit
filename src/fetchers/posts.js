@@ -3,6 +3,12 @@
 // and a body cap (a 100 MB feed would OOM the function). The timer must stay
 // alive across the body read — drip-fed responses can otherwise hold the
 // connection open after fetch() resolves.
+// Both this file and src/common/theme-url.js use the same 5s fetch timeout
+// and the same streaming byte-count cap (different size: 2 MB here, 256 KB
+// for theme palettes — they're intentionally different). If a third
+// user-controlled fetch surface appears, co-locate the constants in a
+// dedicated fetch-config module — NOT in utils.js, which has fanout to
+// every endpoint and shouldn't inherit network concerns.
 const FETCH_TIMEOUT_MS = 5000;
 const MAX_BODY_BYTES = 2_000_000;
 const HEADERS = { "User-Agent": "profilekit-posts-card" };
@@ -15,16 +21,14 @@ const HEADERS = { "User-Agent": "profilekit-posts-card" };
 // loopback-mounted services, or cloud provider instance metadata. The host
 // allowlist plus `redirect: "error"` (set in fetchCapped) plus scheme check
 // in validateFeedUrl closes the three classic SSRF bypass routes (direct,
-// redirect, scheme smuggling). Hashnode's own GraphQL API endpoint
-// (gql.hashnode.com) is here too because fetchHashnode pipes through
-// fetchCapped — its allowlist membership is what keeps that call path from
-// becoming a different SSRF surface if the host is ever parameterized.
+// redirect, scheme smuggling). hashnode.dev is kept for `source=rss`
+// against a Hashnode blog's /rss feed; the retired gql.hashnode.com is no
+// longer hit by any code path.
 const ALLOWED_FEED_HOSTS = [
   "medium.com",
   "dev.to",
   "hashnode.dev",
   "hashnode.com",
-  "gql.hashnode.com",
   "substack.com",
   "github.io",
   "wordpress.com",
@@ -64,38 +68,88 @@ function validateFeedUrl(raw) {
   return url;
 }
 
-async function fetchCapped(url, init = {}) {
+async function fetchCapped(url, init = {}, opts) {
+  // Guard against callers passing `null` as the options bag — destructure
+  // defaults only kick in for `undefined`. `opts || {}` lets `null` and
+  // `{ fetchImpl: null }` both fall back to the real fetch.
+  const { fetchImpl, timeoutMs } = opts || {};
+  const realFetch = fetchImpl || globalThis.fetch;
+  const timeout = typeof timeoutMs === "number" ? timeoutMs : FETCH_TIMEOUT_MS;
+
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeout);
   try {
     // `redirect: "error"` defends against a classic SSRF bypass where an
     // allowlisted host returns a 302 pointing at an internal resource — we
-    // refuse to follow any redirect at all. A caller that needs to follow
-    // redirects has to override this explicitly.
-    const res = await fetch(url, {
-      redirect: "error",
+    // refuse to follow any redirect at all. Caller's init is spread FIRST so
+    // `redirect` and `signal` are non-overridable — any future caller passing
+    // `{ redirect: "follow" }` or `{ signal: theirOwn }` cannot weaken these.
+    const res = await realFetch(url, {
       ...init,
+      redirect: "error",
       signal: controller.signal,
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
-    const len = Number(res.headers.get("content-length"));
-    if (Number.isFinite(len) && len > MAX_BODY_BYTES) {
-      throw new Error(`Response too large: ${len} bytes`);
+    // Pre-read cap. Sanitized as non-negative integer so a malformed
+    // `Content-Length: -1` or `Content-Length: 1.5e10` from a buggy or
+    // hostile upstream cannot bypass the check via NaN / negative-comparison.
+    const declaredLen = Number(res.headers.get("content-length"));
+    if (Number.isInteger(declaredLen) && declaredLen >= 0 && declaredLen > MAX_BODY_BYTES) {
+      throw new Error(`Response too large: ${declaredLen} bytes`);
     }
-    const text = await res.text();
-    if (text.length > MAX_BODY_BYTES) {
-      throw new Error(`Response too large: ${text.length} bytes`);
-    }
-    return text;
+    // Streaming byte counter — caps real bytes (not UTF-16 code units), and
+    // prevents OOM mid-read for chunked / no-content-length responses by
+    // aborting the controller the moment the cap is crossed.
+    return await readBodyCapped(res, controller);
   } catch (e) {
-    if (e.name === "AbortError") {
-      throw new Error(`Fetch timed out after ${FETCH_TIMEOUT_MS}ms`);
+    // Distinguish timer-induced aborts from upstream-surfaced AbortErrors
+    // by consulting the controller, not just the duck-typed error name.
+    // Undici can throw AbortError for non-timeout reasons (mid-stream
+    // server reset); mislabeling those as "timed out" sends the operator
+    // chasing a phantom slowness bug.
+    if (controller.signal.aborted && (e.name === "AbortError" || e.message === "aborted")) {
+      throw new Error(`Fetch timed out after ${timeout}ms`);
     }
     throw e;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// Stream-read a Response body, throwing if the running byte count exceeds
+// MAX_BODY_BYTES. Falls back to res.text() for mock responses (and pre-fetch
+// Response shapes) that don't expose a streamable body; the cap is then
+// applied post-read against UTF-8 byte length.
+async function readBodyCapped(res, controller) {
+  if (!res.body || typeof res.body.getReader !== "function") {
+    const text = await res.text();
+    const byteLen = Buffer.byteLength(text, "utf8");
+    if (byteLen > MAX_BODY_BYTES) {
+      throw new Error(`Response too large: ${byteLen} bytes`);
+    }
+    return text;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  const parts = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_BODY_BYTES) {
+        try { controller.abort(); } catch { /* ignore */ }
+        throw new Error(`Response too large: ${bytes} bytes`);
+      }
+      parts.push(decoder.decode(value, { stream: true }));
+    }
+    parts.push(decoder.decode());
+    return parts.join("");
+  } finally {
+    try { reader.releaseLock(); } catch { /* ignore */ }
   }
 }
 
@@ -177,44 +231,16 @@ async function fetchDevTo(username, count) {
   }));
 }
 
-async function fetchHashnode(username, count) {
-  const query = `query Posts($host: String!, $first: Int!) {
-    publication(host: $host) {
-      posts(first: $first) {
-        edges {
-          node {
-            title
-            url
-            publishedAt
-            brief
-            readTimeInMinutes
-            reactionCount
-          }
-        }
-      }
-    }
-  }`;
-  const text = await fetchCapped("https://gql.hashnode.com/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...HEADERS },
-    body: JSON.stringify({
-      query,
-      variables: { host: `${username}.hashnode.dev`, first: count },
-    }),
-  }).catch((e) => {
-    throw new Error(`Hashnode API error: ${e.message}`);
-  });
-  const json = JSON.parse(text);
-  const edges = json?.data?.publication?.posts?.edges;
-  if (!edges) throw new Error("Hashnode publication not found");
-  return edges.map(({ node }) => ({
-    title: node.title,
-    url: node.url,
-    published: node.publishedAt,
-    description: node.brief,
-    readingTime: node.readTimeInMinutes,
-    reactions: node.reactionCount,
-  }));
+// Hashnode retired the free public GraphQL API in 2026-05 — gql.hashnode.com
+// now returns 301 to https://hashnode.com/announcements/graphql-api. There is
+// no free path forward; the paid Pro-tier API requires per-user auth that
+// ProfileKit's "drop URL in a README" model cannot supply. The source stays
+// listed as removed (with a helpful error) instead of silently failing the
+// fetch via redirect:error.
+function fetchHashnodeRetired() {
+  throw new Error(
+    "hashnode source is retired (gql.hashnode.com requires Pro-tier auth as of 2026-05). Use source=rss with your Hashnode blog's /rss feed URL instead."
+  );
 }
 
 async function fetchRssUrl(rawUrl, count) {
@@ -234,7 +260,7 @@ async function fetchRssUrl(rawUrl, count) {
 async function fetchPosts({ source, username, url, count }) {
   const n = Math.max(1, Math.min(count, 10));
   if (source === "devto") return fetchDevTo(username, n);
-  if (source === "hashnode") return fetchHashnode(username, n);
+  if (source === "hashnode") return fetchHashnodeRetired();
   if (source === "rss" || source === "medium") {
     let feedUrl = url;
     if (source === "medium" && username && !feedUrl) {
@@ -267,4 +293,7 @@ module.exports = {
   validateFeedUrl,
   isAllowedFeedHost,
   ALLOWED_FEED_HOSTS,
+  fetchCapped,
+  FETCH_TIMEOUT_MS,
+  MAX_BODY_BYTES,
 };

@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   res.setHeader("Content-Type", "image/svg+xml");
   if (themeError) res.setHeader("X-Theme-Error", themeError);
 
-  if ((source === "devto" || source === "hashnode") && !username) {
+  if (source === "devto" && !username) {
     res.setHeader("Cache-Control", errorCacheHeaders("bad_input"));
     return res.send(renderError("Missing ?username= parameter", { colors, font }));
   }

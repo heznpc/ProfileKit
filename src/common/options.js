@@ -66,10 +66,20 @@ function parseCardOptions(params) {
   };
 }
 
-async function resolveCardOptions(params) {
+// `prefetched` lets /api/stack avoid N+1 gist fetches: stack.js resolves the
+// top-level theme_url once, then passes { url, palette } (or { url, error })
+// here for every child slot whose theme_url matches. A child that overrides
+// with `<card>.theme_url=<different>` falls through to the live fetch path.
+async function resolveCardOptions(params, prefetched = null) {
   const opts = parseCardOptions(params);
   const themeUrl = params.get("theme_url");
   if (!themeUrl) return { opts, themeError: null };
+
+  if (prefetched && prefetched.url === themeUrl) {
+    if (prefetched.error) return { opts, themeError: prefetched.error };
+    const colors = applyOverrides(prefetched.palette, readColorOverrides(params));
+    return { opts: { ...opts, colors }, themeError: null };
+  }
 
   try {
     const externalPalette = await fetchExternalTheme(themeUrl);
@@ -85,9 +95,23 @@ async function resolveCardOptions(params) {
   }
 }
 
+// Single-shot prefetch for a top-level theme_url. Used by /api/stack to
+// resolve the gist once and reuse for every slot via `resolveCardOptions`'s
+// `prefetched` arg.
+async function prefetchExternalTheme(themeUrl) {
+  if (!themeUrl) return null;
+  try {
+    const palette = await fetchExternalTheme(themeUrl);
+    return { url: themeUrl, palette };
+  } catch (err) {
+    return { url: themeUrl, error: err.message };
+  }
+}
+
 module.exports = {
   parseCardOptions,
   resolveCardOptions,
+  prefetchExternalTheme,
   parseSearchParams,
   CARD_WIDTH_MIN,
   CARD_WIDTH_MAX,

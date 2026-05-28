@@ -177,7 +177,7 @@ ProfileKit cards are plain SVG. They render anywhere a platform allows external 
 | `/api/timeline` | Vertical timeline |
 | `/api/tags` | Tag cloud / skill pills |
 | `/api/toc` | Table of contents |
-| `/api/posts` | Latest posts from dev.to / Hashnode / RSS |
+| `/api/posts` | Latest posts from dev.to / Medium / RSS (Hashnode via its RSS feed) |
 | **Animations** | |
 | `/api/typing` | Typewriter text |
 | `/api/wave` | Layered animated sin waves |
@@ -263,7 +263,7 @@ The JSON shape mirrors the entries in `src/common/themes.js`:
 - Responses are cached for 30 minutes per URL.
 - On any failure (host not allowed, network, schema mismatch) the card falls back to the default `dark` palette and the response carries an `X-Theme-Error` header explaining why.
 
-**Currently supported by**: `/api/stats`, `/api/stack` (and any cards rendered through `/api/stack`). Other endpoints will adopt `theme_url=` as a follow-up — no behavior change for callers that don't use the parameter.
+**Currently supported by**: every card endpoint — `?theme_url=` is parsed by the shared option resolver (`src/common/options.js`), so `/api/stats`, `/api/hero`, `/api/posts`, `/api/stack`, and the rest all accept it. Cards rendered through `/api/stack` inherit the resolved palette.
 
 ## Common Options
 
@@ -454,10 +454,12 @@ Pick a card from the sidebar, tweak parameters in the right panel, copy the URL 
 #### `/api/posts`
 | Param | Description |
 |-------|-------------|
-| `source` | `devto` (default) / `hashnode` / `medium` / `rss` |
-| `username` | Author username (devto / hashnode / medium) |
+| `source` | `devto` (default) / `medium` / `rss` |
+| `username` | Author username (devto / medium) |
 | `url` | Feed URL (rss source) |
 | `count` | Number of posts (default 5, max 10) |
+
+> Note: `source=hashnode` was retired in 2026-05 when Hashnode moved their GraphQL API behind a Pro-tier auth wall. Use `source=rss&url=https://<your>.hashnode.dev/rss.xml` instead — the RSS path still works without auth.
 
 ### Animations
 

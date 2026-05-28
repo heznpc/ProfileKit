@@ -22,6 +22,7 @@ const { stackVertical } = require("../common/stack");
 const {
   parseSearchParams,
   resolveCardOptions,
+  prefetchExternalTheme,
 } = require("../common/options");
 const {
   parseArray,
@@ -151,8 +152,14 @@ function scopeParams(params, cardName) {
 
 async function buildStack(params) {
   const themeErrors = [];
+
+  // Resolve the top-level theme_url ONCE and reuse for every slot whose
+  // theme_url matches. Avoids the 1+N concurrent gist fetch fan-out a naive
+  // per-slot resolveCardOptions would issue on cold cache.
+  const prefetched = await prefetchExternalTheme(params.get("theme_url"));
+
   const { opts: baseOpts, themeError: baseThemeError } =
-    await resolveCardOptions(params);
+    await resolveCardOptions(params, prefetched);
   if (baseThemeError) themeErrors.push(`base: ${baseThemeError}`);
 
   const cardList = parseArray(params.get("cards"));
@@ -196,8 +203,12 @@ async function buildStack(params) {
         };
       }
       const scoped = scopeParams(params, cardName);
+      // Pass the prefetched top-level theme so the per-slot resolveCardOptions
+      // doesn't re-fetch the gist. A child overriding with its own
+      // `<card>.theme_url=` URL falls through to the live fetch path inside
+      // resolveCardOptions (different URL → no cache hit on `prefetched`).
       const { opts: cardOpts, themeError: cardThemeError } =
-        await resolveCardOptions(scoped);
+        await resolveCardOptions(scoped, prefetched);
       try {
         const svg = await builder(scoped, cardOpts);
         return { svg, themeError: cardThemeError, cardName };
