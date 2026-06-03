@@ -1,0 +1,21 @@
+# Build context exclusion list — keep the image lean and avoid bundling
+# anything the runtime doesn't need.
+
+.git
+.github
+.vercel
+.idea
+.vscode
+node_modules
+tests
+docs
+examples
+scripts
+review.md
+*.md
+!README.md
+Dockerfile
+.dockerignore
+.gitignore
+.env
+.env.local

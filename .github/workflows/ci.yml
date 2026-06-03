@@ -33,3 +33,56 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  # Validates the optional self-host path: image builds, container starts,
+  # HEALTHCHECK passes, /api/health responds, /api/divider returns SVG.
+  # Independent of the Node matrix above because the runtime inside the
+  # image is pinned by the Dockerfile (node:22-slim).
+  #
+  # No untrusted GitHub event data flows into any `run:` step — every
+  # shell variable below is initialized inside the script.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          tags: profilekit:ci
+          load: true
+
+      - name: Run container and verify /api/health + /api/divider
+        run: |
+          set -euo pipefail
+          docker run -d --name pkit -p 3000:3000 profilekit:ci
+
+          # Wait up to ~30s for Docker's HEALTHCHECK (defined in the
+          # Dockerfile) to flip to "healthy".
+          for i in $(seq 1 30); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' pkit 2>/dev/null || echo "unknown")
+            echo "attempt $i: health=$status"
+            if [ "$status" = "healthy" ]; then break; fi
+            sleep 1
+          done
+
+          # Independent verification from the host — don't trust HEALTHCHECK
+          # alone in case the probe itself is misconfigured.
+          body=$(curl -sf http://localhost:3000/api/health)
+          echo "$body"
+          echo "$body" | grep -q '"ok": true'
+
+          # Real card endpoint — proves the route adapter is wired, not
+          # just /api/health.
+          ctype=$(curl -s -o /dev/null -w '%{content_type}' \
+            'http://localhost:3000/api/divider?style=line&width=400')
+          echo "divider ctype: $ctype"
+          echo "$ctype" | grep -q 'image/svg+xml'
+
+          docker logs pkit
+          docker rm -f pkit
