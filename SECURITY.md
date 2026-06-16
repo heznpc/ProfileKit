@@ -28,7 +28,7 @@ API token pool, theme schema escape) — please report it privately.
 
 **How to report:**
 
-- Use GitHub's [Private vulnerability reporting](https://github.com/newtria/ProfileKit/security/advisories/new)
+- Use GitHub's [Private vulnerability reporting](https://github.com/starter-series/ProfileKit/security/advisories/new)
   (preferred — keeps disclosure timeline tracked).
 - Or email the maintainer via the address listed on the GitHub profile.
 
