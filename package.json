@@ -8,6 +8,8 @@
   },
   "scripts": {
     "test": "node --test tests/*.test.js",
+    "build": "npm run check",
+    "smoke:server": "node scripts/server-smoke.js",
     "check": "node --check server.js && find api src scripts -name '*.js' -exec node --check {} +"
   },
   "license": "MIT"
