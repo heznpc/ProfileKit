@@ -14,6 +14,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { themes, getTheme } = require("../src/common/themes");
+const { renderCard } = require("../src/common/card");
 
 const { renderStatsCard } = require("../src/cards/stats");
 const { renderLanguagesCard } = require("../src/cards/languages");
@@ -241,4 +242,19 @@ test("smoke: accent_color override does not break renderCard cards", () => {
     const svg = render();
     assertHealthySvg(`${name} (accent override)`, svg);
   }
+});
+
+test("renderCard escapes titleTarget before interpolating data-cas-target", () => {
+  const colors = getTheme("dark");
+  const svg = renderCard({
+    width: 320,
+    height: 120,
+    title: "Safe",
+    colors,
+    body: "",
+    titleTarget: 'username" onclick="alert(1)',
+  });
+
+  assert.ok(svg.includes('data-cas-target="username&quot; onclick=&quot;alert(1)"'));
+  assert.ok(!svg.includes('data-cas-target="username" onclick="alert(1)"'));
 });
