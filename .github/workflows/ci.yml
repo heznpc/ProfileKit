@@ -34,6 +34,9 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Audit npm package metadata
+        run: npm audit --audit-level=high
+
   # Validates the optional self-host path: image builds, container starts,
   # HEALTHCHECK passes, /api/health responds, /api/divider returns SVG.
   # Independent of the Node matrix above because the runtime inside the

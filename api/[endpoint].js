@@ -13,8 +13,13 @@ module.exports = async (req, res) => {
     return res.send(`Unknown endpoint: ${endpoint ?? "(missing)"}`);
   }
 
-  const handler = require(`../src/endpoints/${endpoint}`);
-  return handler(req, res);
+  try {
+    const handler = require(`../src/endpoints/${endpoint}`);
+    return await handler(req, res);
+  } catch (err) {
+    res.status(500).setHeader("Content-Type", "text/plain; charset=utf-8");
+    return res.send(`Internal error: ${err.message}`);
+  }
 };
 
 module.exports.ALLOWED_ENDPOINTS = Array.from(ALLOWED).sort();
