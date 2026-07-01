@@ -5,12 +5,48 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
 
 # Least-privilege: this workflow only reads the repo and runs tests.
 permissions:
   contents: read
 
 jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: secret-scanning with gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o /tmp/gitleaks.tgz
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c -
+          tar xz -C /tmp -f /tmp/gitleaks.tgz
+          /tmp/gitleaks detect --source . --verbose --redact
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Check licenses
+        run: npm exec -- license-checker-evergreen --failOn "GPL-2.0;GPL-3.0;AGPL-3.0"
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+
+      - name: Syntax check
+        run: npm run check
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -89,3 +125,18 @@ jobs:
 
           docker logs pkit
           docker rm -f pkit
+
+  ci:
+    needs: [static-checks, test, docker]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate result
+        run: |
+          if [ "${{ needs.static-checks.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.docker.result }}" != "success" ]; then
+            echo "::error::CI failed (static-checks=${{ needs.static-checks.result }}, test=${{ needs.test.result }}, docker=${{ needs.docker.result }})"
+            exit 1
+          fi
+          echo "All checks passed."

@@ -1,7 +1,7 @@
 const { themes } = require("../common/themes");
 const { cacheHeaders } = require("../common/utils");
 
-// Card catalog — consumed by @heznpc/profilekit-mcp and any external tool
+// Card catalog — consumed by profilekit-mcp and any external tool
 // that wants to discover available endpoints + their common parameters
 // without scraping the README. The schema is intentionally shallow: full
 // parameter types live in the endpoint handlers; this answers the higher

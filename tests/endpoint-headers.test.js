@@ -87,7 +87,7 @@ test("/api/health emits no-store cache so probes always observe current state", 
 });
 
 test("/api/catalog emits JSON + cached", async () => {
-  // Discovery endpoint consumed by @heznpc/profilekit-mcp. A regression
+  // Discovery endpoint consumed by profilekit-mcp. A regression
   // to text/plain would break the wrapper's JSON.parse, and missing
   // Cache-Control would hammer the function on every MCP discover call.
   const handler = require("../src/endpoints/catalog");

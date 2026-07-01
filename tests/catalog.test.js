@@ -7,7 +7,7 @@ const {
 } = require("../src/endpoints/catalog");
 
 // /api/catalog is the machine-readable discovery surface consumed by
-// @heznpc/profilekit-mcp and any client that doesn't scrape README. The
+// profilekit-mcp and any client that doesn't scrape README. The
 // README promise of "theme_url on every card endpoint" has to be reflected
 // here too — otherwise discovery clients silently disagree with the docs.
 

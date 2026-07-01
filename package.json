@@ -12,5 +12,8 @@
     "smoke:server": "node scripts/server-smoke.js",
     "check": "node --check server.js && find api src scripts -name '*.js' -exec node --check {} +"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "license-checker-evergreen": "^6.3.1"
+  }
 }
