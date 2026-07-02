@@ -47,6 +47,18 @@ function parseSearchParams(req) {
 const CARD_WIDTH_MIN = 200;
 const CARD_WIDTH_MAX = 1600;
 
+// Outer bounds for the free-form ?width=/?height= params on the layout
+// endpoints (hero / divider / section). Unlike card_width these feed SVG
+// generators whose work scales with the dimension — e.g. the hero/divider
+// `wave` paths loop across the width — so an unbounded ?width=1000000000 would
+// build a giant path string and blow the function's memory/time budget.
+// Out-of-range values fall back to each endpoint's default (parseIntSafe
+// semantics), same as card_width.
+const SVG_WIDTH_MIN = 200;
+const SVG_WIDTH_MAX = 2400;
+const SVG_HEIGHT_MIN = 8;
+const SVG_HEIGHT_MAX = 1200;
+
 function parseCardOptions(params) {
   const theme = params.get("theme") || "dark";
   const colors = getTheme(theme, readColorOverrides(params));
@@ -115,4 +127,8 @@ module.exports = {
   parseSearchParams,
   CARD_WIDTH_MIN,
   CARD_WIDTH_MAX,
+  SVG_WIDTH_MIN,
+  SVG_WIDTH_MAX,
+  SVG_HEIGHT_MIN,
+  SVG_HEIGHT_MAX,
 };

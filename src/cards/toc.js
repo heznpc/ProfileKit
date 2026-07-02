@@ -2,10 +2,17 @@ const { renderCard } = require("../common/card");
 const { bodyStartY } = require("../common/tokens");
 const { escapeHtml } = require("../common/utils");
 
+// User-controlled `?items=` count is capped so the derived SVG height and row
+// count stay bounded — mirrors constellation's MAX_STARS and stack's
+// MAX_CARDS_PER_STACK. Excess items are dropped rather than rejecting the whole
+// request, preserving the lenient render behavior these cards use.
+const MAX_ITEMS = 30;
+
 function parseItems(raw) {
   if (!raw) return [];
   return raw
     .split("|")
+    .slice(0, MAX_ITEMS)
     .map((chunk) => chunk.split(";")[0].trim())
     .filter(Boolean);
 }

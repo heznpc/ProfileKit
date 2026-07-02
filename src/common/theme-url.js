@@ -25,6 +25,8 @@
 // starts will re-fetch, but warm instances skip the round trip. The map is
 // process-local so there's no cross-tenant cache poisoning surface.
 
+const { normalizeColor } = require("./themes");
+
 const ALLOWED_HOSTS = new Set(["gist.githubusercontent.com"]);
 const REQUIRED_KEYS = ["bg", "title", "text", "muted", "icon", "border", "accentStops"];
 const TTL_MS = 30 * 60 * 1000;
@@ -87,6 +89,12 @@ function validatePalette(json) {
       }
     } else if (typeof json[key] !== "string") {
       throw new ThemeUrlError(`"${key}" must be a string`);
+    } else if (normalizeColor(json[key]) === null) {
+      // Base colors are interpolated unescaped into SVG attributes / <style>
+      // by card.js, so they MUST be strict hex — mirror the accentStops check
+      // above and the ?bg_color= path (normalizeColor). Anything else throws
+      // and the palette falls back to dark.
+      throw new ThemeUrlError(`"${key}" must be a hex color`);
     }
     palette[key] = json[key];
   }

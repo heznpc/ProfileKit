@@ -1,5 +1,12 @@
 const { withRotation } = require("../common/github-token");
 
+// A slow/hanging api.github.com response must not hold the serverless function
+// open until the platform kills it — mirror the 5s AbortController deadline
+// used by posts.js / theme-url.js. fetchCapped is intentionally not reused: it
+// throws a status-less error on !res.ok, which would break token rotation
+// (withRotation keys off err.status for 401/403/429).
+const FETCH_TIMEOUT_MS = 5000;
+
 const QUERY = `
 query repo($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
@@ -18,15 +25,29 @@ query repo($owner: String!, $name: String!) {
 // src/common/github-token.js via `withRotation`.
 async function fetchRepo(owner, repo, _legacyToken) {
   return withRotation(async (token) => {
-    const res = await fetch("https://api.github.com/graphql", {
-      method: "POST",
-      headers: {
-        Authorization: `bearer ${token}`,
-        "Content-Type": "application/json",
-        "User-Agent": "profilekit",
-      },
-      body: JSON.stringify({ query: QUERY, variables: { owner, name: repo } }),
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    let res;
+    try {
+      res = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+          Authorization: `bearer ${token}`,
+          "Content-Type": "application/json",
+          "User-Agent": "profilekit",
+        },
+        body: JSON.stringify({ query: QUERY, variables: { owner, name: repo } }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (controller.signal.aborted && err.name === "AbortError") {
+        throw new Error(`GitHub API timed out after ${FETCH_TIMEOUT_MS}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!res.ok) {
       const err = new Error(`GitHub API error: ${res.status}`);

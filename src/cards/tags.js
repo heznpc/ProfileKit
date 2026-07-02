@@ -2,13 +2,21 @@ const { renderCard } = require("../common/card");
 const { bodyStartY } = require("../common/tokens");
 const { escapeHtml, parseArray } = require("../common/utils");
 
+// User-controlled `?tags=` count is capped so the derived SVG height and pill
+// count stay bounded — mirrors constellation's MAX_STARS and stack's
+// MAX_CARDS_PER_STACK. Excess tags are dropped rather than rejecting the whole
+// request, preserving the lenient render behavior these cards use.
+const MAX_TAGS = 40;
+
 function parseTags(raw) {
-  return parseArray(raw).map((t) => {
-    const [name, color] = t.split(":");
-    let c = color ? color.trim() : null;
-    if (c && !c.startsWith("#")) c = `#${c}`;
-    return { name: name.trim(), color: c };
-  });
+  return parseArray(raw)
+    .slice(0, MAX_TAGS)
+    .map((t) => {
+      const [name, color] = t.split(":");
+      let c = color ? color.trim() : null;
+      if (c && !c.startsWith("#")) c = `#${c}`;
+      return { name: name.trim(), color: c };
+    });
 }
 
 function renderTagsCard(rawTags, opts) {

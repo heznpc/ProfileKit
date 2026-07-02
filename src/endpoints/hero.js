@@ -1,5 +1,12 @@
 const { renderHeroCard } = require("../cards/hero");
-const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const {
+  parseSearchParams,
+  resolveCardOptions,
+  SVG_WIDTH_MIN,
+  SVG_WIDTH_MAX,
+  SVG_HEIGHT_MIN,
+  SVG_HEIGHT_MAX,
+} = require("../common/options");
 const { parseColor, parseIntSafe, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
@@ -12,8 +19,8 @@ module.exports = async (req, res) => {
     subtitle: params.get("subtitle"),
     bg: params.get("bg") || "gradient",
     color: parseColor(params.get("color")),
-    width: parseIntSafe(params.get("width"), 1200),
-    height: parseIntSafe(params.get("height"), 280),
+    width: parseIntSafe(params.get("width"), 1200, SVG_WIDTH_MIN, SVG_WIDTH_MAX),
+    height: parseIntSafe(params.get("height"), 280, SVG_HEIGHT_MIN, SVG_HEIGHT_MAX),
     align: params.get("align") || "center",
   });
 
