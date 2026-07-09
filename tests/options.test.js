@@ -55,6 +55,11 @@ test("border_radius accepts both tokens and px", () => {
   assert.equal(parseCardOptions(p("border_radius=20")).borderRadius, 20);
 });
 
+test("border_radius falls back when raw px is outside supported bounds", () => {
+  assert.equal(parseCardOptions(p("border_radius=-1")).borderRadius, undefined);
+  assert.equal(parseCardOptions(p("border_radius=10000")).borderRadius, undefined);
+});
+
 test("border_radius is undefined when missing (so cards apply their own default)", () => {
   assert.equal(parseCardOptions(p("")).borderRadius, undefined);
 });

@@ -17,11 +17,11 @@ docker run --rm -p 3000:3000 profilekit:local
 
 ```
 api/
-  health.js      -> health endpoint
-  divider.js     -> SVG divider endpoint
+  [endpoint].js  -> Vercel adapter dispatching named endpoints
 src/
+  endpoints/     -> endpoint handlers and response headers
   cards/         -> card renderers
-  core/          -> shared SVG/query helpers
+  common/        -> shared SVG/query/theme helpers
 server.js        -> local/self-host HTTP adapter
 tests/           -> node:test coverage for endpoints and renderers
 ```

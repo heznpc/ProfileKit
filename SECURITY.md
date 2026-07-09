@@ -12,7 +12,7 @@ external URLs on behalf of users. The user-controlled URL surfaces are:
   timeout that covers the body read, a 256 KB streaming byte cap, and
   `redirect: "error"`.
 - `?source=rss|medium&url=` on `/api/posts` — see
-  [`src/fetchers/posts.js`](src/fetchers/posts.js). 13-host allowlist plus
+  [`src/fetchers/posts.js`](src/fetchers/posts.js). 12-host allowlist plus
   https-only, `redirect: "error"`, 5-second timeout across the body read,
   and a 2 MB streaming byte cap (the cap aborts the underlying controller
   mid-stream if exceeded, so chunked / no-content-length responses cannot

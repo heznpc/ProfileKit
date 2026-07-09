@@ -44,6 +44,12 @@ test("parseRadius is parseToken bound to RADIUS", () => {
   assert.equal(parseRadius("none", 0), 0);
 });
 
+test("parseRadius keeps raw px within the radius scale bounds", () => {
+  assert.equal(parseRadius("9999", 6), 9999);
+  assert.equal(parseRadius("10000", 6), 6);
+  assert.equal(parseRadius("-1", 6), 6);
+});
+
 test("bodyStartY uses LAYOUT constants", () => {
   assert.equal(bodyStartY(false), LAYOUT.BODY_TOP_WITH_TITLE);
   assert.equal(bodyStartY(true), LAYOUT.BODY_TOP_NO_TITLE);

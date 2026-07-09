@@ -88,7 +88,7 @@ The default hero dimensions (1200 × 280–400) drop straight into a personal si
 
 ```
 https://profilekit.vercel.app/api/hero
-  ?name=Hi%2C+I%27m+Ren
+  ?name=Hi%2C+I%27m+Heznpc
   &subtitle=I+build+small+sharp+tools
   &bg=gradient
   &font=manrope
@@ -97,7 +97,7 @@ https://profilekit.vercel.app/api/hero
   &theme=kanagawa
 ```
 
-![Personal site hero example](https://profilekit.vercel.app/api/hero?name=Hi%2C+I%27m+Ren&subtitle=I+build+small+sharp+tools&bg=gradient&font=manrope&width=1200&height=400&theme=kanagawa)
+![Personal site hero example](https://profilekit.vercel.app/api/hero?name=Hi%2C+I%27m+Heznpc&subtitle=I+build+small+sharp+tools&bg=gradient&font=manrope&width=1200&height=400&theme=kanagawa)
 
 ---
 

@@ -1,6 +1,6 @@
 const { renderCard } = require("../common/card");
 const { bodyStartY } = require("../common/tokens");
-const { escapeHtml, parseArray } = require("../common/utils");
+const { escapeHtml, parseArray, parseColor } = require("../common/utils");
 
 // User-controlled `?tags=` count is capped so the derived SVG height and pill
 // count stay bounded — mirrors constellation's MAX_STARS and stack's
@@ -13,9 +13,7 @@ function parseTags(raw) {
     .slice(0, MAX_TAGS)
     .map((t) => {
       const [name, color] = t.split(":");
-      let c = color ? color.trim() : null;
-      if (c && !c.startsWith("#")) c = `#${c}`;
-      return { name: name.trim(), color: c };
+      return { name: name.trim(), color: parseColor(color ? color.trim() : null) };
     });
 }
 

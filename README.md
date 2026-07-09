@@ -268,7 +268,7 @@ The JSON shape mirrors the entries in `src/common/themes.js`:
 
 **Rules**:
 
-- `https://gist.githubusercontent.com` is currently the only allowlisted host. Other hosts → 400 (header `X-Theme-Error`).
+- `https://gist.githubusercontent.com` is currently the only allowlisted host. Other hosts are rejected by the theme loader; the card falls back to the default `dark` palette and carries an `X-Theme-Error` header.
 - All seven keys are required. Extras are silently ignored so you can keep comments / metadata in the gist.
 - `accentStops` must be an array of two or more `#hex` strings.
 - Per-param overrides (`?bg_color=`, `?accent_color=`, …) still win on top of the external palette.
@@ -662,7 +662,7 @@ docker build -t profilekit:local .
 
 # Run a single replica
 docker run --rm -p 3000:3000 \
-  -e GITHUB_TOKEN=ghp_... \
+  -e GITHUB_TOKEN=REPLACE_WITH_GITHUB_TOKEN \
   profilekit:local
 # → http://localhost:3000/api/divider?style=wave
 ```

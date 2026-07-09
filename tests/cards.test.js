@@ -233,6 +233,15 @@ test("smoke: bundled fonts render without errors", () => {
   }
 });
 
+test("tags card rejects per-tag color attribute injection", () => {
+  const colors = getTheme("dark");
+  const svg = renderTagsCard('Safe:00add8,Bad:" onload="alert(1)', { colors });
+  assert.ok(svg.includes(">Bad</text>"));
+  assert.ok(!svg.includes("onload="));
+  assert.ok(!svg.includes('fill="#"'));
+  assert.ok(svg.includes('fill="#58a6ff"'));
+});
+
 // Sanity: accent_color override collapses the gradient to a single color across
 // every card that uses renderCard (the wrapper that applies the gradient).
 test("smoke: accent_color override does not break renderCard cards", () => {

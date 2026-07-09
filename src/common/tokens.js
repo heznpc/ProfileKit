@@ -29,7 +29,11 @@ function parseToken(scale, value, defaultValue) {
 }
 
 function parseRadius(value, defaultValue) {
-  return parseToken(RADIUS, value, defaultValue);
+  const parsed = parseToken(RADIUS, value, defaultValue);
+  if (typeof parsed !== "number" || parsed < RADIUS.none || parsed > RADIUS.full) {
+    return defaultValue;
+  }
+  return parsed;
 }
 
 function bodyStartY(hideTitle) {

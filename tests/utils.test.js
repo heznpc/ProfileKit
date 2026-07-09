@@ -113,6 +113,11 @@ test("parseRadius accepts tokens and raw px", () => {
   assert.equal(parseRadius("", 6), 6);
 });
 
+test("parseRadius rejects raw px outside the supported radius range", () => {
+  assert.equal(parseRadius("-1", 6), 6);
+  assert.equal(parseRadius("10000", 6), 6);
+});
+
 test("makeRng is deterministic for the same seed", () => {
   const a = makeRng(42);
   const b = makeRng(42);

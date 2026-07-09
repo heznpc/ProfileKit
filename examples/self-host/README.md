@@ -39,7 +39,7 @@ container IDs.
 token. Set one before bringing the stack up:
 
 ```bash
-export GITHUB_TOKEN=ghp_...
+export GITHUB_TOKEN=REPLACE_WITH_GITHUB_TOKEN
 docker compose up --build --scale web=3
 ```
 
