@@ -94,7 +94,13 @@ const server = http.createServer(async (req, res) => {
   const segments = url.pathname.split("/").filter(Boolean);
 
   // /api/<endpoint> — reproduce Vercel's [endpoint] dynamic segment.
-  if (segments[0] === "api" && segments[1]) {
+  if (segments[0] === "api") {
+    if (segments.length !== 2) {
+      res
+        .status(404)
+        .setHeader("Content-Type", "text/plain; charset=utf-8");
+      return res.send(`Unknown endpoint: ${segments.slice(1).join("/") || "(missing)"}`);
+    }
     const endpoint = segments[1];
     if (!ALLOWED.has(endpoint)) {
       res

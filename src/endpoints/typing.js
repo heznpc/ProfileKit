@@ -1,6 +1,6 @@
 const { renderTypingCard } = require("../cards/typing");
 const { renderError } = require("../common/card");
-const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseSearchParams, resolveCardOptions, parseSvgWidth, parseSvgHeight } = require("../common/options");
 const {
   parseBoolean,
   parseColor,
@@ -10,12 +10,14 @@ const {
   errorCacheHeaders,
 } = require("../common/utils");
 
+const MAX_LINES = 10;
+
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
   const { opts, themeError } = await resolveCardOptions(params);
   const { colors, font } = opts;
 
-  const lines = parseArray(params.get("lines"));
+  const lines = parseArray(params.get("lines")).slice(0, MAX_LINES);
 
   res.setHeader("Content-Type", "image/svg+xml");
   if (themeError) res.setHeader("X-Theme-Error", themeError);
@@ -28,18 +30,18 @@ module.exports = async (req, res) => {
   const svg = renderTypingCard({
     ...opts,
     lines,
-    size: parseIntSafe(params.get("size"), 20),
-    weight: parseIntSafe(params.get("weight"), 400),
+    size: parseIntSafe(params.get("size"), 20, 8, 96),
+    weight: parseIntSafe(params.get("weight"), 400, 100, 900),
     color: parseColor(params.get("color")),
     bgColor: parseColor(params.get("bg_color")),
-    width: parseIntSafe(params.get("width"), 500),
-    height: parseIntSafe(params.get("height"), 50),
-    speed: parseIntSafe(params.get("speed"), 100),
-    pause: parseIntSafe(params.get("pause"), 1500),
+    width: parseSvgWidth(params.get("width"), 500),
+    height: parseSvgHeight(params.get("height"), 50),
+    speed: parseIntSafe(params.get("speed"), 100, 10, 1000),
+    pause: parseIntSafe(params.get("pause"), 1500, 0, 10000),
     loop: params.get("loop") !== null ? parseBoolean(params.get("loop")) : true,
     cursor: params.get("cursor") !== null ? parseBoolean(params.get("cursor")) : true,
     cursorColor: parseColor(params.get("cursor_color")),
-    cursorWidth: parseIntSafe(params.get("cursor_width"), 2),
+    cursorWidth: parseIntSafe(params.get("cursor_width"), 2, 1, 12),
     align: params.get("align") || "left",
     frame: parseBoolean(params.get("frame")),
   });
@@ -47,3 +49,5 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", cacheHeaders());
   return res.send(svg);
 };
+
+module.exports.MAX_LINES = MAX_LINES;

@@ -1,5 +1,5 @@
 const { renderRadarCard } = require("../cards/radar");
-const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseSearchParams, resolveCardOptions, parseSvgWidth, parseSvgHeight } = require("../common/options");
 const {
   parseColor,
   parseFloatSafe,
@@ -15,10 +15,10 @@ module.exports = async (req, res) => {
     ...opts,
     text: params.get("text"),
     color: parseColor(params.get("color")),
-    width: parseIntSafe(params.get("width"), 300),
-    height: parseIntSafe(params.get("height"), 300),
-    blips: parseIntSafe(params.get("blips"), 5),
-    speed: parseFloatSafe(params.get("speed"), 4),
+    width: parseSvgWidth(params.get("width"), 300),
+    height: parseSvgHeight(params.get("height"), 300),
+    blips: parseIntSafe(params.get("blips"), 5, 0, 20),
+    speed: parseFloatSafe(params.get("speed"), 4, 1, 60),
     seed: parseIntSafe(params.get("seed"), 23),
   });
 

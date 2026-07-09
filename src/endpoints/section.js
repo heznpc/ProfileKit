@@ -2,10 +2,8 @@ const { renderSectionCard } = require("../cards/section");
 const {
   parseSearchParams,
   resolveCardOptions,
-  SVG_WIDTH_MIN,
-  SVG_WIDTH_MAX,
-  SVG_HEIGHT_MIN,
-  SVG_HEIGHT_MAX,
+  parseSvgWidth,
+  parseSvgHeight,
 } = require("../common/options");
 const { parseColor, parseIntSafe, cacheHeaders } = require("../common/utils");
 
@@ -19,9 +17,9 @@ module.exports = async (req, res) => {
     subtitle: params.get("subtitle"),
     align: params.get("align") || "left",
     color: parseColor(params.get("color")),
-    width: parseIntSafe(params.get("width"), 800, SVG_WIDTH_MIN, SVG_WIDTH_MAX),
+    width: parseSvgWidth(params.get("width"), 800),
     height: params.has("height")
-      ? parseIntSafe(params.get("height"), 70, SVG_HEIGHT_MIN, SVG_HEIGHT_MAX)
+      ? parseSvgHeight(params.get("height"), 70)
       : null,
     icon: params.get("icon"),
   });

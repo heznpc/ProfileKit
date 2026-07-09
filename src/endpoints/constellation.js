@@ -1,5 +1,5 @@
 const { renderConstellationCard } = require("../cards/constellation");
-const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseSearchParams, resolveCardOptions, parseSvgWidth, parseSvgHeight } = require("../common/options");
 const {
   parseColor,
   parseFloatSafe,
@@ -15,9 +15,9 @@ module.exports = async (req, res) => {
     ...opts,
     text: params.get("text"),
     color: parseColor(params.get("color")),
-    width: parseIntSafe(params.get("width"), 600),
-    height: parseIntSafe(params.get("height"), 200),
-    density: parseFloatSafe(params.get("density"), 1),
+    width: parseSvgWidth(params.get("width"), 600),
+    height: parseSvgHeight(params.get("height"), 200),
+    density: parseFloatSafe(params.get("density"), 1, 0, 3),
     seed: parseIntSafe(params.get("seed"), 19),
   });
 

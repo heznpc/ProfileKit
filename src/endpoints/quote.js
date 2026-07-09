@@ -1,7 +1,7 @@
 const { getRandomQuote, getDailyQuote } = require("../data/quotes");
 const { renderQuoteCard } = require("../cards/quote");
-const { parseSearchParams, resolveCardOptions } = require("../common/options");
-const { parseBoolean, parseIntSafe, cacheHeaders } = require("../common/utils");
+const { parseSearchParams, resolveCardOptions, parseSvgWidth } = require("../common/options");
+const { parseBoolean, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
   const params = parseSearchParams(req);
@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
 
   const daily = parseBoolean(params.get("daily"));
   // card_width is the canonical name; width is kept as a documented alias.
-  const width = opts.cardWidth || parseIntSafe(params.get("width"), 495);
+  const width = opts.cardWidth || parseSvgWidth(params.get("width"), 495);
 
   const quote = daily ? getDailyQuote() : getRandomQuote();
   const svg = renderQuoteCard(quote, { ...opts, width });

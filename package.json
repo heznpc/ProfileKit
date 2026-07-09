@@ -10,8 +10,19 @@
     "test": "node --test tests/*.test.js",
     "build": "npm run check",
     "smoke:server": "node scripts/server-smoke.js",
+    "pack:check": "node scripts/pack-check.js",
     "check": "node --check server.js && find api src scripts -name '*.js' -exec node --check {} +"
   },
+  "files": [
+    "api/",
+    "src/",
+    "public/",
+    "examples/self-host/",
+    "server.js",
+    "vercel.json",
+    "Dockerfile",
+    ".dockerignore"
+  ],
   "license": "MIT",
   "devDependencies": {
     "license-checker-evergreen": "^6.3.1"

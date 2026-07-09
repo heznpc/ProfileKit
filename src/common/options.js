@@ -78,6 +78,14 @@ function parseCardOptions(params) {
   };
 }
 
+function parseSvgWidth(value, defaultValue) {
+  return parseIntSafe(value, defaultValue, SVG_WIDTH_MIN, SVG_WIDTH_MAX);
+}
+
+function parseSvgHeight(value, defaultValue) {
+  return parseIntSafe(value, defaultValue, SVG_HEIGHT_MIN, SVG_HEIGHT_MAX);
+}
+
 // `prefetched` lets /api/stack avoid N+1 gist fetches: stack.js resolves the
 // top-level theme_url once, then passes { url, palette } (or { url, error })
 // here for every child slot whose theme_url matches. A child that overrides
@@ -131,4 +139,6 @@ module.exports = {
   SVG_WIDTH_MAX,
   SVG_HEIGHT_MIN,
   SVG_HEIGHT_MAX,
+  parseSvgWidth,
+  parseSvgHeight,
 };

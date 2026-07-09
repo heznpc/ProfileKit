@@ -1,12 +1,18 @@
-# Dependabot v2 — github-actions ecosystem only.
+# Dependabot v2 — GitHub Actions plus the small npm dev-tool surface.
 #
-# ProfileKit has zero runtime/dev npm dependencies (see package.json: no
-# `dependencies` or `devDependencies` keys), so the npm ecosystem has no
-# nodes to scan. We only track GitHub Actions versions here — actions
-# like checkout/setup-node release majors roughly yearly and we want
-# alerts when a deprecation window opens.
+# ProfileKit has zero runtime dependencies, but CI uses npm dev tooling
+# from package-lock.json. Track that dev surface so audit/license gates are
+# kept current instead of only discovering stale tools after install.
 version: 2
 updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

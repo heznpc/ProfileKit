@@ -1,6 +1,11 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { parseCardOptions, parseSearchParams } = require("../src/common/options");
+const {
+  parseCardOptions,
+  parseSearchParams,
+  parseSvgWidth,
+  parseSvgHeight,
+} = require("../src/common/options");
 
 const p = (q) => new URLSearchParams(q);
 
@@ -69,6 +74,15 @@ test("card_width out-of-bounds falls back to 495 default", () => {
   // Boundary values accepted (min=200, max=1600)
   assert.equal(parseCardOptions(p("card_width=200")).cardWidth, 200);
   assert.equal(parseCardOptions(p("card_width=1600")).cardWidth, 1600);
+});
+
+test("SVG dimensions are bounded by the shared renderer limits", () => {
+  assert.equal(parseSvgWidth("2400", 800), 2400);
+  assert.equal(parseSvgWidth("2401", 800), 800);
+  assert.equal(parseSvgWidth("199", 800), 800);
+  assert.equal(parseSvgHeight("1200", 160), 1200);
+  assert.equal(parseSvgHeight("1201", 160), 160);
+  assert.equal(parseSvgHeight("7", 160), 160);
 });
 
 test("invalid hex color overrides are silently dropped (theme base stands)", () => {

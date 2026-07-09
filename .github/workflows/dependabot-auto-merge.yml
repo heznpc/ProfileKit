@@ -4,6 +4,7 @@ on: pull_request
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -28,7 +29,26 @@ jobs:
 
       - name: Label major updates for manual review
         if: steps.meta.outputs.update-type == 'version-update:semver-major'
-        run: gh pr edit "$PR_URL" --add-label "dependencies,manual-review"
+        run: |
+          set -euo pipefail
+
+          add_label_if_exists() {
+            label="$1"
+            if gh label list --search "$label" --json name --jq '.[].name' | grep -Fxq "$label"; then
+              gh pr edit "$PR_URL" --add-label "$label"
+            else
+              echo "::notice title=Label missing::$label does not exist; skipping label assignment."
+            fi
+          }
+
+          add_label_if_exists "dependencies"
+          add_label_if_exists "manual-review"
+
+          if gh label list --search "manual-review" --json name --jq '.[].name' | grep -Fxq "manual-review"; then
+            echo "::notice title=Manual review required::Major dependency update left unmerged for manual review."
+          else
+            echo "::notice title=Manual review label missing::The manual-review label does not exist; leaving the major update unmerged."
+          fi
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,5 +1,5 @@
 const { renderWaveCard } = require("../cards/wave");
-const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseSearchParams, resolveCardOptions, parseSvgWidth, parseSvgHeight } = require("../common/options");
 const { parseColor, parseIntSafe, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
@@ -10,9 +10,9 @@ module.exports = async (req, res) => {
     ...opts,
     text: params.get("text"),
     color: parseColor(params.get("color")),
-    width: parseIntSafe(params.get("width"), 800),
-    height: parseIntSafe(params.get("height"), 160),
-    waves: parseIntSafe(params.get("waves"), 3),
+    width: parseSvgWidth(params.get("width"), 800),
+    height: parseSvgHeight(params.get("height"), 160),
+    waves: parseIntSafe(params.get("waves"), 3, 1, 5),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");

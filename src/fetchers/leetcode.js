@@ -1,4 +1,5 @@
 const LEETCODE_API = "https://leetcode.com/graphql";
+const FETCH_TIMEOUT_MS = 5000;
 
 const QUERY = `
 query userProfile($username: String!) {
@@ -21,18 +22,35 @@ query userProfile($username: String!) {
   }
 }`;
 
-async function fetchLeetcode(username) {
-  const res = await fetch(LEETCODE_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": "github-stats-card",
-    },
-    body: JSON.stringify({
-      query: QUERY,
-      variables: { username },
-    }),
-  });
+async function fetchLeetcode(username, opts = {}) {
+  const { fetchImpl, timeoutMs } = opts || {};
+  const realFetch = fetchImpl || globalThis.fetch;
+  const timeout = typeof timeoutMs === "number" ? timeoutMs : FETCH_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+
+  let res;
+  try {
+    res = await realFetch(LEETCODE_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "github-stats-card",
+      },
+      body: JSON.stringify({
+        query: QUERY,
+        variables: { username },
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (controller.signal.aborted && (err.name === "AbortError" || err.message === "aborted")) {
+      throw new Error(`LeetCode API timed out after ${timeout}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) throw new Error(`LeetCode API error: ${res.status}`);
   const json = await res.json();
@@ -66,4 +84,4 @@ async function fetchLeetcode(username) {
   };
 }
 
-module.exports = { fetchLeetcode };
+module.exports = { fetchLeetcode, FETCH_TIMEOUT_MS };

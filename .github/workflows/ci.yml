@@ -44,6 +44,9 @@ jobs:
       - name: Security audit
         run: npm audit --audit-level=high
 
+      - name: Check npm package surface
+        run: npm run pack:check
+
       - name: Syntax check
         run: npm run check
 

@@ -69,6 +69,11 @@ test("/api/<unknown> responds 404 — ALLOWED gate rejects arbitrary names", asy
   assert.equal(res.status, 404);
 });
 
+test("/api/<endpoint>/<extra> responds 404 to match the single-segment API contract", async () => {
+  const res = await fetch(`${baseUrl}/api/divider/extra?style=line`);
+  assert.equal(res.status, 404);
+});
+
 test("/api/../something cannot escape the endpoints directory", async () => {
   // URL parsing normalizes /api/../foo → /foo at the WHATWG layer, so the
   // server sees a non-/api/ path and falls through to static serving.

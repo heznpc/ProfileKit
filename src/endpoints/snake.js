@@ -1,5 +1,5 @@
 const { renderSnakeCard } = require("../cards/snake");
-const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseSearchParams, resolveCardOptions, parseSvgWidth, parseSvgHeight } = require("../common/options");
 const {
   parseColor,
   parseFloatSafe,
@@ -15,13 +15,13 @@ module.exports = async (req, res) => {
     ...opts,
     color: parseColor(params.get("color")),
     emptyColor: parseColor(params.get("empty_color")),
-    width: params.has("width") ? parseIntSafe(params.get("width"), 0) : null,
-    height: params.has("height") ? parseIntSafe(params.get("height"), 0) : null,
-    cols: parseIntSafe(params.get("cols"), 53),
-    rows: parseIntSafe(params.get("rows"), 7),
-    cellSize: parseIntSafe(params.get("cell_size"), 11),
-    cellGap: parseIntSafe(params.get("cell_gap"), 3),
-    duration: parseFloatSafe(params.get("duration"), 24),
+    width: params.has("width") ? parseSvgWidth(params.get("width"), 0) : null,
+    height: params.has("height") ? parseSvgHeight(params.get("height"), 0) : null,
+    cols: parseIntSafe(params.get("cols"), 53, 1, 100),
+    rows: parseIntSafe(params.get("rows"), 7, 1, 20),
+    cellSize: parseIntSafe(params.get("cell_size"), 11, 4, 24),
+    cellGap: parseIntSafe(params.get("cell_gap"), 3, 0, 10),
+    duration: parseFloatSafe(params.get("duration"), 24, 2, 120),
     seed: parseIntSafe(params.get("seed"), 7),
   });
 

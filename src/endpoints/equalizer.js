@@ -1,5 +1,5 @@
 const { renderEqualizerCard } = require("../cards/equalizer");
-const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseSearchParams, resolveCardOptions, parseSvgWidth, parseSvgHeight } = require("../common/options");
 const { parseColor, parseIntSafe, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
@@ -8,11 +8,11 @@ module.exports = async (req, res) => {
 
   const svg = renderEqualizerCard({
     ...opts,
-    bars: parseIntSafe(params.get("bars"), 24),
+    bars: parseIntSafe(params.get("bars"), 24, 4, 60),
     color: parseColor(params.get("color")),
     label: params.get("label"),
-    width: parseIntSafe(params.get("width"), 495),
-    height: parseIntSafe(params.get("height"), 140),
+    width: parseSvgWidth(params.get("width"), 495),
+    height: parseSvgHeight(params.get("height"), 140),
     seed: parseIntSafe(params.get("seed"), 11),
   });
 

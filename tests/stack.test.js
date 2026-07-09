@@ -171,6 +171,17 @@ test("buildStack composes pure cards end-to-end", async () => {
   assert.equal(childCount, 3);
 });
 
+test("buildStack applies the same dimension bounds as direct layout endpoints", async () => {
+  const params = new URLSearchParams(
+    "cards=hero&hero.name=Huge&hero.width=999999&hero.height=999999"
+  );
+  const { svg, ok } = await buildStack(params);
+  assert.equal(ok, true);
+  const { width, height } = getOuterAttrs(svg);
+  assert.equal(width, 1200);
+  assert.equal(height, 280);
+});
+
 test("buildStack renders an error card slot when an unknown card is requested", async () => {
   const params = new URLSearchParams("cards=hero,nonsense&hero.name=Hi");
   const { svg, ok } = await buildStack(params);

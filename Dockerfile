@@ -6,9 +6,9 @@
 # This image is for anyone who wants to run ProfileKit on their own
 # infrastructure instead. The Vercel path is unaffected.
 #
-# Zero npm dependencies (see package.json — no "dependencies" /
-# "devDependencies" blocks), so there is no `npm install` step. The image
-# is just a Node 22 runtime + the source. Builds in seconds.
+# Zero runtime npm dependencies, so there is no `npm install` step in the
+# image. CI-only dev tooling stays in package-lock.json; the container is just
+# a Node 22 runtime + the source. Builds in seconds.
 
 FROM node:22-slim
 

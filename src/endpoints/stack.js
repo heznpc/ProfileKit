@@ -23,6 +23,8 @@ const {
   parseSearchParams,
   resolveCardOptions,
   prefetchExternalTheme,
+  parseSvgWidth,
+  parseSvgHeight,
 } = require("../common/options");
 const {
   parseArray,
@@ -40,8 +42,8 @@ const BUILDERS = {
       subtitle: params.get("subtitle"),
       bg: params.get("bg") || "gradient",
       color: parseColor(params.get("color")),
-      width: parseIntSafe(params.get("width"), 1200),
-      height: parseIntSafe(params.get("height"), 280),
+      width: parseSvgWidth(params.get("width"), 1200),
+      height: parseSvgHeight(params.get("height"), 280),
       align: params.get("align") || "center",
     }),
 
@@ -52,8 +54,8 @@ const BUILDERS = {
       subtitle: params.get("subtitle"),
       align: params.get("align") || "left",
       color: parseColor(params.get("color")),
-      width: parseIntSafe(params.get("width"), 800),
-      height: params.has("height") ? parseIntSafe(params.get("height"), 70) : null,
+      width: parseSvgWidth(params.get("width"), 800),
+      height: params.has("height") ? parseSvgHeight(params.get("height"), 70) : null,
       icon: params.get("icon"),
     }),
 
@@ -62,8 +64,8 @@ const BUILDERS = {
       ...opts,
       style: params.get("style") || "line",
       color: parseColor(params.get("color")),
-      width: parseIntSafe(params.get("width"), 800),
-      height: parseIntSafe(params.get("height"), 30),
+      width: parseSvgWidth(params.get("width"), 800),
+      height: parseSvgHeight(params.get("height"), 30),
     }),
 
   now: async (params, opts) => {

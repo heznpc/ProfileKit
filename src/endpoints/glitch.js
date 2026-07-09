@@ -1,5 +1,5 @@
 const { renderGlitchCard } = require("../cards/glitch");
-const { parseSearchParams, resolveCardOptions } = require("../common/options");
+const { parseSearchParams, resolveCardOptions, parseSvgWidth, parseSvgHeight } = require("../common/options");
 const { parseColor, parseIntSafe, cacheHeaders } = require("../common/utils");
 
 module.exports = async (req, res) => {
@@ -10,9 +10,9 @@ module.exports = async (req, res) => {
     ...opts,
     text: params.get("text") || "GLITCH",
     color: parseColor(params.get("color")),
-    size: parseIntSafe(params.get("size"), 64),
-    width: parseIntSafe(params.get("width"), 600),
-    height: parseIntSafe(params.get("height"), 160),
+    size: parseIntSafe(params.get("size"), 64, 8, 160),
+    width: parseSvgWidth(params.get("width"), 600),
+    height: parseSvgHeight(params.get("height"), 160),
   });
 
   res.setHeader("Content-Type", "image/svg+xml");
