@@ -26,5 +26,13 @@
   "license": "MIT",
   "devDependencies": {
     "license-checker-evergreen": "^6.3.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/heznpc/ProfileKit.git"
+  },
+  "homepage": "https://github.com/heznpc/ProfileKit#readme",
+  "bugs": {
+    "url": "https://github.com/heznpc/ProfileKit/issues"
   }
 }
