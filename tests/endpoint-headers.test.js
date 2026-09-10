@@ -87,9 +87,9 @@ test("/api/health emits no-store cache so probes always observe current state", 
 });
 
 test("/api/catalog emits JSON + cached", async () => {
-  // Discovery endpoint consumed by profilekit-mcp. A regression
-  // to text/plain would break the wrapper's JSON.parse, and missing
-  // Cache-Control would hammer the function on every MCP discover call.
+  // Discovery endpoint consumed by editors and external tools. A regression
+  // to text/plain would break clients' JSON parsing, and missing
+  // Cache-Control would hammer the function on every discovery call.
   const handler = require("../src/endpoints/catalog");
   const res = makeMockRes();
   await handler(makeMockReq(), res);
@@ -98,7 +98,7 @@ test("/api/catalog emits JSON + cached", async () => {
   assert.match(
     headers["Cache-Control"] || "",
     /max-age=\d+/,
-    "/api/catalog must be cached so MCP discovery doesn't re-execute the handler per request"
+    "/api/catalog must be cached so discovery doesn't re-execute the handler per request"
   );
   const parsed = JSON.parse(body);
   assert.ok(parsed.cards && parsed.themes, "catalog must declare cards + themes");

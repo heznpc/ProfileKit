@@ -28,6 +28,8 @@ tests/           -> node:test coverage for endpoints and renderers
 
 ## Invariants
 
+- ProfileKit is the only active project. The standalone MCP integration is
+  retired; do not reintroduce its workspace, dependencies, or release workflows.
 - Keep endpoints deterministic: same query string means same SVG.
 - Treat every query parameter as untrusted input. Clamp numbers, whitelist
   enum-like strings, and escape text before embedding in SVG.
