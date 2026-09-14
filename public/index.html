@@ -5,801 +5,141 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ProfileKit Playground</title>
   <meta name="description" content="Designer-grade GitHub profile cards. Live preview, copy URL." />
-  <style>
-    :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --surface-2: #1c222b;
-      --border: #21262d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --accent: #58a6ff;
-      --radius: 8px;
-      --pad: 16px;
-      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    }
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--sans);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code, kbd { font-family: var(--mono); }
-
-    header {
-      padding: 24px 32px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.4px;
-    }
-    header h1 span { color: var(--accent); }
-    header .tagline {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    header nav a {
-      margin-left: 16px;
-      font-size: 13px;
-    }
-
-    main {
-      display: grid;
-      grid-template-columns: 240px 1fr 320px;
-      min-height: calc(100vh - 78px);
-    }
-    @media (max-width: 1080px) {
-      main { grid-template-columns: 200px 1fr; }
-      .params-panel { grid-column: 1 / -1; border-left: none; border-top: 1px solid var(--border); }
-    }
-    @media (max-width: 720px) {
-      main { grid-template-columns: 1fr; }
-      .card-list-panel { border-right: none; border-bottom: 1px solid var(--border); }
-    }
-
-    .card-list-panel {
-      border-right: 1px solid var(--border);
-      padding: 20px 12px;
-      overflow-y: auto;
-    }
-    .card-list-panel h2 {
-      margin: 0 0 12px 12px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--muted);
-    }
-    .card-group { margin-bottom: 18px; }
-    .card-group h3 {
-      margin: 0 0 6px 12px;
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--muted);
-      opacity: 0.7;
-    }
-    .card-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .card-list button {
-      width: 100%;
-      text-align: left;
-      background: transparent;
-      border: none;
-      color: var(--text);
-      padding: 7px 12px;
-      font-size: 13px;
-      font-family: inherit;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .card-list button:hover { background: var(--surface); }
-    .card-list button.active {
-      background: var(--surface-2);
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .preview-panel {
-      padding: 32px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      min-width: 0;
-    }
-    .preview-panel h2 {
-      margin: 0;
-      font-size: 24px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-    .preview-panel .desc {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .preview-frame {
-      background:
-        linear-gradient(45deg, var(--surface) 25%, transparent 25%),
-        linear-gradient(-45deg, var(--surface) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, var(--surface) 75%),
-        linear-gradient(-45deg, transparent 75%, var(--surface) 75%);
-      background-size: 20px 20px;
-      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 260px;
-      overflow: auto;
-    }
-    .preview-frame img {
-      max-width: 100%;
-      display: block;
-      filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4));
-    }
-
-    .copy-section {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .copy-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 8px 8px 14px;
-    }
-    .copy-row code {
-      flex: 1;
-      font-size: 12px;
-      color: var(--text);
-      overflow-x: auto;
-      white-space: nowrap;
-      scrollbar-width: thin;
-    }
-    .copy-row button {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 6px 12px;
-      font-size: 12px;
-      font-family: inherit;
-      border-radius: 4px;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    .copy-row button:hover {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-    .copy-row button.copied {
-      background: #3fb950;
-      border-color: #3fb950;
-      color: #fff;
-    }
-
-    .params-panel {
-      border-left: 1px solid var(--border);
-      padding: 24px 20px;
-      overflow-y: auto;
-    }
-    .params-panel h3 {
-      margin: 0 0 16px 0;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--muted);
-    }
-    .params-form {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-    .field label .req { color: #f85149; }
-    .field input[type="text"],
-    .field input[type="number"],
-    .field select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 10px;
-      border-radius: 5px;
-      font-family: inherit;
-      font-size: 13px;
-      width: 100%;
-    }
-    .field input[type="text"]:focus,
-    .field input[type="number"]:focus,
-    .field select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-    .field input[type="color"] {
-      flex: 1;
-      height: 32px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .field .color-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .field .color-wrap input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: var(--accent);
-      flex-shrink: 0;
-    }
-    .field-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .field-row input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: var(--accent);
-    }
-    .field-row label {
-      font-size: 13px;
-      color: var(--text);
-      text-transform: none;
-      letter-spacing: 0;
-    }
-
-    /* View toggle (Cards vs Templates) */
-    .view-toggle {
-      display: inline-flex;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 2px;
-      margin-left: 16px;
-    }
-    .view-toggle button {
-      background: transparent;
-      color: var(--muted);
-      border: none;
-      padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .view-toggle button.active {
-      background: var(--accent);
-      color: #0d1117;
-    }
-
-    /* Templates view */
-    .templates-panel {
-      padding: 24px 32px;
-      overflow-y: auto;
-    }
-    .templates-panel h2 {
-      margin: 0 0 6px 0;
-      font-size: 20px;
-    }
-    .templates-panel .intro {
-      margin: 0 0 24px 0;
-      color: var(--muted);
-      font-size: 13px;
-      max-width: 720px;
-    }
-    .templates-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-    }
-    .template-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .template-card .thumb {
-      background: var(--surface-2);
-      border-radius: 4px;
-      min-height: 120px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-    .template-card .thumb img {
-      max-width: 100%;
-      max-height: 200px;
-      display: block;
-    }
-    .template-card .meta {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .template-card h3 {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 700;
-    }
-    .template-card .by {
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-    .template-card p {
-      margin: 0;
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.4;
-    }
-    .template-card button {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 12px;
-      border-radius: 5px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .template-card button:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .hidden { display: none !important; }
-
-    /* Compose view (v3 — CAS-style README composer) */
-    .compose-view {
-      display: grid;
-      grid-template-columns: 220px 1fr 320px;
-      min-height: calc(100vh - 78px);
-    }
-    @media (max-width: 1080px) {
-      .compose-view { grid-template-columns: 200px 1fr; }
-      .composer-inspector { grid-column: 1 / -1; border-left: none; border-top: 1px solid var(--border); }
-    }
-    @media (max-width: 720px) {
-      .compose-view { grid-template-columns: 1fr; }
-      .composer-inventory { border-right: none; border-bottom: 1px solid var(--border); }
-    }
-
-    .composer-inventory {
-      border-right: 1px solid var(--border);
-      padding: 20px 12px;
-      overflow-y: auto;
-    }
-    .composer-inventory h2 {
-      margin: 0 0 12px 12px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--muted);
-    }
-    .composer-inventory .group { margin-bottom: 18px; }
-    .composer-inventory .group h3 {
-      margin: 0 0 6px 12px;
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--muted);
-      opacity: 0.7;
-    }
-    .composer-inventory ul { list-style: none; margin: 0; padding: 0; }
-    .composer-inventory li button {
-      width: 100%;
-      text-align: left;
-      background: transparent;
-      border: none;
-      color: var(--text);
-      padding: 7px 12px;
-      font-size: 13px;
-      font-family: inherit;
-      border-radius: 5px;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .composer-inventory li button:hover { background: var(--surface); color: var(--accent); }
-    .composer-inventory li button[disabled] {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-    .composer-inventory li button[disabled]:hover { background: transparent; color: var(--text); }
-    .composer-inventory li button .add-icon {
-      font-size: 16px;
-      color: var(--muted);
-      line-height: 1;
-    }
-    .composer-inventory li button[draggable="true"] {
-      cursor: grab;
-    }
-    .composer-inventory li button[draggable="true"]:active {
-      cursor: grabbing;
-    }
-    .composer-inventory li button.dragging {
-      opacity: 0.5;
-    }
-
-    /* Drop indicators between blocks during drag-over */
-    .block.drop-before {
-      box-shadow: 0 -3px 0 var(--accent);
-    }
-    .block.drop-after {
-      box-shadow: 0 3px 0 var(--accent);
-    }
-    .composer-canvas .empty-state.drop-target {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    /* v3.4 — inline direct-manipulation hooks on hero card preview */
-    .block-body .hero-svg-host { display: contents; }
-    .block-body svg [data-cas-target] {
-      cursor: pointer;
-    }
-    .block-body svg [data-cas-target]:hover {
-      opacity: 0.85;
-    }
-    .block-body svg [data-cas-target="name"]:hover,
-    .block-body svg [data-cas-target="subtitle"]:hover {
-      opacity: 1;
-      text-decoration: underline;
-      text-decoration-color: var(--accent);
-      text-decoration-thickness: 2px;
-    }
-    .block-body .hero-loading {
-      color: var(--muted);
-      font-size: 12px;
-      padding: 24px;
-    }
-
-    .cas-popover {
-      position: fixed;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px;
-      min-width: 160px;
-      z-index: 100;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
-    }
-    .cas-popover .cas-popover-title {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--muted);
-      padding: 4px 8px 6px;
-    }
-    .cas-popover button {
-      display: block;
-      width: 100%;
-      background: transparent;
-      border: none;
-      color: var(--text);
-      padding: 7px 10px;
-      font-size: 13px;
-      font-family: inherit;
-      border-radius: 4px;
-      cursor: pointer;
-      text-align: left;
-    }
-    .cas-popover button:hover { background: var(--surface); }
-    .cas-popover button.active {
-      background: var(--accent);
-      color: #0d1117;
-      font-weight: 600;
-    }
-
-    .composer-inspector .field input.flash,
-    .composer-inspector .field select.flash {
-      animation: flashHighlight 1.2s ease-out;
-    }
-    @keyframes flashHighlight {
-      0%   { box-shadow: 0 0 0 2px var(--accent); }
-      100% { box-shadow: 0 0 0 0 transparent; }
-    }
-
-    .composer-canvas {
-      padding: 28px 32px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      min-width: 0;
-      overflow-y: auto;
-    }
-    .composer-canvas .empty-state {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: var(--muted);
-      font-size: 13px;
-      text-align: center;
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
-      padding: 40px 24px;
-      min-height: 280px;
-    }
-    .composer-canvas .empty-state strong {
-      display: block;
-      color: var(--text);
-      font-size: 15px;
-      margin-bottom: 6px;
-    }
-
-    .block {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .block.selected {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent);
-    }
-    .block .block-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-    }
-    .block .block-header .label { flex: 1; font-weight: 700; }
-    .block .block-header button {
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      padding: 4px 8px;
-      font-size: 14px;
-      border-radius: 4px;
-      line-height: 1;
-    }
-    .block .block-header button:hover { background: var(--surface-2); color: var(--text); }
-    .block .block-header button.danger:hover { color: #f85149; }
-    .block .block-header button:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-    .block .block-header button:disabled:hover { background: transparent; color: var(--muted); }
-
-    .block .block-body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 60px;
-    }
-    .block .block-body img {
-      max-width: 100%;
-      display: block;
-    }
-    .block .block-body textarea {
-      width: 100%;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 10px;
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: 13px;
-      resize: vertical;
-      min-height: 60px;
-    }
-    .block .block-body textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .composer-canvas .canvas-footer {
-      margin-top: 8px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-    .composer-canvas .canvas-footer button {
-      background: var(--accent);
-      color: #0d1117;
-      border: none;
-      padding: 9px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      border-radius: 5px;
-      cursor: pointer;
-      font-family: inherit;
-    }
-    .composer-canvas .canvas-footer button:hover { filter: brightness(1.1); }
-    .composer-canvas .canvas-footer button.copied {
-      background: #3fb950;
-      color: #fff;
-    }
-    .composer-canvas .canvas-footer button.secondary {
-      background: var(--surface-2);
-      color: var(--muted);
-    }
-
-    .composer-inspector {
-      border-left: 1px solid var(--border);
-      padding: 24px 20px;
-      overflow-y: auto;
-    }
-    .composer-inspector h3 {
-      margin: 0 0 4px 0;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--muted);
-    }
-    .composer-inspector .selected-label {
-      margin: 0 0 16px 0;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .composer-inspector .empty {
-      color: var(--muted);
-      font-size: 13px;
-      padding: 12px 0;
-    }
-
-    /* Composer focus visibility — relies on :focus-visible so mouse clicks
-       don't paint rings, only keyboard nav does. */
-    .composer-inventory li button:focus-visible,
-    .block .block-header button:focus-visible,
-    .composer-canvas .canvas-footer button:focus-visible,
-    .cas-popover button:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-  </style>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 
-<header>
-  <div>
-    <h1>Profile<span>Kit</span></h1>
-    <p class="tagline">Cards for your GitHub README. Customize, share, adopt.</p>
-  </div>
-  <div style="display:flex; align-items:center;">
-    <div class="view-toggle" role="tablist">
-      <button type="button" id="view-cards" class="active" role="tab">Cards</button>
-      <button type="button" id="view-templates" role="tab">Templates</button>
-      <button type="button" id="view-compose" role="tab">Compose</button>
+<header class="app-header">
+  <div class="brand-lockup">
+    <div class="brand-mark" aria-hidden="true">PK</div>
+    <div class="brand-copy">
+      <h1>Profile<span>Kit</span></h1>
+      <p class="tagline" data-i18n="tagline">Composable profile cards for a README that feels like yours.</p>
     </div>
+  </div>
+
+  <div class="view-toggle" role="tablist">
+    <button type="button" id="view-cards" class="active" role="tab" data-i18n="cards">Cards</button>
+    <button type="button" id="view-compose" role="tab" data-i18n="compose">Compose</button>
+  </div>
+
+  <div class="header-actions">
+    <label class="language-control" for="locale-select">
+      <span data-i18n="language">Language</span>
+      <select id="locale-select">
+        <option value="ko">한국어</option>
+        <option value="en">English</option>
+      </select>
+    </label>
     <nav>
-      <a href="https://github.com/heznpc/ProfileKit" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/heznpc/ProfileKit#endpoints" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/heznpc/ProfileKit" target="_blank" rel="noopener" data-i18n="github">GitHub</a>
+      <a href="https://github.com/heznpc/ProfileKit#endpoints" target="_blank" rel="noopener" data-i18n="docs">Docs</a>
     </nav>
   </div>
 </header>
 
 <main id="cards-view">
   <aside class="card-list-panel">
-    <h2>Catalog</h2>
+    <div class="panel-heading">
+      <div>
+        <h2 data-i18n="catalog">Card library</h2>
+        <p data-i18n="catalogHint">Choose a card to start</p>
+      </div>
+      <span class="catalog-count" id="catalog-count">26</span>
+    </div>
+    <div class="catalog-search">
+      <input id="card-search" type="search" autocomplete="off" data-i18n-placeholder="searchCards" placeholder="Search cards" />
+    </div>
+    <div id="category-filters" class="category-filters" role="tablist"></div>
     <div id="card-list-root"></div>
   </aside>
 
   <section class="preview-panel">
-    <div>
-      <h2 id="card-name">Stats</h2>
-      <p class="desc" id="card-desc">GitHub stats — commits, PRs, issues, stars, repos.</p>
+    <div class="preview-heading">
+      <div>
+        <span class="eyebrow" data-i18n="liveSvg">Live SVG</span>
+        <h2 id="card-name">Profile hero</h2>
+        <p class="desc" id="card-desc">Open your README with a personal, animated banner.</p>
+      </div>
+      <span class="live-badge" data-i18n="livePreview">Live preview</span>
     </div>
     <div class="preview-frame">
       <img id="preview-img" alt="" />
     </div>
     <div class="copy-section">
-      <div class="copy-row">
-        <code id="url-output"></code>
-        <button id="copy-url" type="button">Copy URL</button>
+      <div class="copy-intro">
+        <div>
+          <h3 data-i18n="useCard">Use this card</h3>
+          <p data-i18n="useCardHint">Copy the Markdown and paste it directly into your README.</p>
+        </div>
       </div>
-      <div class="copy-row">
+      <div class="copy-row primary">
         <code id="md-output"></code>
-        <button id="copy-md" type="button">Copy Markdown</button>
+        <button id="copy-md" type="button" data-i18n="copyMarkdown">Copy Markdown</button>
       </div>
-      <div class="copy-row">
-        <code id="share-output"></code>
-        <button id="copy-share" type="button">Copy share link</button>
+      <div class="copy-grid">
+        <div class="copy-row">
+          <code id="url-output"></code>
+          <button id="copy-url" type="button" data-i18n="copyUrl">Copy URL</button>
+        </div>
+        <div class="copy-row">
+          <code id="share-output"></code>
+          <button id="copy-share" type="button" data-i18n="copyShare">Copy share link</button>
+        </div>
+        <div class="copy-row">
+          <code data-i18n="downloadPngHint">PNG snapshot of this card</code>
+          <button id="download-png" type="button" data-i18n="downloadPng">Download PNG</button>
+        </div>
       </div>
     </div>
   </section>
 
   <aside class="params-panel">
-    <h3>Parameters</h3>
+    <div class="panel-heading">
+      <div>
+        <h3 data-i18n="customize">Customize</h3>
+        <p data-i18n="customizeHint">Changes appear in the preview automatically.</p>
+      </div>
+      <button type="button" id="reset-card" class="reset-card" data-i18n="reset">Reset</button>
+    </div>
+    <section class="looks-panel" aria-labelledby="looks-heading">
+      <h4 id="looks-heading" data-i18n="quickLooks">Quick looks</h4>
+      <div id="look-options" class="look-options"></div>
+    </section>
+    <div id="param-tabs" class="param-tabs" role="tablist"></div>
     <form id="params-form" class="params-form" onsubmit="return false;"></form>
   </aside>
 </main>
 
-<section id="templates-view" class="templates-panel hidden">
-  <h2>Templates</h2>
-  <p class="intro">
-    Curated picks. Click Load to copy any preset into the Cards editor — tweak every param, then copy the URL or markdown.
-    Community submissions open once the gallery ships.
-  </p>
-  <div id="templates-grid" class="templates-grid"></div>
-</section>
-
 <section id="compose-view" class="compose-view hidden">
   <aside class="composer-inventory">
-    <h2>Inventory</h2>
+    <h2 data-i18n="inventory">Add a block</h2>
     <div id="composer-inventory-root"></div>
   </aside>
 
   <section class="composer-canvas">
     <div id="composer-blocks"></div>
     <div id="composer-empty" class="empty-state">
-      <strong>No blocks yet.</strong>
-      Click an inventory item on the left to add a card or markdown block.
+      <strong data-i18n="noBlocksTitle">Start with one block</strong>
+      <span data-i18n="noBlocksHint">Choose a card or Markdown block from the library.</span>
     </div>
     <div class="canvas-footer">
-      <button type="button" id="composer-clear" class="secondary">Clear</button>
-      <button type="button" id="composer-share" class="secondary">Copy share link</button>
-      <button type="button" id="composer-copy">Copy README markdown</button>
+      <button type="button" id="composer-clear" class="secondary" data-i18n="clear">Clear</button>
+      <button type="button" id="composer-share" class="secondary" data-i18n="copyShare">Copy share link</button>
+      <button type="button" id="composer-copy" data-i18n="copyReadme">Copy README Markdown</button>
     </div>
   </section>
 
   <aside class="composer-inspector">
-    <h3>Slot inspector</h3>
-    <p id="composer-selected-label" class="selected-label">No block selected</p>
+    <h3 data-i18n="slotInspector">Block settings</h3>
+    <p id="composer-selected-label" class="selected-label" data-i18n="noBlockSelected">No block selected</p>
     <form id="composer-slot-form" class="params-form" onsubmit="return false;">
-      <div class="empty">Select a card block to edit its slots.</div>
+      <div class="empty" data-i18n="selectBlockHint">Select a block in the canvas to edit it.</div>
     </form>
   </aside>
 </section>
 
+<script src="/i18n.js"></script>
 <script>
 // Card schema. Each card lists its tweakable params; rendering happens via the
 // real /api/* endpoints so the preview is always exactly what the user gets.
@@ -1132,63 +472,144 @@ const CARDS = {
 };
 
 const GROUPS = ["Data", "Blog", "Animation"];
+const i18n = window.ProfileKitI18n;
+
+function cardLabel(key) {
+  return i18n.card(key, 0, CARDS[key]?.label || key);
+}
+
+function cardDescription(key) {
+  return i18n.card(key, 1, CARDS[key]?.desc || "");
+}
+
+function composerLabel(cardType) {
+  return CARDS[cardType] ? cardLabel(cardType) : cardType;
+}
 
 const cardListRoot = document.getElementById("card-list-root");
+const cardSearch = document.getElementById("card-search");
+const categoryFilters = document.getElementById("category-filters");
+const catalogCount = document.getElementById("catalog-count");
 const cardName = document.getElementById("card-name");
 const cardDesc = document.getElementById("card-desc");
 const previewImg = document.getElementById("preview-img");
 const urlOutput = document.getElementById("url-output");
 const mdOutput = document.getElementById("md-output");
 const shareOutput = document.getElementById("share-output");
+const lookOptions = document.getElementById("look-options");
+const paramTabs = document.getElementById("param-tabs");
 const paramsForm = document.getElementById("params-form");
+const resetCardBtn = document.getElementById("reset-card");
 const copyUrlBtn = document.getElementById("copy-url");
 const copyMdBtn = document.getElementById("copy-md");
 const copyShareBtn = document.getElementById("copy-share");
+const downloadPngBtn = document.getElementById("download-png");
 
-// Build the sidebar grouped by category.
-function buildCardList() {
+let activeCategory = "All";
+
+function buildCategoryFilters() {
+  categoryFilters.innerHTML = "";
+  for (const group of ["All", ...GROUPS]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("role", "tab");
+    button.dataset.group = group;
+    button.textContent = group === "All" ? i18n.t("allCards") : i18n.group(group);
+    button.setAttribute("aria-selected", group === activeCategory ? "true" : "false");
+    button.classList.toggle("active", group === activeCategory);
+    button.addEventListener("click", () => {
+      activeCategory = group;
+      buildCategoryFilters();
+      buildCardList(cardSearch.value);
+    });
+    categoryFilters.appendChild(button);
+  }
+}
+
+// Build the card library using the active locale and search query.
+function buildCardList(query = "") {
+  cardListRoot.innerHTML = "";
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  let matchCount = 0;
+
   for (const group of GROUPS) {
+    const matches = Object.entries(CARDS).filter(([key, card]) => {
+      if (card.group !== group) return false;
+      if (activeCategory !== "All" && card.group !== activeCategory) return false;
+      const haystack = [key, cardLabel(key), cardDescription(key), i18n.group(group)]
+        .join(" ")
+        .toLocaleLowerCase();
+      return !normalizedQuery || haystack.includes(normalizedQuery);
+    });
+    if (!matches.length) continue;
+
     const groupDiv = document.createElement("div");
     groupDiv.className = "card-group";
     const h3 = document.createElement("h3");
-    h3.textContent = group;
+    h3.textContent = i18n.group(group);
     groupDiv.appendChild(h3);
     const list = document.createElement("ul");
     list.className = "card-list";
-    for (const [key, card] of Object.entries(CARDS)) {
-      if (card.group !== group) continue;
+    for (const [key, card] of matches) {
       const li = document.createElement("li");
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.card = key;
-      button.textContent = card.label;
+      button.dataset.group = card.group;
+      button.textContent = cardLabel(key);
+      button.setAttribute("aria-label", `${cardLabel(key)}. ${cardDescription(key)}`);
+      button.classList.toggle("active", currentCard === key);
       button.addEventListener("click", () => selectCard(key));
       li.appendChild(button);
       list.appendChild(li);
+      matchCount++;
     }
     groupDiv.appendChild(list);
     cardListRoot.appendChild(groupDiv);
   }
+
+  catalogCount.textContent = String(matchCount);
+  if (!matchCount) {
+    const empty = document.createElement("p");
+    empty.className = "catalog-empty";
+    empty.textContent = i18n.t("emptySearch");
+    cardListRoot.appendChild(empty);
+  }
 }
 
-let currentCard = "stats";
+let currentCard = "hero";
 let currentValues = {};
+let currentLookId = "default";
+let currentParamGroup = "content";
 
-function selectCard(key, overrides) {
+function defaultValuesForCard(key) {
+  const values = {};
+  for (const param of CARDS[key].params) {
+    if (param.default != null) {
+      values[param.name] = i18n.example(key, param.name, param.default);
+    }
+  }
+  return values;
+}
+
+function selectCard(key, overrides, options = {}) {
+  const cardChanged = currentCard !== key;
   currentCard = key;
+  if (cardChanged) currentParamGroup = "content";
   const card = CARDS[key];
-  cardName.textContent = card.label;
-  cardDesc.textContent = card.desc;
+  cardName.textContent = cardLabel(key);
+  cardDesc.textContent = cardDescription(key);
   document.querySelectorAll(".card-list button").forEach((b) => {
     b.classList.toggle("active", b.dataset.card === key);
   });
-  currentValues = {};
-  for (const p of card.params) {
-    if (p.default != null) currentValues[p.name] = p.default;
-  }
+  currentValues = defaultValuesForCard(key);
   if (overrides) Object.assign(currentValues, overrides);
+  currentLookId = Object.prototype.hasOwnProperty.call(options, "lookId")
+    ? options.lookId
+    : inferLookId(key, currentValues);
+  buildLookOptions();
   buildForm(card.params);
-  render();
+  render({ immediate: true });
 }
 
 function cardUrl(card, values) {
@@ -1201,90 +622,366 @@ function cardUrl(card, values) {
   return `/api/${card}${qs ? "?" + qs : ""}`;
 }
 
+const PARAM_GROUPS = [
+  { id: "content", label: "contentTab" },
+  { id: "style", label: "styleTab" },
+  { id: "adjust", label: "adjustTab" },
+];
+
+const STYLE_PARAMS = new Set([
+  "theme", "font", "accent_color", "color", "border_radius",
+  "hide_border", "hide_bar", "frame", "bg", "style",
+]);
+
+const ADJUST_PARAMS = new Set([
+  "layout", "align", "width", "height", "size", "card_width",
+  "max_desc_lines", "langs_count", "count", "speed", "density",
+  "seed", "cols", "rows", "duration", "waves", "bars", "bpm", "blips",
+]);
+
+const SEGMENTED_PARAMS = new Set(["layout", "align", "bg", "style"]);
+const THEME_COLORS = {
+  dark: ["#0d1117", "#58a6ff"],
+  dark_dimmed: ["#22272e", "#539bf5"],
+  light: ["#ffffff", "#0969da"],
+};
+
+const RANGE_CONFIG = {
+  width: { min: 280, max: 1200, step: 10 },
+  height: { min: 80, max: 600, step: 10 },
+  size: { min: 12, max: 96, step: 1 },
+  card_width: { min: 280, max: 600, step: 10 },
+  max_desc_lines: { min: 1, max: 6, step: 1 },
+  langs_count: { min: 1, max: 10, step: 1 },
+  count: { min: 1, max: 10, step: 1 },
+  waves: { min: 1, max: 8, step: 1 },
+  density: { min: 0.2, max: 3, step: 0.1 },
+  seed: { min: 1, max: 999, step: 1 },
+  cols: { min: 20, max: 80, step: 1 },
+  rows: { min: 3, max: 14, step: 1 },
+  duration: { min: 8, max: 60, step: 1 },
+  bars: { min: 8, max: 48, step: 1 },
+  bpm: { min: 40, max: 180, step: 1 },
+  blips: { min: 1, max: 12, step: 1 },
+  "divider:height": { min: 10, max: 100, step: 1 },
+  "typing:height": { min: 40, max: 300, step: 10 },
+  "hero:height": { min: 120, max: 600, step: 10 },
+  "radar:width": { min: 200, max: 600, step: 10 },
+  "radar:height": { min: 200, max: 600, step: 10 },
+  "terminal:speed": { min: 20, max: 200, step: 5 },
+  "matrix:speed": { min: 0.2, max: 3, step: 0.1 },
+  "radar:speed": { min: 1, max: 12, step: 1 },
+};
+
+function paramGroup(param) {
+  if (STYLE_PARAMS.has(param.name)) return "style";
+  if (ADJUST_PARAMS.has(param.name) || param.type === "number") return "adjust";
+  return "content";
+}
+
+function rangeConfig(param) {
+  const exact = RANGE_CONFIG[`${currentCard}:${param.name}`];
+  if (exact) return exact;
+  if (RANGE_CONFIG[param.name]) return RANGE_CONFIG[param.name];
+  const base = Number(param.default) || 50;
+  return { min: 0, max: Math.max(100, base * 2), step: 1 };
+}
+
+function setParamValue(name, value) {
+  if (value === "" || value == null) delete currentValues[name];
+  else currentValues[name] = value;
+  currentLookId = null;
+  syncLookSelection();
+  render();
+}
+
+function makeFieldLabel(param, id) {
+  const label = document.createElement("label");
+  label.htmlFor = id;
+  label.textContent = i18n.param(param.name);
+  if (param.required) {
+    const required = document.createElement("span");
+    required.className = "req";
+    required.textContent = " *";
+    label.appendChild(required);
+  }
+  return label;
+}
+
+function setParamGroup(groupId) {
+  currentParamGroup = groupId;
+  paramTabs.querySelectorAll("button").forEach((button) => {
+    const active = button.dataset.group === groupId;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  paramsForm.querySelectorAll(".param-group").forEach((section) => {
+    section.classList.toggle("hidden", section.dataset.group !== groupId);
+  });
+}
+
 function buildForm(params) {
   paramsForm.innerHTML = "";
-  for (const p of params) {
-    const field = document.createElement("div");
-    field.className = p.type === "boolean" ? "field-row" : "field";
-    const id = `f-${p.name}`;
-    let input;
-    if (p.type === "select") {
-      input = document.createElement("select");
-      for (const opt of p.options) {
-        const o = document.createElement("option");
-        o.value = opt;
-        o.textContent = opt || (p.placeholder || "(default)");
-        input.appendChild(o);
-      }
-      input.value = currentValues[p.name] || "";
-    } else if (p.type === "boolean") {
-      input = document.createElement("input");
-      input.type = "checkbox";
-      input.checked = !!currentValues[p.name];
-    } else if (p.type === "color") {
-      // Color input always holds a value, so we wrap it with a checkbox that
-      // gates whether the value flows into the URL — otherwise opening the
-      // picker would silently lock the user into the default swatch.
-      input = document.createElement("div");
-      input.className = "color-wrap";
-      const swatch = document.createElement("input");
-      swatch.type = "color";
-      swatch.value = currentValues[p.name] ? `#${currentValues[p.name].replace("#", "")}` : "#58a6ff";
-      const toggle = document.createElement("input");
-      toggle.type = "checkbox";
-      toggle.checked = !!currentValues[p.name];
-      toggle.title = "Use custom color";
-      input.appendChild(toggle);
-      input.appendChild(swatch);
-      input.__swatch = swatch;
-      input.__toggle = toggle;
-    } else if (p.type === "number") {
-      input = document.createElement("input");
-      input.type = "number";
-      input.value = currentValues[p.name] != null ? currentValues[p.name] : "";
-      if (p.placeholder) input.placeholder = p.placeholder;
-    } else {
-      input = document.createElement("input");
-      input.type = "text";
-      input.value = currentValues[p.name] || "";
-      if (p.placeholder) input.placeholder = p.placeholder;
-    }
-    input.id = id;
-    const onChange = () => {
-      let value;
-      if (p.type === "boolean") value = input.checked ? "true" : "";
-      else if (p.type === "color") {
-        value = input.__toggle.checked ? input.__swatch.value.replace("#", "") : "";
-      } else value = input.value;
-      if (value === "" || value == null) delete currentValues[p.name];
-      else currentValues[p.name] = value;
-      render();
-    };
-    if (p.type === "color") {
-      input.__swatch.addEventListener("input", () => {
-        // Picking a color implicitly enables the toggle.
-        input.__toggle.checked = true;
-        onChange();
-      });
-      input.__toggle.addEventListener("change", onChange);
-    } else {
-      input.addEventListener("input", onChange);
-    }
-    if (p.type === "boolean") {
-      field.appendChild(input);
-      const label = document.createElement("label");
-      label.htmlFor = id;
-      label.textContent = p.name;
-      field.appendChild(label);
-    } else {
-      const label = document.createElement("label");
-      label.htmlFor = id;
-      label.innerHTML = p.name + (p.required ? ' <span class="req">*</span>' : "");
-      field.appendChild(label);
-      field.appendChild(input);
-    }
-    paramsForm.appendChild(field);
+  paramTabs.innerHTML = "";
+  const buckets = new Map(PARAM_GROUPS.map((group) => [group.id, []]));
+  for (const param of params) buckets.get(paramGroup(param)).push(param);
+  const availableGroups = PARAM_GROUPS.filter((group) => buckets.get(group.id).length);
+  if (!availableGroups.some((group) => group.id === currentParamGroup)) {
+    currentParamGroup = availableGroups[0]?.id || "content";
   }
+
+  for (const group of availableGroups) {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.setAttribute("role", "tab");
+    tab.dataset.group = group.id;
+    tab.textContent = i18n.t(group.label);
+    tab.addEventListener("click", () => setParamGroup(group.id));
+    paramTabs.appendChild(tab);
+
+    const section = document.createElement("section");
+    section.className = "param-group";
+    section.dataset.group = group.id;
+    section.setAttribute("role", "tabpanel");
+    for (const param of buckets.get(group.id)) section.appendChild(buildParamField(param));
+    paramsForm.appendChild(section);
+  }
+  setParamGroup(currentParamGroup);
+}
+
+function buildParamField(param) {
+  const id = `f-${param.name}`;
+
+  if (param.type === "boolean") {
+    const field = document.createElement("div");
+    field.className = "switch-field";
+    const label = document.createElement("label");
+    label.className = "switch-control";
+    label.htmlFor = id;
+    const text = document.createElement("span");
+    text.textContent = i18n.param(param.name);
+    const input = document.createElement("input");
+    input.id = id;
+    input.type = "checkbox";
+    input.checked = !!currentValues[param.name];
+    input.addEventListener("change", () => {
+      setParamValue(param.name, input.checked ? "true" : "");
+    });
+    const track = document.createElement("span");
+    track.className = "switch-track";
+    track.setAttribute("aria-hidden", "true");
+    label.appendChild(text);
+    label.appendChild(input);
+    label.appendChild(track);
+    field.appendChild(label);
+    return field;
+  }
+
+  const field = document.createElement("div");
+  field.className = "field";
+  field.appendChild(makeFieldLabel(param, id));
+
+  if (param.type === "select" && param.name === "theme") {
+    const choices = document.createElement("div");
+    choices.className = "theme-options";
+    choices.setAttribute("role", "group");
+    for (const option of param.options) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.value = option;
+      const colors = THEME_COLORS[option] || ["#667085", "#d0d5dd"];
+      const dot = document.createElement("span");
+      dot.className = "theme-dot";
+      dot.style.setProperty("--theme-bg", colors[0]);
+      dot.style.setProperty("--theme-accent", colors[1]);
+      const text = document.createElement("span");
+      text.textContent = i18n.option(option);
+      button.appendChild(dot);
+      button.appendChild(text);
+      const active = (currentValues[param.name] || param.options[0] || "") === option;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.addEventListener("click", () => {
+        choices.querySelectorAll("button").forEach((item) => {
+          const selected = item === button;
+          item.classList.toggle("active", selected);
+          item.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+        setParamValue(param.name, option);
+      });
+      choices.appendChild(button);
+    }
+    field.appendChild(choices);
+    return field;
+  }
+
+  if (param.type === "select" && param.name === "border_radius") {
+    const values = param.options;
+    const currentIndex = Math.max(0, values.indexOf(currentValues[param.name] || ""));
+    const wrap = document.createElement("div");
+    wrap.className = "token-range";
+    const range = document.createElement("input");
+    range.id = id;
+    range.type = "range";
+    range.min = "0";
+    range.max = String(values.length - 1);
+    range.step = "1";
+    range.value = String(currentIndex);
+    const output = document.createElement("output");
+    output.htmlFor = id;
+    output.textContent = i18n.option(values[currentIndex], i18n.t("defaultValue"));
+    range.addEventListener("input", () => {
+      const value = values[Number(range.value)];
+      output.textContent = i18n.option(value, i18n.t("defaultValue"));
+      setParamValue(param.name, value);
+    });
+    wrap.appendChild(range);
+    wrap.appendChild(output);
+    field.appendChild(wrap);
+    return field;
+  }
+
+  if (param.type === "select" && SEGMENTED_PARAMS.has(param.name)) {
+    const choices = document.createElement("div");
+    choices.className = "segmented-options";
+    choices.setAttribute("role", "group");
+    for (const option of param.options) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.value = option;
+      button.textContent = i18n.option(option, i18n.t("defaultValue"));
+      const active = (currentValues[param.name] || param.options[0] || "") === option;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.addEventListener("click", () => {
+        choices.querySelectorAll("button").forEach((item) => {
+          const selected = item === button;
+          item.classList.toggle("active", selected);
+          item.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+        setParamValue(param.name, option);
+      });
+      choices.appendChild(button);
+    }
+    field.appendChild(choices);
+    return field;
+  }
+
+  if (param.type === "number") {
+    const config = rangeConfig(param);
+    const value = Number(currentValues[param.name] ?? param.default ?? config.min);
+    const wrap = document.createElement("div");
+    wrap.className = "range-control";
+    const range = document.createElement("input");
+    range.type = "range";
+    range.min = String(config.min);
+    range.max = String(config.max);
+    range.step = String(config.step);
+    range.value = String(value);
+    range.setAttribute("aria-label", i18n.param(param.name));
+    const number = document.createElement("input");
+    number.id = id;
+    number.className = "range-number";
+    number.type = "number";
+    number.min = String(config.min);
+    number.max = String(config.max);
+    number.step = String(config.step);
+    number.value = String(value);
+    range.addEventListener("input", () => {
+      number.value = range.value;
+      setParamValue(param.name, range.value);
+    });
+    number.addEventListener("input", () => {
+      if (number.value === "") return;
+      const next = Math.min(config.max, Math.max(config.min, Number(number.value)));
+      range.value = String(next);
+      setParamValue(param.name, number.value);
+    });
+    number.addEventListener("change", () => {
+      const next = Math.min(config.max, Math.max(config.min, Number(number.value) || config.min));
+      number.value = String(next);
+      range.value = String(next);
+      setParamValue(param.name, String(next));
+    });
+    wrap.appendChild(range);
+    wrap.appendChild(number);
+    field.appendChild(wrap);
+    return field;
+  }
+
+  if (param.type === "color") {
+    const raw = String(currentValues[param.name] || "58a6ff").replace(/^#/, "");
+    const wrap = document.createElement("div");
+    wrap.className = "color-control";
+    const swatch = document.createElement("input");
+    swatch.id = id;
+    swatch.type = "color";
+    swatch.value = `#${raw}`;
+    const hex = document.createElement("input");
+    hex.type = "text";
+    hex.className = "color-hex";
+    hex.value = `#${raw.toUpperCase()}`;
+    hex.setAttribute("aria-label", `${i18n.param(param.name)} hex`);
+    const toggle = document.createElement("input");
+    toggle.type = "checkbox";
+    toggle.className = "color-enabled";
+    toggle.checked = !!currentValues[param.name];
+    toggle.title = i18n.t("customColor");
+    toggle.setAttribute("aria-label", i18n.t("customColor"));
+    swatch.addEventListener("input", () => {
+      toggle.checked = true;
+      hex.value = swatch.value.toUpperCase();
+      setParamValue(param.name, swatch.value.replace("#", ""));
+    });
+    hex.addEventListener("change", () => {
+      const value = hex.value.trim().replace(/^#/, "");
+      if (!/^[0-9a-fA-F]{6}$/.test(value)) {
+        hex.value = swatch.value.toUpperCase();
+        return;
+      }
+      swatch.value = `#${value}`;
+      toggle.checked = true;
+      hex.value = `#${value.toUpperCase()}`;
+      setParamValue(param.name, value);
+    });
+    toggle.addEventListener("change", () => {
+      setParamValue(param.name, toggle.checked ? swatch.value.replace("#", "") : "");
+    });
+    wrap.appendChild(swatch);
+    wrap.appendChild(hex);
+    wrap.appendChild(toggle);
+    field.appendChild(wrap);
+    return field;
+  }
+
+  if (param.type === "select") {
+    const select = document.createElement("select");
+    select.id = id;
+    for (const option of param.options) {
+      const item = document.createElement("option");
+      item.value = option;
+      const fallback = param.placeholder === "(system)"
+        ? i18n.t("systemFont")
+        : param.placeholder === "(monospace)"
+          ? i18n.t("monospaceFont")
+          : i18n.t("defaultValue");
+      item.textContent = i18n.option(option, fallback);
+      select.appendChild(item);
+    }
+    select.value = currentValues[param.name] || param.options[0] || "";
+    select.addEventListener("change", () => setParamValue(param.name, select.value));
+    field.appendChild(select);
+    return field;
+  }
+
+  const input = document.createElement("input");
+  input.id = id;
+  input.type = "text";
+  input.value = currentValues[param.name] || "";
+  if (param.placeholder) input.placeholder = param.placeholder;
+  input.addEventListener("input", () => setParamValue(param.name, input.value));
+  field.appendChild(input);
+  return field;
 }
 
 function buildUrl() {
@@ -1295,22 +992,43 @@ function absoluteUrl(rel) {
   return window.location.origin + rel;
 }
 
-// URL/markdown text update synchronously, but the actual <img> request is
-// debounced so typing into a username field doesn't fire one fetch per
-// keystroke.
+// Slider and text inputs can emit dozens of events in one gesture. Commit the
+// derived URLs, address-bar hash, and SVG together after the gesture settles
+// so the browser only performs one layout, history update, and image decode.
 let renderTimer;
-function render() {
+let pendingRenderState;
+
+function commitRender() {
+  if (!pendingRenderState) return;
+  const state = pendingRenderState;
+  pendingRenderState = null;
+  urlOutput.textContent = state.abs;
+  mdOutput.textContent = `![${state.label}](${state.abs})`;
+  shareOutput.textContent = state.share;
+  writeHashState(state.hash);
+  if (previewImg.getAttribute("src") !== state.url) previewImg.src = state.url;
+  previewImg.alt = state.label;
+}
+
+function flushRender() {
+  clearTimeout(renderTimer);
+  commitRender();
+}
+
+function render({ immediate = false } = {}) {
   const url = buildUrl();
   const abs = absoluteUrl(url);
-  urlOutput.textContent = abs;
-  mdOutput.textContent = `![${CARDS[currentCard].label}](${abs})`;
-  shareOutput.textContent = shareLink();
-  writeHashState();
+  const hash = encodeHashState();
+  pendingRenderState = {
+    url,
+    abs,
+    hash,
+    label: cardLabel(currentCard),
+    share: shareLink(hash),
+  };
   clearTimeout(renderTimer);
-  renderTimer = setTimeout(() => {
-    previewImg.src = url;
-    previewImg.alt = CARDS[currentCard].label;
-  }, 200);
+  if (immediate) flushRender();
+  else renderTimer = setTimeout(commitRender, 120);
 }
 
 // ---------------------------------------------------------------------------
@@ -1329,8 +1047,8 @@ function encodeHashState() {
   return p.toString();
 }
 
-function writeHashState() {
-  const next = "#" + encodeHashState();
+function writeHashState(encodedState = encodeHashState()) {
+  const next = "#" + encodedState;
   if (window.location.hash !== next) {
     history.replaceState(null, "", next);
   }
@@ -1350,14 +1068,14 @@ function readHashState() {
   return { card, values };
 }
 
-function shareLink() {
-  return window.location.origin + window.location.pathname + "#" + encodeHashState();
+function shareLink(encodedState = encodeHashState()) {
+  return window.location.origin + window.location.pathname + "#" + encodedState;
 }
 
 function copyText(text, button) {
   navigator.clipboard.writeText(text).then(() => {
     const original = button.textContent;
-    button.textContent = "Copied!";
+    button.textContent = i18n.t("copied");
     button.classList.add("copied");
     setTimeout(() => {
       button.textContent = original;
@@ -1366,9 +1084,68 @@ function copyText(text, button) {
   });
 }
 
-copyUrlBtn.addEventListener("click", () => copyText(urlOutput.textContent, copyUrlBtn));
-copyMdBtn.addEventListener("click", () => copyText(mdOutput.textContent, copyMdBtn));
-copyShareBtn.addEventListener("click", () => copyText(shareOutput.textContent, copyShareBtn));
+copyUrlBtn.addEventListener("click", () => {
+  flushRender();
+  copyText(urlOutput.textContent, copyUrlBtn);
+});
+copyMdBtn.addEventListener("click", () => {
+  flushRender();
+  copyText(mdOutput.textContent, copyMdBtn);
+});
+copyShareBtn.addEventListener("click", () => {
+  flushRender();
+  copyText(shareOutput.textContent, copyShareBtn);
+});
+
+async function downloadPng() {
+  flushRender();
+  const url = previewImg.getAttribute("src");
+  if (!url) return;
+  const originalLabel = downloadPngBtn.textContent;
+  downloadPngBtn.disabled = true;
+  downloadPngBtn.textContent = i18n.t("preparingPng");
+  let objectUrl;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const svg = await response.text();
+    const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
+    const root = parsed.documentElement;
+    if (!root || root.nodeName.toLowerCase() !== "svg") throw new Error("invalid SVG");
+    const viewBox = root.getAttribute("viewBox")?.trim().split(/\s+/).map(Number) || [];
+    const width = Number(root.getAttribute("width")) || viewBox[2] || 1200;
+    const height = Number(root.getAttribute("height")) || viewBox[3] || 280;
+    objectUrl = URL.createObjectURL(new Blob([svg], {type: "image/svg+xml;charset=utf-8"}));
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error("SVG could not be rasterized"));
+      image.src = objectUrl;
+    });
+    const scale = 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const context = canvas.getContext("2d");
+    context.scale(scale, scale);
+    context.drawImage(image, 0, 0, width, height);
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `profilekit-${currentCard}.png`;
+    link.click();
+    downloadPngBtn.textContent = i18n.t("downloadedPng");
+  } catch {
+    downloadPngBtn.textContent = i18n.t("pngFailed");
+    setTimeout(() => { downloadPngBtn.textContent = originalLabel; }, 1800);
+  } finally {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    downloadPngBtn.disabled = false;
+    if (downloadPngBtn.textContent === i18n.t("preparingPng")) downloadPngBtn.textContent = originalLabel;
+  }
+}
+
+downloadPngBtn.addEventListener("click", downloadPng);
+cardSearch.addEventListener("input", () => buildCardList(cardSearch.value));
 
 window.addEventListener("hashchange", () => {
   const state = readHashState();
@@ -1379,20 +1156,20 @@ window.addEventListener("hashchange", () => {
 
 const TEMPLATES = [
   {
+    id: "tokyo-hero",
+    name: "Tokyo Night Hero",
+    author: "heznpc",
+    description: "Cool blues, wave background, space-grotesk. Great README opener.",
+    card: "hero",
+    params: { name: "ProfileKit", subtitle: "Make your profile yours", bg: "wave", theme: "tokyo_night", font: "space-grotesk", width: 900, height: 220 },
+  },
+  {
     id: "minimal-stats",
     name: "Minimal Stats",
     author: "heznpc",
     description: "Borderless, no accent bar. Cleanest possible stats card.",
     card: "stats",
     params: { username: "heznpc", hide: "issues,contributed", hide_border: "true", hide_bar: "true" },
-  },
-  {
-    id: "tokyo-hero",
-    name: "Tokyo Night Hero",
-    author: "heznpc",
-    description: "Cool blues, wave background, space-grotesk. Great README opener.",
-    card: "hero",
-    params: { name: "Your Name", subtitle: "Your tagline here", bg: "wave", theme: "tokyo_night", font: "space-grotesk", width: 900, height: 220 },
   },
   {
     id: "donut-langs",
@@ -1468,61 +1245,108 @@ const TEMPLATES = [
   },
 ];
 
-const templatesGrid = document.getElementById("templates-grid");
 const cardsView = document.getElementById("cards-view");
-const templatesView = document.getElementById("templates-view");
 const viewCardsBtn = document.getElementById("view-cards");
-const viewTemplatesBtn = document.getElementById("view-templates");
 
-let templatesBuilt = false;
-
-function buildTemplates() {
-  templatesGrid.innerHTML = "";
-  for (const tpl of TEMPLATES) {
-    const card = document.createElement("div");
-    card.className = "template-card";
-
-    const thumb = document.createElement("div");
-    thumb.className = "thumb";
-    const img = document.createElement("img");
-    img.src = cardUrl(tpl.card, tpl.params);
-    img.alt = tpl.name;
-    img.loading = "lazy";
-    thumb.appendChild(img);
-
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    const h3 = document.createElement("h3");
-    h3.textContent = tpl.name;
-    const by = document.createElement("div");
-    by.className = "by";
-    by.textContent = `by ${tpl.author} · ${tpl.card}`;
-    const desc = document.createElement("p");
-    desc.textContent = tpl.description;
-    meta.appendChild(h3);
-    meta.appendChild(by);
-    meta.appendChild(desc);
-
-    const loadBtn = document.createElement("button");
-    loadBtn.type = "button";
-    loadBtn.textContent = "Load into editor →";
-    loadBtn.addEventListener("click", () => loadTemplate(tpl));
-
-    card.appendChild(thumb);
-    card.appendChild(meta);
-    card.appendChild(loadBtn);
-    templatesGrid.appendChild(card);
-  }
+function templateParams(tpl) {
+  if (tpl.id !== "tokyo-hero") return tpl.params;
+  return {
+    ...tpl.params,
+    name: i18n.example("hero", "name", tpl.params.name),
+    subtitle: i18n.example("hero", "subtitle", tpl.params.subtitle),
+  };
 }
 
-function loadTemplate(tpl) {
-  if (!CARDS[tpl.card]) {
-    console.warn(`Template ${tpl.id} references unknown card ${tpl.card}`);
-    return;
-  }
-  switchView("cards");
-  selectCard(tpl.card, tpl.params);
+const LOOK_PALETTES = {
+  dark: ["#0d1117", "#58a6ff"],
+  dark_dimmed: ["#22272e", "#539bf5"],
+  light: ["#ffffff", "#0969da"],
+  tokyo_night: ["#1a1b26", "#7aa2f7"],
+  kanagawa: ["#1f1f28", "#e6c384"],
+  rose_pine: ["#191724", "#ebbcba"],
+  solarized_dark: ["#002b36", "#b58900"],
+};
+
+function looksForCard(cardKey) {
+  const baseLooks = [
+    { id: "default", label: i18n.t("lookDefault"), params: {}, palette: LOOK_PALETTES.dark },
+    { id: "light", label: i18n.t("lookLight"), params: { theme: "light" }, palette: LOOK_PALETTES.light },
+    { id: "dimmed", label: i18n.t("lookDimmed"), params: { theme: "dark_dimmed" }, palette: LOOK_PALETTES.dark_dimmed },
+  ];
+  const presetLooks = TEMPLATES
+    .filter((tpl) => tpl.card === cardKey)
+    .map((tpl) => ({
+      id: `preset-${tpl.id}`,
+      label: i18n.template(tpl.id, 0, tpl.name),
+      description: i18n.template(tpl.id, 1, tpl.description),
+      params: templateParams(tpl),
+      palette: LOOK_PALETTES[tpl.params.theme]
+        || (CARDS[cardKey].group === "Animation"
+          ? ["#101827", "#159b6c"]
+          : ["#172033", "#f05b55"]),
+    }));
+  return [...baseLooks, ...presetLooks];
 }
+
+function sameValues(left, right) {
+  const normalize = (values) => Object.fromEntries(
+    Object.entries(values)
+      .filter(([, value]) => value != null && value !== "")
+      .map(([key, value]) => [key, String(value)])
+      .sort(([a], [b]) => a.localeCompare(b))
+  );
+  return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
+}
+
+function inferLookId(cardKey, values) {
+  const defaults = defaultValuesForCard(cardKey);
+  for (const look of looksForCard(cardKey)) {
+    if (sameValues(values, { ...defaults, ...look.params })) return look.id;
+  }
+  return null;
+}
+
+function buildLookOptions() {
+  lookOptions.innerHTML = "";
+
+  for (const look of looksForCard(currentCard)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "look-option";
+    button.dataset.look = look.id;
+    button.title = look.description || look.label;
+    const swatch = document.createElement("span");
+    swatch.className = "look-swatch";
+    const base = document.createElement("span");
+    base.style.background = look.palette[0];
+    const accent = document.createElement("span");
+    accent.style.background = look.palette[1];
+    swatch.appendChild(base);
+    swatch.appendChild(accent);
+    const label = document.createElement("span");
+    label.className = "look-label";
+    label.textContent = look.label;
+    button.appendChild(swatch);
+    button.appendChild(label);
+    button.addEventListener("click", () => {
+      selectCard(currentCard, look.params, { lookId: look.id });
+    });
+    lookOptions.appendChild(button);
+  }
+  syncLookSelection();
+}
+
+function syncLookSelection() {
+  lookOptions.querySelectorAll(".look-option").forEach((button) => {
+    const active = button.dataset.look === currentLookId;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+resetCardBtn.addEventListener("click", () => {
+  selectCard(currentCard, null, { lookId: "default" });
+});
 
 // ---------------------------------------------------------------------------
 // Compose view (v3 MVP-C — CAS-style README composer)
@@ -1649,16 +1473,26 @@ function buildInventory() {
     const groupDiv = document.createElement("div");
     groupDiv.className = "group";
     const h3 = document.createElement("h3");
-    h3.textContent = groupName;
+    h3.textContent = i18n.group(groupName);
     groupDiv.appendChild(h3);
     const ul = document.createElement("ul");
     for (const item of items) {
+      const localizedItemLabel = item.card_type
+        ? composerLabel(item.card_type)
+        : i18n.t("markdownBlock");
       const li = document.createElement("li");
       const btn = document.createElement("button");
       btn.type = "button";
       btn.draggable = true;
-      btn.setAttribute("aria-label", `Add ${item.label} block`);
-      btn.innerHTML = `<span>${item.label}</span><span class="add-icon" aria-hidden="true">+</span>`;
+      btn.setAttribute("aria-label", i18n.t("addBlock", { name: localizedItemLabel }));
+      const label = document.createElement("span");
+      label.textContent = localizedItemLabel;
+      const addIcon = document.createElement("span");
+      addIcon.className = "add-icon";
+      addIcon.setAttribute("aria-hidden", "true");
+      addIcon.textContent = "+";
+      btn.appendChild(label);
+      btn.appendChild(addIcon);
       btn.addEventListener("click", () => addBlock(item));
       btn.addEventListener("dragstart", (e) => {
         btn.classList.add("dragging");
@@ -1739,7 +1573,7 @@ function selectBlock(index) {
 
 function clearComposition() {
   if (!composerState.blocks.length) return;
-  if (!confirm("Clear all blocks?")) return;
+  if (!confirm(i18n.t("clearConfirm"))) return;
   composerState.blocks = [];
   composerState.selectedIndex = -1;
   persistAndRender();
@@ -1772,7 +1606,11 @@ async function injectCardSvg(container, cardType, slots, blockIndex) {
     if (!res.ok) throw new Error(`fetch ${res.status}`);
     svgText = await res.text();
   } catch (err) {
-    container.innerHTML = `<div class="hero-loading">preview unavailable: ${err.message}</div>`;
+    container.textContent = "";
+    const error = document.createElement("div");
+    error.className = "hero-loading";
+    error.textContent = i18n.t("previewUnavailable", { reason: err.message });
+    container.appendChild(error);
     return;
   }
   // Bail if the block was removed or replaced while the request was in flight.
@@ -1780,7 +1618,11 @@ async function injectCardSvg(container, cardType, slots, blockIndex) {
   const parsed = new DOMParser().parseFromString(svgText, "image/svg+xml");
   const svg = parsed.documentElement;
   if (!svg || svg.nodeName.toLowerCase() !== "svg") {
-    container.innerHTML = `<div class="hero-loading">preview unavailable: malformed SVG</div>`;
+    container.textContent = "";
+    const error = document.createElement("div");
+    error.className = "hero-loading";
+    error.textContent = i18n.t("malformedSvg");
+    container.appendChild(error);
     return;
   }
   container.innerHTML = "";
@@ -1813,10 +1655,10 @@ function showBgPopover(targetEl, blockIndex) {
   const popover = document.createElement("div");
   popover.className = "cas-popover";
   popover.setAttribute("role", "menu");
-  popover.setAttribute("aria-label", "Background");
+  popover.setAttribute("aria-label", i18n.t("background"));
   const title = document.createElement("div");
   title.className = "cas-popover-title";
-  title.textContent = "Background";
+  title.textContent = i18n.t("background");
   popover.appendChild(title);
 
   const options = ["gradient", "wave", "grid", "particles"];
@@ -1827,7 +1669,7 @@ function showBgPopover(targetEl, blockIndex) {
     btn.type = "button";
     btn.setAttribute("role", "menuitemradio");
     btn.setAttribute("aria-checked", opt === current ? "true" : "false");
-    btn.textContent = opt;
+    btn.textContent = i18n.option(opt);
     if (opt === current) btn.classList.add("active");
     btn.addEventListener("click", () => {
       block.slots.bg = opt;
@@ -1902,12 +1744,9 @@ document.addEventListener("keydown", (e) => {
 });
 
 function focusSlotInput(slotName) {
-  const field = slotForm.querySelector(`label`);
-  // The slot inspector renders fields in declaration order. Find the input
-  // whose preceding label text matches the slot name.
   const labels = slotForm.querySelectorAll("label");
   for (const lbl of labels) {
-    if (lbl.textContent.trim() === slotName) {
+    if (lbl.dataset.slot === slotName) {
       const input = lbl.parentElement.querySelector("input, select, textarea");
       if (input) {
         input.focus();
@@ -1962,7 +1801,7 @@ function renderBlocks() {
     const header = document.createElement("div");
     header.className = "block-header";
     const labelText =
-      block.type === "card" ? `${COMPOSER_SLOTS[block.card_type]?.label ?? block.card_type}` : "Markdown";
+      block.type === "card" ? composerLabel(block.card_type) : i18n.t("markdown");
     const label = document.createElement("span");
     label.className = "label";
     label.textContent = labelText;
@@ -1970,8 +1809,8 @@ function renderBlocks() {
 
     const upBtn = document.createElement("button");
     upBtn.type = "button";
-    upBtn.title = "Move up";
-    upBtn.setAttribute("aria-label", `Move ${labelText} up`);
+    upBtn.title = i18n.t("moveUp", { name: labelText });
+    upBtn.setAttribute("aria-label", i18n.t("moveUp", { name: labelText }));
     upBtn.textContent = "↑";
     upBtn.disabled = index === 0;
     upBtn.addEventListener("click", () => moveBlock(index, -1));
@@ -1979,8 +1818,8 @@ function renderBlocks() {
 
     const downBtn = document.createElement("button");
     downBtn.type = "button";
-    downBtn.title = "Move down";
-    downBtn.setAttribute("aria-label", `Move ${labelText} down`);
+    downBtn.title = i18n.t("moveDown", { name: labelText });
+    downBtn.setAttribute("aria-label", i18n.t("moveDown", { name: labelText }));
     downBtn.textContent = "↓";
     downBtn.disabled = index === composerState.blocks.length - 1;
     downBtn.addEventListener("click", () => moveBlock(index, 1));
@@ -1988,10 +1827,10 @@ function renderBlocks() {
 
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
-    removeBtn.title = "Remove";
-    removeBtn.setAttribute("aria-label", `Remove ${labelText}`);
+    removeBtn.title = i18n.t("remove", { name: labelText });
+    removeBtn.setAttribute("aria-label", i18n.t("remove", { name: labelText }));
     removeBtn.className = "danger";
-    removeBtn.textContent = "⊘";
+    removeBtn.textContent = "×";
     removeBtn.addEventListener("click", () => removeBlock(index));
     header.appendChild(removeBtn);
 
@@ -2002,7 +1841,10 @@ function renderBlocks() {
       if (INLINE_EDIT_CARDS.has(block.card_type)) {
         // Cards that emit data-cas-target hooks render inline so click-to-edit
         // handlers can attach. Other card types still render as <img>.
-        body.innerHTML = '<div class="hero-loading">loading…</div>';
+        const loading = document.createElement("div");
+        loading.className = "hero-loading";
+        loading.textContent = i18n.t("loading");
+        body.appendChild(loading);
         injectCardSvg(body, block.card_type, block.slots, index);
       } else {
         const img = document.createElement("img");
@@ -2033,19 +1875,19 @@ function renderInspector() {
   slotForm.innerHTML = "";
   const idx = composerState.selectedIndex;
   if (idx < 0 || idx >= composerState.blocks.length) {
-    selectedLabel.textContent = "No block selected";
+    selectedLabel.textContent = i18n.t("noBlockSelected");
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = "Select a card block to edit its slots.";
+    empty.textContent = i18n.t("selectBlockHint");
     slotForm.appendChild(empty);
     return;
   }
   const block = composerState.blocks[idx];
   if (block.type === "markdown") {
-    selectedLabel.textContent = "Markdown block";
+    selectedLabel.textContent = i18n.t("markdownBlock");
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = "Edit text directly in the canvas.";
+    empty.textContent = i18n.t("editCanvas");
     slotForm.appendChild(empty);
     return;
   }
@@ -2054,13 +1896,16 @@ function renderInspector() {
     selectedLabel.textContent = block.card_type;
     return;
   }
-  selectedLabel.textContent = def.label;
+  selectedLabel.textContent = composerLabel(block.card_type);
 
   for (const slot of def.slots) {
     const field = document.createElement("div");
     field.className = "field";
     const label = document.createElement("label");
-    label.textContent = slot.name;
+    const inputId = `slot-${idx}-${slot.name}`;
+    label.htmlFor = inputId;
+    label.dataset.slot = slot.name;
+    label.textContent = i18n.param(slot.name);
     field.appendChild(label);
 
     let input;
@@ -2069,7 +1914,7 @@ function renderInspector() {
       for (const opt of slot.options) {
         const o = document.createElement("option");
         o.value = opt;
-        o.textContent = opt;
+        o.textContent = i18n.option(opt);
         input.appendChild(o);
       }
       input.value = block.slots[slot.name] ?? slot.default;
@@ -2105,8 +1950,11 @@ function renderInspector() {
       const toggle = document.createElement("input");
       toggle.type = "checkbox";
       toggle.checked = !!block.slots[slot.name];
+      toggle.setAttribute("aria-label", i18n.t("customColor"));
       const swatch = document.createElement("input");
       swatch.type = "color";
+      swatch.id = inputId;
+      swatch.setAttribute("aria-label", i18n.param(slot.name));
       swatch.value = "#" + ((block.slots[slot.name] ?? slot.default ?? "58a6ff").replace(/^#/, ""));
       wrap.appendChild(toggle);
       wrap.appendChild(swatch);
@@ -2134,6 +1982,7 @@ function renderInspector() {
       label.textContent = "";  // we'll re-wrap below
       input = document.createElement("input");
       input.type = "checkbox";
+      input.id = inputId;
       input.checked = !!(block.slots[slot.name] ?? slot.default);
       input.addEventListener("change", () => {
         block.slots[slot.name] = input.checked;
@@ -2143,11 +1992,15 @@ function renderInspector() {
       field.innerHTML = "";
       field.appendChild(input);
       const lbl = document.createElement("label");
-      lbl.textContent = slot.name;
+      lbl.htmlFor = inputId;
+      lbl.dataset.slot = slot.name;
+      lbl.textContent = i18n.param(slot.name);
       field.appendChild(lbl);
       slotForm.appendChild(field);
       continue;
     }
+    input.id = inputId;
+    input.setAttribute("aria-label", i18n.param(slot.name));
     field.appendChild(input);
     slotForm.appendChild(field);
   }
@@ -2162,7 +2015,7 @@ function serializeComposition() {
       continue;
     }
     if (block.type === "card") {
-      const altText = block.card_type;
+      const altText = composerLabel(block.card_type);
       if (cardSupportsTheme(block.card_type)) {
         // Dark + light <picture> pair so the card matches the viewer's GitHub theme.
         const darkUrl = absoluteUrl(buildCardUrlForCompose(block.card_type, block.slots, "dark"));
@@ -2310,38 +2163,34 @@ shareComposerBtn.addEventListener("click", () => {
 });
 
 function switchView(view) {
-  if (view === "templates") {
-    if (!templatesBuilt) {
-      buildTemplates();
-      templatesBuilt = true;
-    }
+  if (view === "compose") {
     cardsView.classList.add("hidden");
-    templatesView.classList.remove("hidden");
-    composeView.classList.add("hidden");
-    viewCardsBtn.classList.remove("active");
-    viewTemplatesBtn.classList.add("active");
-    viewComposeBtn.classList.remove("active");
-  } else if (view === "compose") {
-    cardsView.classList.add("hidden");
-    templatesView.classList.add("hidden");
     composeView.classList.remove("hidden");
     viewCardsBtn.classList.remove("active");
-    viewTemplatesBtn.classList.remove("active");
     viewComposeBtn.classList.add("active");
   } else {
-    templatesView.classList.add("hidden");
     composeView.classList.add("hidden");
     cardsView.classList.remove("hidden");
-    viewTemplatesBtn.classList.remove("active");
     viewComposeBtn.classList.remove("active");
     viewCardsBtn.classList.add("active");
   }
 }
 
 viewCardsBtn.addEventListener("click", () => switchView("cards"));
-viewTemplatesBtn.addEventListener("click", () => switchView("templates"));
 viewComposeBtn.addEventListener("click", () => switchView("compose"));
 
+window.addEventListener("profilekit:localechange", () => {
+  const values = { ...currentValues };
+  const lookId = currentLookId;
+  buildCategoryFilters();
+  buildCardList(cardSearch.value);
+  selectCard(currentCard, values, { lookId });
+  buildInventory();
+  renderBlocks();
+  renderInspector();
+});
+
+buildCategoryFilters();
 buildCardList();
 buildInventory();
 
@@ -2362,7 +2211,7 @@ if (sharedBlocks) {
 } else if (initialState) {
   selectCard(initialState.card, initialState.values);
 } else {
-  selectCard("stats");
+  selectCard("hero");
 }
 </script>
 
