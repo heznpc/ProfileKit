@@ -775,10 +775,53 @@ copyShareBtn.addEventListener("click", () => {
   copyText(shareOutput.textContent, copyShareBtn);
 });
 
+function prepareSvgSnapshot(root, cardType) {
+  // Image decoding starts animations at time zero, when entrance text and
+  // terminal clips are still hidden. Export their completed, static state.
+  const host = document.createElement("div");
+  host.style.cssText = "position:fixed;left:-10000px;top:0;pointer-events:none";
+  host.setAttribute("aria-hidden", "true");
+  document.body.appendChild(host);
+  const svg = document.importNode(root, true);
+  host.attachShadow({ mode: "closed" }).appendChild(svg);
+  try {
+    // Let SVG's animation engine resolve repeating geometry at a fixed time.
+    // This also preserves seeded offsets and coordinated x/y or height/y pairs.
+    svg.pauseAnimations();
+    svg.setCurrentTime(1);
+    const frozen = [...svg.querySelectorAll("animate, animateTransform, animateMotion, set")].map((animation) => {
+      const target = animation.parentElement;
+      const attribute = animation.getAttribute("attributeName");
+      const finalValue = animation.getAttribute("to") || animation.getAttribute("values")?.split(";").at(-1);
+      const value = animation.localName === "animate" && animation.getAttribute("fill") === "freeze" && finalValue
+        ? finalValue
+        : attribute ? getComputedStyle(target).getPropertyValue(attribute) : "";
+      return { animation, target, attribute, value };
+    });
+    for (const { animation, target, attribute, value } of frozen) {
+      if (attribute && value && value !== "none") target.setAttribute(attribute, value);
+      animation.remove();
+    }
+    const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    style.textContent = "* { animation: none !important; transition: none !important; }";
+    svg.appendChild(style);
+    if (cardType === "typing") {
+      // Rotating lines share one baseline. A static image shows the first line.
+      svg.querySelectorAll('text[class^="line"]').forEach((line, index) => {
+        line.style.setProperty("opacity", index === 0 ? "1" : "0", "important");
+      });
+    }
+    return new XMLSerializer().serializeToString(svg);
+  } finally {
+    host.remove();
+  }
+}
+
 async function downloadPng() {
   flushRender();
   const url = previewImg.getAttribute("src");
   if (!url) return;
+  const cardType = currentCard;
   const originalLabel = downloadPngBtn.textContent;
   downloadPngBtn.disabled = true;
   downloadPngBtn.textContent = i18n.t("preparingPng");
@@ -793,7 +836,8 @@ async function downloadPng() {
     const viewBox = root.getAttribute("viewBox")?.trim().split(/\s+/).map(Number) || [];
     const width = Number(root.getAttribute("width")) || viewBox[2] || 1200;
     const height = Number(root.getAttribute("height")) || viewBox[3] || 280;
-    objectUrl = URL.createObjectURL(new Blob([svg], {type: "image/svg+xml;charset=utf-8"}));
+    const snapshot = prepareSvgSnapshot(root, cardType);
+    objectUrl = URL.createObjectURL(new Blob([snapshot], {type: "image/svg+xml;charset=utf-8"}));
     const image = new Image();
     await new Promise((resolve, reject) => {
       image.onload = resolve;
@@ -809,7 +853,7 @@ async function downloadPng() {
     context.drawImage(image, 0, 0, width, height);
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
-    link.download = `profilekit-${currentCard}.png`;
+    link.download = `profilekit-${cardType}.png`;
     link.click();
     downloadPngBtn.textContent = i18n.t("downloadedPng");
   } catch {
