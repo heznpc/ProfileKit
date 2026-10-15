@@ -93,6 +93,33 @@ test("/ serves the playground index.html", async () => {
   assert.match(res.headers.get("content-type"), /text\/html/);
   const body = await res.text();
   assert.ok(body.length > 100, "playground index must be non-trivial");
+  assert.match(body, /id="look-options"/, "card studio must expose integrated looks");
+  assert.match(body, /id="param-tabs"/, "card studio must expose grouped controls");
+  assert.match(body, /id="add-to-compose"/, "edited cards can be added to the README");
+  assert.match(body, /src="\/card-schema\.js"/);
+  assert.match(body, /src="\/composition\.js"/);
+  assert.doesNotMatch(body, /id="view-templates"/, "presets must not be a separate mode");
+});
+
+test("shared editor modules are served as JavaScript", async () => {
+  for (const file of ["card-schema.js", "composition.js"]) {
+    const res = await fetch(`${baseUrl}/${file}`);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get("content-type"), /text\/javascript/);
+  }
+});
+
+test("playground CSS and locale module are served with correct types", async () => {
+  const [cssRes, localeRes] = await Promise.all([
+    fetch(`${baseUrl}/styles.css`),
+    fetch(`${baseUrl}/i18n.js`),
+  ]);
+  assert.equal(cssRes.status, 200);
+  assert.match(cssRes.headers.get("content-type"), /text\/css/);
+  assert.match(await cssRes.text(), /\.range-control/);
+  assert.equal(localeRes.status, 200);
+  assert.match(localeRes.headers.get("content-type"), /text\/javascript/);
+  assert.match(await localeRes.text(), /ProfileKitI18n/);
 });
 
 test("/robots.txt serves the static file with text/plain", async () => {
