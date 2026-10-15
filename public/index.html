@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ProfileKit Playground</title>
   <meta name="description" content="Designer-grade GitHub profile cards. Live preview, copy URL." />
+  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -72,6 +73,7 @@
           <h3 data-i18n="useCard">Use this card</h3>
           <p data-i18n="useCardHint">Copy the Markdown and paste it directly into your README.</p>
         </div>
+        <button id="add-to-compose" type="button" data-i18n="addToReadme">Add to README</button>
       </div>
       <div class="copy-row primary">
         <code id="md-output"></code>
@@ -140,336 +142,14 @@
 </section>
 
 <script src="/i18n.js"></script>
+<script src="/card-schema.js"></script>
+<script src="/composition.js"></script>
 <script>
 // Card schema. Each card lists its tweakable params; rendering happens via the
 // real /api/* endpoints so the preview is always exactly what the user gets.
 
-const COMMON_FRAME = [
-  { name: "theme", type: "select", options: ["dark", "dark_dimmed", "light"] },
-  { name: "font", type: "select", options: ["", "inter", "space-grotesk", "jetbrains-mono", "ibm-plex-sans", "manrope"], placeholder: "(system)" },
-  { name: "accent_color", type: "color" },
-  { name: "border_radius", type: "select", options: ["", "none", "sm", "md", "lg", "xl", "2xl", "3xl", "full"], placeholder: "(default)" },
-  { name: "hide_border", type: "boolean" },
-  { name: "hide_bar", type: "boolean" },
-];
-
-const COMMON_DECOR = [
-  { name: "theme", type: "select", options: ["dark", "dark_dimmed", "light"] },
-  { name: "font", type: "select", options: ["", "inter", "space-grotesk", "jetbrains-mono", "ibm-plex-sans", "manrope"], placeholder: "(system)" },
-  { name: "color", type: "color" },
-  { name: "border_radius", type: "select", options: ["", "none", "sm", "md", "lg", "xl", "2xl", "3xl", "full"], placeholder: "(default)" },
-  { name: "hide_border", type: "boolean" },
-];
-
-const CARDS = {
-  stats: {
-    label: "Stats",
-    group: "Data",
-    desc: "GitHub stats — commits, PRs, issues, stars, repos.",
-    params: [
-      { name: "username", type: "text", default: "heznpc", required: true },
-      { name: "layout", type: "select", options: ["default", "compact"] },
-      ...COMMON_FRAME,
-    ],
-  },
-  languages: {
-    label: "Languages",
-    group: "Data",
-    desc: "Top languages with bars or donut layout.",
-    params: [
-      { name: "username", type: "text", default: "heznpc", required: true },
-      { name: "layout", type: "select", options: ["default", "compact", "donut"] },
-      { name: "langs_count", type: "number", default: 6 },
-      ...COMMON_FRAME,
-    ],
-  },
-  reviews: {
-    label: "Reviews",
-    group: "Data",
-    desc: "Code review stats with approval ring.",
-    params: [
-      { name: "username", type: "text", default: "heznpc", required: true },
-      ...COMMON_FRAME,
-    ],
-  },
-  pin: {
-    label: "Pin",
-    group: "Data",
-    desc: "Repository card.",
-    params: [
-      { name: "username", type: "text", default: "heznpc", required: true },
-      { name: "repo", type: "text", default: "ProfileKit", required: true },
-      { name: "card_width", type: "number", default: 400 },
-      ...COMMON_FRAME,
-    ],
-  },
-  leetcode: {
-    label: "LeetCode",
-    group: "Data",
-    desc: "LeetCode problem stats.",
-    params: [
-      { name: "username", type: "text", default: "heznpc", required: true },
-      ...COMMON_FRAME,
-    ],
-  },
-  social: {
-    label: "Social",
-    group: "Data",
-    desc: "Social links card.",
-    params: [
-      { name: "github", type: "text", default: "heznpc" },
-      { name: "linkedin", type: "text" },
-      { name: "x", type: "text" },
-      { name: "email", type: "text" },
-      { name: "website", type: "text" },
-      { name: "layout", type: "select", options: ["default", "compact"] },
-      ...COMMON_FRAME,
-    ],
-  },
-  quote: {
-    label: "Quote",
-    group: "Data",
-    desc: "Random or daily dev quote.",
-    params: [
-      { name: "daily", type: "boolean" },
-      ...COMMON_FRAME,
-    ],
-  },
-  hero: {
-    label: "Hero",
-    group: "Blog",
-    desc: "Wide hero banner with animated background.",
-    params: [
-      { name: "name", type: "text", default: "Hello, World" },
-      { name: "subtitle", type: "text", default: "Building things that ship" },
-      { name: "bg", type: "select", options: ["gradient", "wave", "grid", "particles"] },
-      { name: "align", type: "select", options: ["center", "left"] },
-      { name: "width", type: "number", default: 1200 },
-      { name: "height", type: "number", default: 280 },
-      ...COMMON_DECOR,
-    ],
-  },
-  section: {
-    label: "Section",
-    group: "Blog",
-    desc: "Section header with animated underline.",
-    params: [
-      { name: "title", type: "text", default: "About" },
-      { name: "subtitle", type: "text" },
-      { name: "align", type: "select", options: ["left", "center"] },
-      { name: "icon", type: "text", placeholder: "✦" },
-      { name: "width", type: "number", default: 800 },
-      ...COMMON_DECOR,
-    ],
-  },
-  divider: {
-    label: "Divider",
-    group: "Blog",
-    desc: "Decorative separator (6 styles).",
-    params: [
-      { name: "style", type: "select", options: ["line", "wave", "dots", "dashed", "gradient", "double"] },
-      { name: "width", type: "number", default: 800 },
-      { name: "height", type: "number", default: 30 },
-      { name: "color", type: "color" },
-      { name: "theme", type: "select", options: ["dark", "dark_dimmed", "light"] },
-    ],
-  },
-  now: {
-    label: "Now",
-    group: "Blog",
-    desc: "\"Currently\" status card.",
-    params: [
-      { name: "coding", type: "text", default: "ProfileKit" },
-      { name: "reading", type: "text", default: "DDIA" },
-      { name: "listening", type: "text", default: "Lo-fi" },
-      { name: "building", type: "text" },
-      ...COMMON_FRAME,
-    ],
-  },
-  timeline: {
-    label: "Timeline",
-    group: "Blog",
-    desc: "Vertical timeline of events.",
-    params: [
-      { name: "items", type: "text", default: "2024;Joined team;Working on AI|2023;Built ProfileKit;Open source" },
-      ...COMMON_FRAME,
-    ],
-  },
-  tags: {
-    label: "Tags",
-    group: "Blog",
-    desc: "Tag cloud / skill pills.",
-    params: [
-      { name: "tags", type: "text", default: "React,TypeScript,Go:00add8,Python:3776ab,Rust:dea584" },
-      ...COMMON_FRAME,
-    ],
-  },
-  toc: {
-    label: "TOC",
-    group: "Blog",
-    desc: "Table of contents.",
-    params: [
-      { name: "items", type: "text", default: "About|Stats|Projects|Contact" },
-      ...COMMON_FRAME,
-    ],
-  },
-  posts: {
-    label: "Posts",
-    group: "Blog",
-    desc: "Latest posts from dev.to / Hashnode / Medium / RSS.",
-    params: [
-      { name: "source", type: "select", options: ["devto", "hashnode", "medium", "rss"] },
-      { name: "username", type: "text", default: "ben" },
-      { name: "url", type: "text" },
-      { name: "count", type: "number", default: 5 },
-      ...COMMON_FRAME,
-    ],
-  },
-  typing: {
-    label: "Typing",
-    group: "Animation",
-    desc: "Typewriter text animation.",
-    params: [
-      { name: "lines", type: "text", default: "ProfileKit,All-in-one+profile+cards" },
-      { name: "color", type: "color" },
-      { name: "size", type: "number", default: 20 },
-      { name: "align", type: "select", options: ["left", "center", "right"] },
-      { name: "width", type: "number", default: 500 },
-      { name: "height", type: "number", default: 50 },
-      { name: "frame", type: "boolean" },
-      { name: "font", type: "select", options: ["", "inter", "space-grotesk", "jetbrains-mono", "ibm-plex-sans", "manrope"], placeholder: "(monospace)" },
-      { name: "theme", type: "select", options: ["dark", "dark_dimmed", "light"] },
-      { name: "border_radius", type: "select", options: ["", "none", "sm", "md", "lg", "xl", "2xl", "3xl", "full"], placeholder: "(default)" },
-      { name: "hide_border", type: "boolean" },
-      { name: "hide_bar", type: "boolean" },
-    ],
-  },
-  wave: {
-    label: "Wave",
-    group: "Animation",
-    desc: "Layered animated sin waves.",
-    params: [
-      { name: "text", type: "text", default: "ProfileKit" },
-      { name: "waves", type: "number", default: 3 },
-      { name: "width", type: "number", default: 800 },
-      { name: "height", type: "number", default: 160 },
-      ...COMMON_DECOR,
-    ],
-  },
-  terminal: {
-    label: "Terminal",
-    group: "Animation",
-    desc: "Terminal window with auto-typing commands.",
-    params: [
-      { name: "commands", type: "text", default: "whoami,ls -la,git status" },
-      { name: "prompt", type: "text", default: "$" },
-      { name: "window_title", type: "text", default: "bash" },
-      { name: "speed", type: "number", default: 70 },
-      { name: "width", type: "number", default: 600 },
-      ...COMMON_DECOR,
-    ],
-  },
-  neon: {
-    label: "Neon",
-    group: "Animation",
-    desc: "Neon glow with flicker.",
-    params: [
-      { name: "text", type: "text", default: "NEON" },
-      { name: "size", type: "number", default: 64 },
-      { name: "width", type: "number", default: 600 },
-      { name: "height", type: "number", default: 160 },
-      ...COMMON_DECOR,
-    ],
-  },
-  glitch: {
-    label: "Glitch",
-    group: "Animation",
-    desc: "RGB-split glitch text.",
-    params: [
-      { name: "text", type: "text", default: "GLITCH" },
-      { name: "size", type: "number", default: 64 },
-      { name: "width", type: "number", default: 600 },
-      { name: "height", type: "number", default: 160 },
-      ...COMMON_DECOR,
-    ],
-  },
-  matrix: {
-    label: "Matrix",
-    group: "Animation",
-    desc: "Matrix code rain.",
-    params: [
-      { name: "text", type: "text", default: "MATRIX" },
-      { name: "density", type: "number", default: 1 },
-      { name: "speed", type: "number", default: 1 },
-      { name: "seed", type: "number", default: 42 },
-      { name: "width", type: "number", default: 600 },
-      { name: "height", type: "number", default: 200 },
-      ...COMMON_DECOR,
-    ],
-  },
-  snake: {
-    label: "Snake",
-    group: "Animation",
-    desc: "Standalone snake on a contribution grid.",
-    params: [
-      { name: "cols", type: "number", default: 53 },
-      { name: "rows", type: "number", default: 7 },
-      { name: "duration", type: "number", default: 24 },
-      { name: "seed", type: "number", default: 7 },
-      ...COMMON_DECOR,
-    ],
-  },
-  equalizer: {
-    label: "Equalizer",
-    group: "Animation",
-    desc: "Audio EQ bars with LIVE indicator.",
-    params: [
-      { name: "label", type: "text", default: "Now Playing" },
-      { name: "bars", type: "number", default: 24 },
-      { name: "width", type: "number", default: 495 },
-      { name: "height", type: "number", default: 140 },
-      ...COMMON_DECOR,
-    ],
-  },
-  heartbeat: {
-    label: "Heartbeat",
-    group: "Animation",
-    desc: "EKG line + pulse.",
-    params: [
-      { name: "text", type: "text", default: "Still shipping" },
-      { name: "bpm", type: "number", default: 72 },
-      { name: "width", type: "number", default: 495 },
-      { name: "height", type: "number", default: 140 },
-      ...COMMON_DECOR,
-    ],
-  },
-  constellation: {
-    label: "Constellation",
-    group: "Animation",
-    desc: "Twinkling stars + connections.",
-    params: [
-      { name: "text", type: "text", default: "ProfileKit" },
-      { name: "density", type: "number", default: 1 },
-      { name: "seed", type: "number", default: 19 },
-      { name: "width", type: "number", default: 600 },
-      { name: "height", type: "number", default: 200 },
-      ...COMMON_DECOR,
-    ],
-  },
-  radar: {
-    label: "Radar",
-    group: "Animation",
-    desc: "Rotating radar sweep with blips.",
-    params: [
-      { name: "text", type: "text", default: "SCANNING" },
-      { name: "blips", type: "number", default: 5 },
-      { name: "speed", type: "number", default: 4 },
-      { name: "width", type: "number", default: 300 },
-      { name: "height", type: "number", default: 300 },
-      ...COMMON_DECOR,
-    ],
-  },
-};
+const { CARDS } = window.ProfileKitCards;
+const composition = window.ProfileKitComposition;
 
 const GROUPS = ["Data", "Blog", "Animation"];
 const i18n = window.ProfileKitI18n;
@@ -602,8 +282,7 @@ function selectCard(key, overrides, options = {}) {
   document.querySelectorAll(".card-list button").forEach((b) => {
     b.classList.toggle("active", b.dataset.card === key);
   });
-  currentValues = defaultValuesForCard(key);
-  if (overrides) Object.assign(currentValues, overrides);
+  currentValues = { ...defaultValuesForCard(key), ...composition.normalizeValues(overrides || {}) };
   currentLookId = Object.prototype.hasOwnProperty.call(options, "lookId")
     ? options.lookId
     : inferLookId(key, currentValues);
@@ -613,13 +292,7 @@ function selectCard(key, overrides, options = {}) {
 }
 
 function cardUrl(card, values) {
-  const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(values)) {
-    if (v == null || v === "") continue;
-    params.set(k, v);
-  }
-  const qs = params.toString();
-  return `/api/${card}${qs ? "?" + qs : ""}`;
+  return composition.cardUrl(card, values);
 }
 
 const PARAM_GROUPS = [
@@ -679,8 +352,8 @@ function paramGroup(param) {
   return "content";
 }
 
-function rangeConfig(param) {
-  const exact = RANGE_CONFIG[`${currentCard}:${param.name}`];
+function rangeConfig(param, cardKey = currentCard) {
+  const exact = RANGE_CONFIG[`${cardKey}:${param.name}`];
   if (exact) return exact;
   if (RANGE_CONFIG[param.name]) return RANGE_CONFIG[param.name];
   const base = Number(param.default) || 50;
@@ -688,8 +361,7 @@ function rangeConfig(param) {
 }
 
 function setParamValue(name, value) {
-  if (value === "" || value == null) delete currentValues[name];
-  else currentValues[name] = value;
+  currentValues[name] = value == null ? "" : String(value);
   currentLookId = null;
   syncLookSelection();
   render();
@@ -698,6 +370,7 @@ function setParamValue(name, value) {
 function makeFieldLabel(param, id) {
   const label = document.createElement("label");
   label.htmlFor = id;
+  label.dataset.slot = param.name;
   label.textContent = i18n.param(param.name);
   if (param.required) {
     const required = document.createElement("span");
@@ -749,8 +422,8 @@ function buildForm(params) {
   setParamGroup(currentParamGroup);
 }
 
-function buildParamField(param) {
-  const id = `f-${param.name}`;
+function buildParamField(param, { values = currentValues, cardKey = currentCard, onChange = setParamValue, prefix = "f" } = {}) {
+  const id = `${prefix}-${param.name}`;
 
   if (param.type === "boolean") {
     const field = document.createElement("div");
@@ -763,9 +436,9 @@ function buildParamField(param) {
     const input = document.createElement("input");
     input.id = id;
     input.type = "checkbox";
-    input.checked = !!currentValues[param.name];
+    input.checked = composition.isEnabled(values[param.name]);
     input.addEventListener("change", () => {
-      setParamValue(param.name, input.checked ? "true" : "");
+      onChange(param.name, input.checked ? "true" : "false");
     });
     const track = document.createElement("span");
     track.className = "switch-track";
@@ -781,7 +454,7 @@ function buildParamField(param) {
   field.className = "field";
   field.appendChild(makeFieldLabel(param, id));
 
-  if (param.type === "select" && param.name === "theme") {
+  if (param.type === "select" && param.name === "theme" && param.options.length <= 3) {
     const choices = document.createElement("div");
     choices.className = "theme-options";
     choices.setAttribute("role", "group");
@@ -798,7 +471,7 @@ function buildParamField(param) {
       text.textContent = i18n.option(option);
       button.appendChild(dot);
       button.appendChild(text);
-      const active = (currentValues[param.name] || param.options[0] || "") === option;
+      const active = (values[param.name] || param.options[0] || "") === option;
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
       button.addEventListener("click", () => {
@@ -807,7 +480,7 @@ function buildParamField(param) {
           item.classList.toggle("active", selected);
           item.setAttribute("aria-pressed", selected ? "true" : "false");
         });
-        setParamValue(param.name, option);
+        onChange(param.name, option);
       });
       choices.appendChild(button);
     }
@@ -816,24 +489,24 @@ function buildParamField(param) {
   }
 
   if (param.type === "select" && param.name === "border_radius") {
-    const values = param.options;
-    const currentIndex = Math.max(0, values.indexOf(currentValues[param.name] || ""));
+    const tokens = param.options;
+    const currentIndex = Math.max(0, tokens.indexOf(values[param.name] || ""));
     const wrap = document.createElement("div");
     wrap.className = "token-range";
     const range = document.createElement("input");
     range.id = id;
     range.type = "range";
     range.min = "0";
-    range.max = String(values.length - 1);
+    range.max = String(tokens.length - 1);
     range.step = "1";
     range.value = String(currentIndex);
     const output = document.createElement("output");
     output.htmlFor = id;
-    output.textContent = i18n.option(values[currentIndex], i18n.t("defaultValue"));
+    output.textContent = i18n.option(tokens[currentIndex], i18n.t("defaultValue"));
     range.addEventListener("input", () => {
-      const value = values[Number(range.value)];
+      const value = tokens[Number(range.value)];
       output.textContent = i18n.option(value, i18n.t("defaultValue"));
-      setParamValue(param.name, value);
+      onChange(param.name, value);
     });
     wrap.appendChild(range);
     wrap.appendChild(output);
@@ -850,7 +523,7 @@ function buildParamField(param) {
       button.type = "button";
       button.dataset.value = option;
       button.textContent = i18n.option(option, i18n.t("defaultValue"));
-      const active = (currentValues[param.name] || param.options[0] || "") === option;
+      const active = (values[param.name] || param.options[0] || "") === option;
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
       button.addEventListener("click", () => {
@@ -859,7 +532,7 @@ function buildParamField(param) {
           item.classList.toggle("active", selected);
           item.setAttribute("aria-pressed", selected ? "true" : "false");
         });
-        setParamValue(param.name, option);
+        onChange(param.name, option);
       });
       choices.appendChild(button);
     }
@@ -868,8 +541,8 @@ function buildParamField(param) {
   }
 
   if (param.type === "number") {
-    const config = rangeConfig(param);
-    const value = Number(currentValues[param.name] ?? param.default ?? config.min);
+    const config = rangeConfig(param, cardKey);
+    const value = Number(values[param.name] ?? param.default ?? config.min);
     const wrap = document.createElement("div");
     wrap.className = "range-control";
     const range = document.createElement("input");
@@ -889,19 +562,19 @@ function buildParamField(param) {
     number.value = String(value);
     range.addEventListener("input", () => {
       number.value = range.value;
-      setParamValue(param.name, range.value);
+      onChange(param.name, range.value);
     });
     number.addEventListener("input", () => {
       if (number.value === "") return;
       const next = Math.min(config.max, Math.max(config.min, Number(number.value)));
       range.value = String(next);
-      setParamValue(param.name, number.value);
+      onChange(param.name, number.value);
     });
     number.addEventListener("change", () => {
       const next = Math.min(config.max, Math.max(config.min, Number(number.value) || config.min));
       number.value = String(next);
       range.value = String(next);
-      setParamValue(param.name, String(next));
+      onChange(param.name, String(next));
     });
     wrap.appendChild(range);
     wrap.appendChild(number);
@@ -910,7 +583,7 @@ function buildParamField(param) {
   }
 
   if (param.type === "color") {
-    const raw = String(currentValues[param.name] || "58a6ff").replace(/^#/, "");
+    const raw = String(values[param.name] || "58a6ff").replace(/^#/, "");
     const wrap = document.createElement("div");
     wrap.className = "color-control";
     const swatch = document.createElement("input");
@@ -925,13 +598,13 @@ function buildParamField(param) {
     const toggle = document.createElement("input");
     toggle.type = "checkbox";
     toggle.className = "color-enabled";
-    toggle.checked = !!currentValues[param.name];
+    toggle.checked = !!values[param.name];
     toggle.title = i18n.t("customColor");
     toggle.setAttribute("aria-label", i18n.t("customColor"));
     swatch.addEventListener("input", () => {
       toggle.checked = true;
       hex.value = swatch.value.toUpperCase();
-      setParamValue(param.name, swatch.value.replace("#", ""));
+      onChange(param.name, swatch.value.replace("#", ""));
     });
     hex.addEventListener("change", () => {
       const value = hex.value.trim().replace(/^#/, "");
@@ -942,10 +615,10 @@ function buildParamField(param) {
       swatch.value = `#${value}`;
       toggle.checked = true;
       hex.value = `#${value.toUpperCase()}`;
-      setParamValue(param.name, value);
+      onChange(param.name, value);
     });
     toggle.addEventListener("change", () => {
-      setParamValue(param.name, toggle.checked ? swatch.value.replace("#", "") : "");
+      onChange(param.name, toggle.checked ? swatch.value.replace("#", "") : "");
     });
     wrap.appendChild(swatch);
     wrap.appendChild(hex);
@@ -968,8 +641,8 @@ function buildParamField(param) {
       item.textContent = i18n.option(option, fallback);
       select.appendChild(item);
     }
-    select.value = currentValues[param.name] || param.options[0] || "";
-    select.addEventListener("change", () => setParamValue(param.name, select.value));
+    select.value = values[param.name] || param.options[0] || "";
+    select.addEventListener("change", () => onChange(param.name, select.value));
     field.appendChild(select);
     return field;
   }
@@ -977,9 +650,10 @@ function buildParamField(param) {
   const input = document.createElement("input");
   input.id = id;
   input.type = "text";
-  input.value = currentValues[param.name] || "";
+  input.maxLength = composition.MAX_VALUE_LENGTH;
+  input.value = values[param.name] || "";
   if (param.placeholder) input.placeholder = param.placeholder;
-  input.addEventListener("input", () => setParamValue(param.name, input.value));
+  input.addEventListener("input", () => onChange(param.name, input.value));
   field.appendChild(input);
   return field;
 }
@@ -1005,7 +679,7 @@ function commitRender() {
   urlOutput.textContent = state.abs;
   mdOutput.textContent = `![${state.label}](${state.abs})`;
   shareOutput.textContent = state.share;
-  writeHashState(state.hash);
+  if (composeView.classList.contains("hidden")) writeHashState(state.hash);
   if (previewImg.getAttribute("src") !== state.url) previewImg.src = state.url;
   previewImg.alt = state.label;
 }
@@ -1041,7 +715,7 @@ function encodeHashState() {
   const p = new URLSearchParams();
   p.set("card", currentCard);
   for (const [k, v] of Object.entries(currentValues)) {
-    if (v == null || v === "") continue;
+    if (v == null) continue;
     p.set(k, v);
   }
   return p.toString();
@@ -1059,7 +733,7 @@ function readHashState() {
   if (!raw) return null;
   const p = new URLSearchParams(raw);
   const card = p.get("card");
-  if (!card || !CARDS[card]) return null;
+  if (!composition.isCardType(card)) return null;
   const values = {};
   for (const [k, v] of p.entries()) {
     if (k === "card") continue;
@@ -1081,6 +755,10 @@ function copyText(text, button) {
       button.textContent = original;
       button.classList.remove("copied");
     }, 1500);
+  }).catch(() => {
+    const original = button.textContent;
+    button.textContent = i18n.t("copyFailed");
+    setTimeout(() => { button.textContent = original; }, 1500);
   });
 }
 
@@ -1147,12 +825,7 @@ async function downloadPng() {
 downloadPngBtn.addEventListener("click", downloadPng);
 cardSearch.addEventListener("input", () => buildCardList(cardSearch.value));
 
-window.addEventListener("hashchange", () => {
-  const state = readHashState();
-  if (state && (state.card !== currentCard || JSON.stringify(state.values) !== JSON.stringify(currentValues))) {
-    selectCard(state.card, state.values);
-  }
-});
+window.addEventListener("hashchange", applyHashNavigation);
 
 const TEMPLATES = [
   {
@@ -1349,80 +1022,14 @@ resetCardBtn.addEventListener("click", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Compose view (v3 MVP-C — CAS-style README composer)
-// Spec: docs/v3-cas-spec.md. Hero card only for MVP. Slot inspector + block
-// list + inventory; localStorage persistence; copy-markdown output.
+// README composer: shared card controls, block ordering, local drafts and export.
 // ---------------------------------------------------------------------------
 
-const COMPOSER_THEMES = [
-  "dark", "dark_dimmed", "light", "tokyo_night", "nord", "gruvbox_dark",
-  "catppuccin_mocha", "catppuccin_latte", "dracula", "monokai", "one_dark",
-  "kanagawa", "synthwave", "solarized_dark", "solarized_light",
-  "rose_pine", "rose_pine_dawn",
-];
-
-const COMPOSER_SLOTS = {
-  hero: {
-    label: "Hero card",
-    group: "Blog Layout",
-    slots: [
-      { name: "name",     type: "text",  default: "heznpc" },
-      { name: "subtitle", type: "text",  default: "Building things that ship" },
-      { name: "bg",       type: "enum",  options: ["gradient", "wave", "grid", "particles"], default: "gradient" },
-      { name: "theme",    type: "enum",  options: COMPOSER_THEMES, default: "dark" },
-      { name: "color",    type: "color" },
-    ],
-  },
-  stats: {
-    label: "Stats",
-    group: "Data",
-    slots: [
-      { name: "username",    type: "text", default: "heznpc" },
-      { name: "layout",      type: "enum", options: ["default", "compact"], default: "default" },
-      { name: "theme",       type: "enum", options: COMPOSER_THEMES, default: "dark" },
-      { name: "hide_border", type: "bool", default: true },
-    ],
-  },
-  languages: {
-    label: "Languages",
-    group: "Data",
-    slots: [
-      { name: "username",    type: "text",   default: "heznpc" },
-      { name: "layout",      type: "enum",   options: ["default", "compact", "donut"], default: "default" },
-      { name: "langs_count", type: "number", default: 6, min: 1, max: 10 },
-      { name: "theme",       type: "enum",   options: COMPOSER_THEMES, default: "dark" },
-      { name: "hide_border", type: "bool",   default: true },
-    ],
-  },
-  pin: {
-    label: "Pin (repo)",
-    group: "Data",
-    slots: [
-      { name: "username",       type: "text",   default: "heznpc" },
-      { name: "repo",           type: "text",   default: "ProfileKit" },
-      { name: "card_width",     type: "number", default: 400, min: 280, max: 600 },
-      { name: "max_desc_lines", type: "number", default: 3,   min: 1,   max: 6 },
-      { name: "theme",          type: "enum",   options: COMPOSER_THEMES, default: "dark" },
-      { name: "hide_border",    type: "bool",   default: true },
-    ],
-  },
-  snake: {
-    label: "Snake",
-    group: "Animations",
-    slots: [
-      { name: "cols", type: "number", default: 53, min: 20, max: 80 },
-      { name: "rows", type: "number", default: 7,  min: 3,  max: 14 },
-    ],
-  },
-};
-
 const COMPOSER_INVENTORY = [
-  { kind: "card",     card_type: "hero",      label: "Hero card",     group: "Blog Layout" },
-  { kind: "card",     card_type: "stats",     label: "Stats",         group: "Data" },
-  { kind: "card",     card_type: "languages", label: "Languages",     group: "Data" },
-  { kind: "card",     card_type: "pin",       label: "Pin (repo)",    group: "Data" },
-  { kind: "card",     card_type: "snake",     label: "Snake",         group: "Animations" },
-  { kind: "markdown",                         label: "Markdown text", group: "Plain" },
+  ...Object.entries(CARDS).map(([card_type, def]) => ({
+    kind: "card", card_type, label: def.label, group: def.group,
+  })),
+  { kind: "markdown", label: "Markdown text", group: "Plain" },
 ];
 
 const COMPOSER_STORAGE_KEY = "profilekit.composition.draft";
@@ -1430,27 +1037,45 @@ const composerState = {
   blocks: [],
   selectedIndex: -1,
 };
+let lastValidDraft = JSON.stringify({ v: 1, blocks: [] });
 
 function loadComposerDraft() {
   try {
     const raw = localStorage.getItem(COMPOSER_STORAGE_KEY);
     if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed.blocks)) composerState.blocks = parsed.blocks;
+    const parsed = composition.parseDraft(raw);
+    if (parsed) {
+      composerState.blocks = parsed.blocks;
+      lastValidDraft = JSON.stringify(parsed);
+    }
   } catch {
     // ignore malformed draft
   }
 }
 
 function saveComposerDraft() {
+  const raw = JSON.stringify({ v: 1, blocks: composerState.blocks });
+  if (!composition.parseDraft(raw)) {
+    composerState.blocks = JSON.parse(lastValidDraft).blocks;
+    composerState.selectedIndex = Math.min(composerState.selectedIndex, composerState.blocks.length - 1);
+    alert(i18n.t("compositionTooLarge"));
+    renderBlocks();
+    renderInspector();
+    return false;
+  }
+  lastValidDraft = raw;
+  // A shared link is an initial document. Once edited, refresh must restore
+  // the new document, never overwrite it with the original link's content.
+  if (new URLSearchParams(window.location.hash.slice(1)).has("c")) {
+    try { history.replaceState(null, "", "#c=" + composition.encode(composerState.blocks)); }
+    catch { history.replaceState(null, "", "#view=compose"); }
+  }
   try {
-    localStorage.setItem(
-      COMPOSER_STORAGE_KEY,
-      JSON.stringify({ blocks: composerState.blocks })
-    );
+    localStorage.setItem(COMPOSER_STORAGE_KEY, raw);
   } catch {
     // quota or disabled storage — ignore
   }
+  return true;
 }
 
 const inventoryRoot = document.getElementById("composer-inventory-root");
@@ -1512,41 +1137,37 @@ function buildInventory() {
 // past-end appends. Click-to-add path stays on addBlock; drag-to-canvas uses
 // addBlockAt with the computed insertion point.
 function addBlockAt(item, index) {
-  let block;
-  if (item.kind === "card") {
-    const def = COMPOSER_SLOTS[item.card_type];
-    if (!def) return;
-    const slots = {};
-    for (const s of def.slots) slots[s.name] = s.default;
-    block = { type: "card", card_type: item.card_type, slots };
-  } else if (item.kind === "markdown") {
-    block = { type: "markdown", content: "## Section\n" };
-  } else {
+  const block = item.kind === "card" && composition.isCardType(item.card_type)
+    ? composition.createCardBlock(item.card_type, defaultValuesForCard(item.card_type))
+    : item.kind === "markdown" ? { type: "markdown", content: "## Section\n" } : null;
+  if (!block) return;
+  if (composerState.blocks.length >= composition.MAX_BLOCKS) {
+    alert(i18n.t("compositionFull", { count: composition.MAX_BLOCKS }));
     return;
   }
   const insertAt = index < 0 || index > composerState.blocks.length
-    ? composerState.blocks.length
-    : index;
+    ? composerState.blocks.length : index;
   composerState.blocks.splice(insertAt, 0, block);
   composerState.selectedIndex = insertAt;
   persistAndRender();
 }
 
 function addBlock(item) {
-  let block;
-  if (item.kind === "card") {
-    const def = COMPOSER_SLOTS[item.card_type];
-    if (!def) return;
-    const slots = {};
-    for (const s of def.slots) slots[s.name] = s.default;
-    block = { type: "card", card_type: item.card_type, slots };
-  } else if (item.kind === "markdown") {
-    block = { type: "markdown", content: "## Section\n" };
-  }
-  composerState.blocks.push(block);
-  composerState.selectedIndex = composerState.blocks.length - 1;
-  persistAndRender();
+  addBlockAt(item, composerState.blocks.length);
 }
+
+document.getElementById("add-to-compose").addEventListener("click", () => {
+  if (composerState.blocks.length >= composition.MAX_BLOCKS) {
+    alert(i18n.t("compositionFull", { count: composition.MAX_BLOCKS }));
+    return;
+  }
+  flushRender();
+  composerState.blocks.push(composition.createCardBlock(currentCard, currentValues));
+  composerState.selectedIndex = composerState.blocks.length - 1;
+  if (!persistAndRender()) return;
+  switchView("compose");
+  blocksRoot.lastElementChild?.scrollIntoView({ block: "nearest" });
+});
 
 function removeBlock(index) {
   composerState.blocks.splice(index, 1);
@@ -1567,7 +1188,9 @@ function moveBlock(index, delta) {
 
 function selectBlock(index) {
   composerState.selectedIndex = index;
-  renderBlocks();
+  blocksRoot.querySelectorAll(".block").forEach((block, i) => {
+    block.classList.toggle("selected", i === index);
+  });
   renderInspector();
 }
 
@@ -1580,10 +1203,11 @@ function clearComposition() {
 }
 
 function persistAndRender() {
-  saveComposerDraft();
+  if (!saveComposerDraft()) return false;
   closeAllPopovers();
   renderBlocks();
   renderInspector();
+  return true;
 }
 
 // v3.4 — inline direct-manipulation
@@ -1597,6 +1221,7 @@ function persistAndRender() {
 // Card types that ship inline-edit hooks (data-cas-target attributes in
 // their SVG output) — render as inline <svg> in the canvas instead of <img>.
 const INLINE_EDIT_CARDS = new Set(["hero", "stats", "languages", "pin"]);
+const embeddedFontFaces = new Set();
 
 async function injectCardSvg(container, cardType, slots, blockIndex) {
   const url = buildCardUrlForCompose(cardType, slots);
@@ -1625,8 +1250,25 @@ async function injectCardSvg(container, cardType, slots, blockIndex) {
     container.appendChild(error);
     return;
   }
-  container.innerHTML = "";
-  container.appendChild(svg);
+  // Chromium does not register @font-face inside shadow roots. Register only
+  // the bundled font declarations at document level; keep card CSS isolated.
+  for (const style of svg.querySelectorAll("style")) {
+    for (const rule of style.textContent.match(/@font-face\s*\{[^}]*\}/g) || []) {
+      if (embeddedFontFaces.has(rule)) continue;
+      const fontStyle = document.createElement("style");
+      fontStyle.textContent = rule;
+      document.head.appendChild(fontStyle);
+      embeddedFontFaces.add(rule);
+    }
+  }
+  container.textContent = "";
+  // Each SVG owns its CSS, keyframes and IDs, including when two cards have
+  // different themes/fonts. A shadow root keeps the preview equal to <img> exports.
+  const shadow = container.shadowRoot || container.attachShadow({ mode: "open" });
+  shadow.replaceChildren();
+  const style = document.createElement("style");
+  style.textContent = "svg { display:block;max-width:100%;height:auto } [data-cas-target] { cursor:pointer } [data-cas-target]:hover { opacity:.85 }";
+  shadow.append(style, svg);
   attachCasHandlers(svg, cardType, blockIndex);
 }
 
@@ -1759,30 +1401,30 @@ function focusSlotInput(slotName) {
   }
 }
 
-function buildCardUrlForCompose(cardType, slots, themeOverride) {
-  const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(slots)) {
-    if (k === "theme" && themeOverride !== undefined) continue;
-    if (v == null || v === "") continue;
-    if (typeof v === "boolean") {
-      if (v) params.set(k, "true");
-      continue;
-    }
-    params.set(k, String(v));
-  }
-  if (themeOverride !== undefined) params.set("theme", themeOverride);
-  return `/api/${cardType}?${params.toString()}`;
+function buildCardUrlForCompose(cardType, slots) {
+  return composition.cardUrl(cardType, slots);
 }
 
-// Cards that have a `theme` slot get a dark/light <picture> pair on export.
-// Cards without one (e.g. snake doesn't take theme today) ship as a single
-// <img> sourced from the slot values as-is.
-function cardSupportsTheme(cardType) {
-  const def = COMPOSER_SLOTS[cardType];
-  return def && def.slots.some((s) => s.name === "theme");
+let composerRenderTimer;
+const pendingPreviewBlocks = new Set();
+function updateComposerSlot(block, name, value) {
+  block.slots[name] = value == null ? "" : String(value);
+  if (!saveComposerDraft()) return;
+  pendingPreviewBlocks.add(block);
+  clearTimeout(composerRenderTimer);
+  composerRenderTimer = setTimeout(() => {
+    for (const changed of pendingPreviewBlocks) {
+      const index = composerState.blocks.indexOf(changed);
+      const body = blocksRoot.children[index]?.querySelector(".block-body");
+      if (body) body.replaceWith(createBlockBody(changed, index));
+    }
+    pendingPreviewBlocks.clear();
+  }, 120);
 }
 
 function renderBlocks() {
+  clearTimeout(composerRenderTimer);
+  pendingPreviewBlocks.clear();
   blocksRoot.innerHTML = "";
   if (!composerState.blocks.length) {
     emptyState.classList.remove("hidden");
@@ -1795,7 +1437,7 @@ function renderBlocks() {
     wrap.className = "block";
     if (composerState.selectedIndex === index) wrap.classList.add("selected");
     wrap.addEventListener("click", (e) => {
-      if (!e.target.closest(".block-header button")) selectBlock(index);
+      if (!e.target.closest("button, input, select, textarea") && composerState.selectedIndex !== index) selectBlock(index);
     });
 
     const header = document.createElement("div");
@@ -1806,6 +1448,13 @@ function renderBlocks() {
     label.className = "label";
     label.textContent = labelText;
     header.appendChild(label);
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.textContent = i18n.t("edit");
+    editBtn.setAttribute("aria-label", i18n.t("editBlock", { name: labelText }));
+    editBtn.addEventListener("click", () => selectBlock(index));
+    header.appendChild(editBtn);
 
     const upBtn = document.createElement("button");
     upBtn.type = "button";
@@ -1834,41 +1483,45 @@ function renderBlocks() {
     removeBtn.addEventListener("click", () => removeBlock(index));
     header.appendChild(removeBtn);
 
-    const body = document.createElement("div");
-    body.className = "block-body";
-
-    if (block.type === "card") {
-      if (INLINE_EDIT_CARDS.has(block.card_type)) {
-        // Cards that emit data-cas-target hooks render inline so click-to-edit
-        // handlers can attach. Other card types still render as <img>.
-        const loading = document.createElement("div");
-        loading.className = "hero-loading";
-        loading.textContent = i18n.t("loading");
-        body.appendChild(loading);
-        injectCardSvg(body, block.card_type, block.slots, index);
-      } else {
-        const img = document.createElement("img");
-        img.src = buildCardUrlForCompose(block.card_type, block.slots);
-        img.alt = labelText;
-        img.loading = "lazy";
-        body.appendChild(img);
-      }
-    } else if (block.type === "markdown") {
-      const ta = document.createElement("textarea");
-      ta.value = block.content;
-      ta.rows = Math.max(2, block.content.split("\n").length);
-      ta.addEventListener("input", () => {
-        block.content = ta.value;
-        saveComposerDraft();
-      });
-      ta.addEventListener("focus", () => selectBlock(index));
-      body.appendChild(ta);
-    }
-
     wrap.appendChild(header);
-    wrap.appendChild(body);
+    wrap.appendChild(createBlockBody(block, index));
     blocksRoot.appendChild(wrap);
   });
+}
+
+function createBlockBody(block, index) {
+  const body = document.createElement("div");
+  body.className = "block-body";
+  if (block.type === "card") {
+    if (INLINE_EDIT_CARDS.has(block.card_type)) {
+      const loading = document.createElement("div");
+      loading.className = "hero-loading";
+      loading.textContent = i18n.t("loading");
+      body.appendChild(loading);
+      injectCardSvg(body, block.card_type, block.slots, index);
+    } else {
+      const img = document.createElement("img");
+      img.src = buildCardUrlForCompose(block.card_type, block.slots);
+      img.alt = composerLabel(block.card_type);
+      img.loading = "lazy";
+      body.appendChild(img);
+    }
+  } else if (block.type === "markdown") {
+    const ta = document.createElement("textarea");
+    ta.value = block.content;
+    ta.maxLength = composition.MAX_MARKDOWN_LENGTH;
+    ta.rows = Math.min(20, Math.max(2, block.content.split("\n").length));
+    ta.addEventListener("input", () => {
+      block.content = ta.value;
+      saveComposerDraft();
+    });
+    ta.setAttribute("aria-label", i18n.t("markdownBlock"));
+    ta.addEventListener("focus", () => {
+      if (composerState.selectedIndex !== index) selectBlock(index);
+    });
+    body.appendChild(ta);
+  }
+  return body;
 }
 
 function renderInspector() {
@@ -1891,148 +1544,45 @@ function renderInspector() {
     slotForm.appendChild(empty);
     return;
   }
-  const def = COMPOSER_SLOTS[block.card_type];
-  if (!def) {
-    selectedLabel.textContent = block.card_type;
-    return;
-  }
+  const def = CARDS[block.card_type];
   selectedLabel.textContent = composerLabel(block.card_type);
-
-  for (const slot of def.slots) {
+  if (def.params.some((param) => param.name === "theme")) {
     const field = document.createElement("div");
     field.className = "field";
     const label = document.createElement("label");
-    const inputId = `slot-${idx}-${slot.name}`;
-    label.htmlFor = inputId;
-    label.dataset.slot = slot.name;
-    label.textContent = i18n.param(slot.name);
-    field.appendChild(label);
-
-    let input;
-    if (slot.type === "enum") {
-      input = document.createElement("select");
-      for (const opt of slot.options) {
-        const o = document.createElement("option");
-        o.value = opt;
-        o.textContent = i18n.option(opt);
-        input.appendChild(o);
-      }
-      input.value = block.slots[slot.name] ?? slot.default;
-      input.addEventListener("change", () => {
-        block.slots[slot.name] = input.value;
-        persistAndRender();
-      });
-    } else if (slot.type === "text") {
-      input = document.createElement("input");
-      input.type = "text";
-      input.value = block.slots[slot.name] ?? "";
-      input.addEventListener("input", () => {
-        block.slots[slot.name] = input.value;
-        saveComposerDraft();
-        renderBlocks();
-      });
-    } else if (slot.type === "number") {
-      input = document.createElement("input");
-      input.type = "number";
-      if (slot.min != null) input.min = String(slot.min);
-      if (slot.max != null) input.max = String(slot.max);
-      input.value = block.slots[slot.name] ?? slot.default;
-      input.addEventListener("input", () => {
-        block.slots[slot.name] = input.value === "" ? slot.default : Number(input.value);
-        persistAndRender();
-      });
-    } else if (slot.type === "color") {
-      // Gated picker: a checkbox decides whether the value flows into the URL.
-      // Without the gate, a default-black HTML color input would silently
-      // override every theme's accent the moment the inspector mounts.
-      const wrap = document.createElement("div");
-      wrap.className = "color-wrap";
-      const toggle = document.createElement("input");
-      toggle.type = "checkbox";
-      toggle.checked = !!block.slots[slot.name];
-      toggle.setAttribute("aria-label", i18n.t("customColor"));
-      const swatch = document.createElement("input");
-      swatch.type = "color";
-      swatch.id = inputId;
-      swatch.setAttribute("aria-label", i18n.param(slot.name));
-      swatch.value = "#" + ((block.slots[slot.name] ?? slot.default ?? "58a6ff").replace(/^#/, ""));
-      wrap.appendChild(toggle);
-      wrap.appendChild(swatch);
-
-      const apply = () => {
-        if (toggle.checked) {
-          block.slots[slot.name] = swatch.value.replace(/^#/, "");
-        } else {
-          delete block.slots[slot.name];
-        }
-        persistAndRender();
-      };
-      toggle.addEventListener("change", apply);
-      swatch.addEventListener("input", () => {
-        toggle.checked = true;
-        apply();
-      });
-
-      field.appendChild(wrap);
-      slotForm.appendChild(field);
-      continue;
-    } else if (slot.type === "bool") {
-      // Render as a checkbox row instead of a labeled column.
-      field.className = "field-row";
-      label.textContent = "";  // we'll re-wrap below
-      input = document.createElement("input");
-      input.type = "checkbox";
-      input.id = inputId;
-      input.checked = !!(block.slots[slot.name] ?? slot.default);
-      input.addEventListener("change", () => {
-        block.slots[slot.name] = input.checked;
-        persistAndRender();
-      });
-      // Reorder: checkbox first, then a label that reads as the slot name
-      field.innerHTML = "";
-      field.appendChild(input);
-      const lbl = document.createElement("label");
-      lbl.htmlFor = inputId;
-      lbl.dataset.slot = slot.name;
-      lbl.textContent = i18n.param(slot.name);
-      field.appendChild(lbl);
-      slotForm.appendChild(field);
-      continue;
+    label.htmlFor = `export-mode-${idx}`;
+    label.textContent = i18n.t("exportAppearance");
+    const select = document.createElement("select");
+    select.id = label.htmlFor;
+    for (const [value, key] of [["selected", "keepStyle"], ["auto", "autoAppearance"]]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = i18n.t(key);
+      select.appendChild(option);
     }
-    input.id = inputId;
-    input.setAttribute("aria-label", i18n.param(slot.name));
-    field.appendChild(input);
+    select.value = block.appearance || "selected";
+    select.addEventListener("change", () => {
+      block.appearance = select.value;
+      saveComposerDraft();
+    });
+    const hint = document.createElement("p");
+    hint.className = "export-hint";
+    hint.textContent = i18n.t("autoAppearanceHint");
+    field.append(label, select, hint);
     slotForm.appendChild(field);
+  }
+  for (const param of def.params) {
+    slotForm.appendChild(buildParamField(param, {
+      values: block.slots,
+      cardKey: block.card_type,
+      prefix: `slot-${idx}`,
+      onChange: (name, value) => updateComposerSlot(block, name, value),
+    }));
   }
 }
 
 function serializeComposition() {
-  const lines = [];
-  for (const block of composerState.blocks) {
-    if (block.type === "markdown") {
-      lines.push(block.content);
-      lines.push("");
-      continue;
-    }
-    if (block.type === "card") {
-      const altText = composerLabel(block.card_type);
-      if (cardSupportsTheme(block.card_type)) {
-        // Dark + light <picture> pair so the card matches the viewer's GitHub theme.
-        const darkUrl = absoluteUrl(buildCardUrlForCompose(block.card_type, block.slots, "dark"));
-        const lightUrl = absoluteUrl(buildCardUrlForCompose(block.card_type, block.slots, "light"));
-        lines.push(`<picture>`);
-        lines.push(`  <source media="(prefers-color-scheme: dark)" srcset="${darkUrl}" />`);
-        lines.push(`  <img src="${lightUrl}" alt="${altText}" />`);
-        lines.push(`</picture>`);
-      } else {
-        // Card has no theme slot — single <img>, no mode switch.
-        const url = absoluteUrl(buildCardUrlForCompose(block.card_type, block.slots));
-        lines.push(`<img src="${url}" alt="${altText}" />`);
-      }
-      lines.push("");
-    }
-  }
-  return lines.join("\n").trimEnd() + "\n";
+  return composition.serialize(composerState.blocks, window.location.origin, composerLabel);
 }
 
 copyComposerBtn.addEventListener("click", () => {
@@ -2125,45 +1675,53 @@ composerCanvas.addEventListener("dragleave", (e) => {
 
 const COMPOSE_HASH_KEY = "c";
 
-function encodeCompositionToB64() {
-  const json = JSON.stringify({ v: 1, blocks: composerState.blocks });
-  // btoa needs Latin-1; route through UTF-8-safe path.
-  return btoa(unescape(encodeURIComponent(json)));
-}
-
-function decodeCompositionFromB64(b64) {
-  try {
-    const json = decodeURIComponent(escape(atob(b64)));
-    const parsed = JSON.parse(json);
-    if (!parsed || !Array.isArray(parsed.blocks)) return null;
-    return parsed.blocks;
-  } catch {
-    return null;
-  }
-}
-
 function makeShareLink() {
-  const b64 = encodeCompositionToB64();
-  return `${window.location.origin}/#${COMPOSE_HASH_KEY}=${b64}`;
+  return `${window.location.origin}${window.location.pathname}#c=${composition.encode(composerState.blocks)}`;
 }
 
 function readSharedComposition() {
   const raw = window.location.hash.replace(/^#/, "");
   if (!raw) return null;
   const params = new URLSearchParams(raw);
-  const b64 = params.get(COMPOSE_HASH_KEY);
-  if (!b64) return null;
-  return decodeCompositionFromB64(b64);
+  if (!params.has(COMPOSE_HASH_KEY)) return null;
+  const parsed = composition.decode(params.get(COMPOSE_HASH_KEY));
+  if (!parsed) alert(i18n.t("invalidComposition"));
+  return parsed?.blocks || null;
+}
+
+function applyHashNavigation() {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  if (params.has(COMPOSE_HASH_KEY)) {
+    const blocks = readSharedComposition();
+    if (!blocks) return;
+    composerState.blocks = blocks;
+    composerState.selectedIndex = blocks.length ? 0 : -1;
+    persistAndRender();
+    switchView("compose");
+  } else if (params.get("view") === "compose") {
+    switchView("compose");
+  } else {
+    const state = readHashState();
+    if (state) {
+      selectCard(state.card, state.values);
+      switchView("cards");
+    }
+  }
 }
 
 const shareComposerBtn = document.getElementById("composer-share");
 shareComposerBtn.addEventListener("click", () => {
   if (!composerState.blocks.length) return;
-  copyText(makeShareLink(), shareComposerBtn);
+  try { copyText(makeShareLink(), shareComposerBtn); }
+  catch { alert(i18n.t("shareFailed")); }
 });
 
 function switchView(view) {
+  viewCardsBtn.setAttribute("aria-selected", String(view !== "compose"));
+  viewComposeBtn.setAttribute("aria-selected", String(view === "compose"));
   if (view === "compose") {
+    clearTimeout(renderTimer);
+    history.replaceState(null, "", new URLSearchParams(window.location.hash.slice(1)).has("c") ? window.location.hash : "#view=compose");
     cardsView.classList.add("hidden");
     composeView.classList.remove("hidden");
     viewCardsBtn.classList.remove("active");
@@ -2173,6 +1731,7 @@ function switchView(view) {
     cardsView.classList.remove("hidden");
     viewComposeBtn.classList.remove("active");
     viewCardsBtn.classList.add("active");
+    render({ immediate: true });
   }
 }
 
@@ -2206,13 +1765,10 @@ renderBlocks();
 renderInspector();
 
 const initialState = readHashState();
-if (sharedBlocks) {
-  switchView("compose");
-} else if (initialState) {
-  selectCard(initialState.card, initialState.values);
-} else {
-  selectCard("hero");
-}
+const initialView = new URLSearchParams(window.location.hash.slice(1)).get("view");
+if (sharedBlocks || initialView === "compose") switchView("compose");
+selectCard(initialState?.card || "hero", initialState?.values);
+if (!sharedBlocks && initialView !== "compose") switchView("cards");
 </script>
 
 </body>

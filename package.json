@@ -11,7 +11,7 @@
     "build": "npm run check",
     "smoke:server": "node scripts/server-smoke.js",
     "pack:check": "node scripts/pack-check.js",
-    "check": "node --check server.js && find api src scripts -name '*.js' -exec node --check {} +"
+    "check": "node --check server.js && find api src scripts -name '*.js' -exec node --check {} + && node scripts/check-browser.js"
   },
   "files": [
     "api/",
