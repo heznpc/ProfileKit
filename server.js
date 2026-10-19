@@ -57,7 +57,7 @@ function adaptResponse(res) {
 
 function serveStatic(req, res) {
   let rel = req.url.split("?")[0];
-  if (rel === "/") rel = "/index.html";
+  if (rel === "/") rel = "/editor.html";
   // Path traversal guard: resolve the full target then assert containment
   // inside PUBLIC_DIR. Rejects `/../../etc/passwd`, `/%2e%2e/foo`, etc.
   const filePath = path.normalize(path.join(PUBLIC_DIR, rel));

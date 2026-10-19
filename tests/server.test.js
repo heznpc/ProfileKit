@@ -87,10 +87,18 @@ test("/api/../something cannot escape the endpoints directory", async () => {
   );
 });
 
-test("/ serves the playground index.html", async () => {
+test("/ serves the free card editor, matching the Vercel entry point", async () => {
   const res = await fetch(`${baseUrl}/`);
   assert.equal(res.status, 200);
   assert.match(res.headers.get("content-type"), /text\/html/);
+  assert.equal(await res.text(), await (await fetch(`${baseUrl}/editor.html`)).text());
+  const config = require("../vercel.json");
+  assert.ok(config.rewrites.some((route) => route.source === "/" && route.destination === "/editor.html"));
+});
+
+test("/index.html preserves the original card library and README composer", async () => {
+  const res = await fetch(`${baseUrl}/index.html`);
+  assert.equal(res.status, 200);
   const body = await res.text();
   assert.ok(body.length > 100, "playground index must be non-trivial");
   assert.match(body, /id="look-options"/, "card studio must expose integrated looks");
@@ -102,7 +110,7 @@ test("/ serves the playground index.html", async () => {
 });
 
 test("shared editor modules are served as JavaScript", async () => {
-  for (const file of ["card-schema.js", "composition.js"]) {
+  for (const file of ["card-schema.js", "composition.js", "editor-model.js", "editor-presets.js", "editor.js"]) {
     const res = await fetch(`${baseUrl}/${file}`);
     assert.equal(res.status, 200);
     assert.match(res.headers.get("content-type"), /text\/javascript/);

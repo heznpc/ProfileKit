@@ -1,4 +1,5 @@
 {
+  "rewrites": [{ "source": "/", "destination": "/editor.html" }],
   "functions": {
     "api/*.js": {
       "memory": 128,
