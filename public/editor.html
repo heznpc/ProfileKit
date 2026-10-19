@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="텍스트와 사진, 도형으로 나다운 프로필 카드를 만드세요. 저장한 카드는 언제든 다시 편집할 수 있습니다." />
+  <title>카드 스튜디오 · ProfileKit</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/editor.css" />
+</head>
+<body>
+  <a class="skip-link" href="#canvas-host">작업판으로 이동</a>
+  <header class="studio-header">
+    <div class="brand-area">
+      <a class="studio-brand" href="/index.html" aria-label="ProfileKit 카드 라이브러리">
+        <span class="brand-symbol" aria-hidden="true">p<span>k</span></span>
+        <span>ProfileKit<small>CARD STUDIO</small></span>
+      </a>
+    </div>
+    <div class="document-title">
+      <label for="doc-name">내 카드</label>
+      <input id="doc-name" type="text" value="나의 첫 번째 카드" maxlength="120" autocomplete="off" />
+    </div>
+    <div class="document-actions" aria-label="프로젝트와 내보내기">
+      <button id="project-open" class="button quiet" type="button">원본 열기</button>
+      <button id="project-save" class="button quiet" type="button"><span class="button-icon" aria-hidden="true">↓</span> 원본 저장</button>
+      <span class="action-divider" aria-hidden="true"></span>
+      <button id="export-png" class="button outline" type="button">PNG 이미지</button>
+      <button id="export-svg" class="button ink" type="button">SVG 내보내기 <span aria-hidden="true">↗</span></button>
+    </div>
+    <input id="project-file" type="file" accept="application/json,.json" hidden />
+    <input id="image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+  </header>
+
+  <nav class="mobile-studio-nav" aria-label="편집 화면 이동">
+    <a href="#canvas-host">작업판</a>
+    <a href="#template-heading">시작 카드</a>
+    <a href="#layers-heading">레이어</a>
+  </nav>
+
+  <main class="editor-workspace">
+    <aside class="library-panel" aria-label="시작 카드와 레이어">
+      <section class="sidebar-section template-section" aria-labelledby="template-heading">
+        <div class="section-heading"><h2 id="template-heading">여기서 시작해요</h2><span class="section-mark" aria-hidden="true">01</span></div>
+        <p class="section-description">마음에 드는 구성을 골라<br />나만의 카드로 바꿔보세요.</p>
+        <div id="template-list" class="template-list">
+          <button class="template-card is-selected" data-preset="editorial" type="button" aria-pressed="true">
+            <span class="template-thumb thumb-editorial" aria-hidden="true"><span class="thumb-kicker">A PERSONAL INTRODUCTION</span><span class="thumb-title">Small ideas.<br />Real things.</span><span class="thumb-disc">↗</span><span class="thumb-rule"></span></span>
+            <span class="template-caption"><strong>활자 표지</strong><span>여백과 큰 활자</span></span>
+          </button>
+          <button class="template-card" data-preset="collage" type="button" aria-pressed="false">
+            <span class="template-thumb thumb-collage" aria-hidden="true"><img src="/editor-assets/coast.png" alt="" /><span class="thumb-collage-title">GOOD<br />DAYS.</span><span class="thumb-tape"></span><span class="thumb-sticker">my little world</span></span>
+            <span class="template-caption"><strong>취향의 조각</strong><span>사진과 자유로운 겹침</span></span>
+          </button>
+          <button class="template-card blank-template" data-preset="blank" type="button" aria-pressed="false"><span class="blank-plus" aria-hidden="true">＋</span><span class="template-caption"><strong>빈 카드</strong><span>처음부터 자유롭게</span></span></button>
+        </div>
+      </section>
+      <section class="sidebar-section layers-section" aria-labelledby="layers-heading">
+        <div class="section-heading"><h2 id="layers-heading">레이어</h2><span class="layer-order-hint">위 → 앞</span></div>
+        <div id="layer-list" class="layer-list" aria-label="카드 요소 목록"></div>
+        <p class="layer-help">요소를 선택하면<br />위치와 모양을 바꿀 수 있어요.</p>
+      </section>
+      <a class="library-return" href="/index.html"><span aria-hidden="true">←</span> 기존 카드 라이브러리</a>
+    </aside>
+
+    <section class="workspace-main" aria-label="카드 작업판">
+      <div class="canvas-toolbar">
+        <div class="history-tools" aria-label="편집 기록">
+          <button id="undo" class="icon-button" type="button" aria-label="실행 취소" title="실행 취소" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6 4 11l5 5M4 11h10a6 6 0 0 1 6 6" /></svg></button>
+          <button id="redo" class="icon-button" type="button" aria-label="다시 실행" title="다시 실행" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6 5 5-5 5M20 11H10a6 6 0 0 0-6 6" /></svg></button>
+        </div>
+        <div class="creation-tools" role="group" aria-label="요소 추가">
+          <button id="add-text" class="tool-button" type="button"><span class="type-icon" aria-hidden="true">T</span><span>텍스트</span></button>
+          <button id="add-image" class="tool-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="9" r="1.5" /><path d="m4 18 5-5 3 3 4-6 5 7" /></svg><span>이미지</span></button>
+          <button id="add-rect" class="tool-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="1" /></svg><span>사각형</span></button>
+          <button id="add-ellipse" class="tool-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="8" ry="7" /></svg><span>원</span></button>
+        </div>
+        <span class="toolbar-endnote">MAKE IT YOURS.</span>
+      </div>
+      <div class="canvas-viewport">
+        <div class="artboard-heading"><span>YOUR CANVAS</span><span id="canvas-size-label">960 × 540</span></div>
+        <div class="canvas-frame"><div id="canvas-host" tabindex="0" aria-label="카드 작업판. 요소를 선택해 이동하거나 크기를 조절할 수 있습니다."></div></div>
+        <p class="canvas-guidance">요소를 움직이고, 겹치고, 바꿔보세요.<span>정해진 자리는 없어요.</span></p>
+      </div>
+      <footer class="workspace-footer"><span class="status-dot" aria-hidden="true"></span><p id="status-message" role="status" aria-live="polite" aria-atomic="true">카드를 선택하거나 새로운 요소를 추가해 보세요.</p><span class="footer-edition">PROFILEKIT / STUDIO</span></footer>
+    </section>
+
+    <aside class="inspector-panel" aria-label="카드와 요소 설정">
+      <section class="inspector-section document-settings" aria-labelledby="document-heading">
+        <div class="section-heading"><h2 id="document-heading">카드</h2><span class="section-mark" aria-hidden="true">↗</span></div>
+        <div class="field-grid two-columns">
+          <label class="field" for="doc-width"><span>너비</span><span class="input-with-unit"><input id="doc-width" type="number" min="64" max="2048" step="1" value="960" /><span>px</span></span></label>
+          <label class="field" for="doc-height"><span>높이</span><span class="input-with-unit"><input id="doc-height" type="number" min="64" max="2048" step="1" value="540" /><span>px</span></span></label>
+        </div>
+        <label class="color-field" for="doc-background"><span>배경색</span><input id="doc-background" type="color" value="#f3eee3" /></label>
+      </section>
+
+      <div id="selection-empty" class="selection-empty">
+        <span class="selection-illustration" aria-hidden="true"><span></span><i></i></span>
+        <h2>작은 선택에서 시작해요.</h2>
+        <p>작업판의 글자나 도형을 눌러보세요.<br />선택한 요소의 설정이 여기에 나타나요.</p>
+      </div>
+
+      <div id="selection-panel" hidden>
+        <section class="inspector-section selection-settings" aria-labelledby="selection-heading">
+          <div class="section-heading"><h2 id="selection-heading">선택한 요소</h2><span id="selection-type" class="selection-type">텍스트</span></div>
+          <div class="field-grid two-columns">
+            <label class="field" for="element-x"><span>X 위치</span><input id="element-x" type="number" step="1" /></label>
+            <label class="field" for="element-y"><span>Y 위치</span><input id="element-y" type="number" step="1" /></label>
+            <label class="field" for="element-width"><span>너비</span><input id="element-width" type="number" min="1" step="1" /></label>
+            <label class="field" for="element-height"><span>높이</span><input id="element-height" type="number" min="1" step="1" /></label>
+            <label class="field" for="element-rotation"><span>회전</span><span class="input-with-unit"><input id="element-rotation" type="number" min="-360" max="360" step="1" /><span>°</span></span></label>
+            <label class="field" for="element-opacity"><span>불투명도</span><input id="element-opacity" type="number" min="0" max="1" step="0.05" /></label>
+          </div>
+          <div class="alignment-tools" aria-label="카드 가운데로 정렬"><button id="align-horizontal" class="small-button" type="button" title="가로 가운데로 정렬">가로 가운데</button><button id="align-vertical" class="small-button" type="button" title="세로 가운데로 정렬">세로 가운데</button></div>
+        </section>
+
+        <section id="text-controls" class="inspector-section" aria-labelledby="text-heading" hidden>
+          <h3 id="text-heading" class="control-heading">글자</h3>
+          <label class="field text-content-field" for="element-text"><span>내용</span><textarea id="element-text" rows="4" placeholder="하고 싶은 이야기를 적어보세요."></textarea></label>
+          <label class="field" for="element-font-family"><span>글꼴</span><select id="element-font-family"><option value="sans">산세리프</option><option value="serif">세리프</option><option value="mono">고정폭</option></select></label>
+          <div class="field-grid two-columns"><label class="field" for="element-font-size"><span>크기</span><input id="element-font-size" type="number" min="8" max="256" step="1" /></label><label class="field" for="element-font-weight"><span>굵기</span><select id="element-font-weight"><option value="400">보통</option><option value="700">굵게</option></select></label></div>
+          <label class="color-field" for="element-color"><span>글자색</span><input id="element-color" type="color" value="#242923" /></label>
+          <label class="field" for="element-align"><span>문단 정렬</span><select id="element-align"><option value="left">왼쪽</option><option value="center">가운데</option><option value="right">오른쪽</option></select></label>
+        </section>
+
+        <section id="shape-controls" class="inspector-section" aria-labelledby="shape-heading" hidden>
+          <h3 id="shape-heading" class="control-heading">도형</h3>
+          <label class="field" for="element-fill"><span>채우기 색상</span><span class="shape-color-row"><input id="element-fill-picker" type="color" aria-label="채우기 색상 선택" value="#d96a50" /><input id="element-fill" type="text" spellcheck="false" placeholder="#d96a50 또는 none" /></span></label>
+          <label class="field" for="element-stroke"><span>테두리 색상</span><span class="shape-color-row"><input id="element-stroke-picker" type="color" aria-label="테두리 색상 선택" value="#242923" /><input id="element-stroke" type="text" spellcheck="false" placeholder="#242923 또는 none" /></span></label>
+          <div class="field-grid two-columns"><label class="field" for="element-stroke-width"><span>테두리 두께</span><input id="element-stroke-width" type="number" min="0" max="40" step="1" /></label><label class="field" for="element-radius"><span>모서리 둥글기</span><input id="element-radius" type="number" min="0" step="1" /></label></div>
+        </section>
+
+        <section id="image-controls" class="inspector-section" aria-labelledby="image-heading" hidden>
+          <h3 id="image-heading" class="control-heading">이미지</h3>
+          <button id="replace-image" class="small-button" type="button">다른 이미지로 교체</button>
+          <label class="field" for="element-fit"><span>이미지 맞춤</span><select id="element-fit"><option value="cover">꽉 채우기</option><option value="contain">전체 보기</option></select></label>
+          <p class="field-hint">크기와 비율을 바꿔 카드에 어울리게 배치하세요.</p>
+        </section>
+
+        <section class="inspector-section element-actions" aria-label="요소 관리">
+          <div class="field-grid two-columns"><button id="bring-forward" class="small-button" type="button">앞으로 한 칸</button><button id="send-backward" class="small-button" type="button">뒤로 한 칸</button></div>
+          <div class="field-grid two-columns"><button id="duplicate-element" class="small-button" type="button">복제</button><button id="delete-element" class="small-button danger" type="button">삭제</button></div>
+        </section>
+      </div>
+    </aside>
+  </main>
+  <script src="/editor-model.js"></script>
+  <script src="/editor-presets.js"></script>
+  <script src="/editor.js"></script>
+</body>
+</html>
