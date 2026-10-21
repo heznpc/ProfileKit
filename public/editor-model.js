@@ -1,12 +1,12 @@
 /* Portable editor documents and their shared preview/export SVG renderer. */
 (function (root, factory) {
-  if (typeof module === "object" && module.exports) module.exports = factory();
-  else root.ProfileKitEditorModel = factory();
-})(typeof globalThis !== "undefined" ? globalThis : this, () => {
+  if (typeof module === "object" && module.exports) module.exports = factory(require("./card-schema"));
+  else root.ProfileKitEditorModel = factory(root.ProfileKitCards);
+})(typeof globalThis !== "undefined" ? globalThis : this, (schema) => {
   "use strict";
 
   const LIMITS = Object.freeze({
-    MIN_CANVAS: 64,
+    MIN_CANVAS: 1,
     MAX_CANVAS: 2048,
     MAX_ELEMENTS: 64,
     MAX_FILE_BYTES: 8 * 1024 * 1024,
@@ -17,6 +17,10 @@
     MAX_COORDINATE: 4096,
     MAX_ELEMENT_SIZE: 4096,
     MAX_TEXT_LENGTH: 32768,
+    MAX_CARD_PARAMS: 64,
+    MAX_CARD_PARAM_LENGTH: 8192,
+    MAX_CARD_PARAM_BYTES: 12288,
+    MAX_CARD_CALLS: 8,
   });
   const FONT_FAMILIES = Object.freeze({
     sans: "'Helvetica Neue', Arial, sans-serif",
@@ -29,7 +33,10 @@
     image: ["src", "fit"],
     rect: ["fill", "stroke", "strokeWidth", "radius"],
     ellipse: ["fill", "stroke", "strokeWidth", "radius"],
+    card: ["endpoint", "params", "sourceOrigin", "nativeWidth", "nativeHeight", "linkUrl", "alt", "displayWidth"],
   };
+  const CARD_ENDPOINTS = Object.freeze([...Object.keys(schema?.CARDS || {}), "stack"]);
+  const STACK_ENDPOINTS = Object.freeze(["hero", "section", "divider", "now", "timeline", "tags", "toc", "stats", "languages"]);
   const DOCUMENT_KEYS = ["kind", "version", "name", "width", "height", "background", "elements"];
   const IMAGE_PREFIX = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/;
   const imageCache = new Map();
@@ -78,6 +85,115 @@
   function escape(value) {
     return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function normalizeOrigin(value) {
+    if (typeof value !== "string" || value.length > 512) fail("Card origin is invalid");
+    let url;
+    try { url = new URL(value); } catch { fail("Card origin is invalid"); }
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password
+      || url.pathname !== "/" || url.search || url.hash) fail("Card origin must be an HTTP(S) origin without credentials or a path");
+    return url.origin;
+  }
+  function normalizeCard(raw) {
+    record(raw, "Card");
+    const endpoint = choice(raw.endpoint, CARD_ENDPOINTS, "Card endpoint");
+    const values = record(raw.params, "Card parameters");
+    if (Object.keys(values).length > LIMITS.MAX_CARD_PARAMS) fail("Card has too many parameters");
+    const params = {};
+    for (const [key, value] of Object.entries(values)) {
+      if (key.length > 80 || !/^[a-z][a-z0-9_.-]*$/i.test(key)
+        || key.split(/[.-]/).some((part) => ["prototype", ...Object.getOwnPropertyNames(Object.prototype)].some((name) => name.toLowerCase() === part.toLowerCase()))) {
+        fail("Card parameter name is invalid");
+      }
+      if (/(?:token|secret|password|credential|authorization|api[_-]?key|access[_-]?key)/i.test(key)) {
+        fail("Secret or token parameters cannot be included in a public card URL");
+      }
+      params[key] = string(value, LIMITS.MAX_CARD_PARAM_LENGTH, `Card parameter ${key}`);
+    }
+    if (jsonBytes(params) > LIMITS.MAX_CARD_PARAM_BYTES) fail("Card parameters are too large");
+    const card = { endpoint, params };
+    if (raw.sourceOrigin !== undefined) card.sourceOrigin = normalizeOrigin(raw.sourceOrigin);
+    if (raw.nativeWidth !== undefined || raw.nativeHeight !== undefined) {
+      for (const key of ["nativeWidth", "nativeHeight"]) {
+        const value = raw[key];
+        if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > 16384) {
+          fail("Native card dimensions must both be positive numbers of at most 16384");
+        }
+        card[key] = value;
+      }
+    }
+    if (raw.linkUrl !== undefined) {
+      const value = string(raw.linkUrl, 2048, "Card link");
+      const controls = /[\u0000-\u001f\u007f-\u009f]/;
+      if (controls.test(value)) fail("Card link cannot contain control characters");
+      let url;
+      try { url = new URL(value); } catch { fail("Card link must be an HTTP(S) or mailto URL"); }
+      if (!["http:", "https:", "mailto:"].includes(url.protocol) || url.username || url.password) {
+        fail("Card link must be an HTTP(S) or mailto URL without credentials");
+      }
+      if (url.protocol === "mailto:") {
+        let recipients;
+        try {
+          recipients = decodeURIComponent(url.pathname);
+          if (controls.test(recipients) || controls.test(decodeURIComponent(url.search))) fail("Invalid email link");
+        } catch { fail("Card link contains invalid email encoding or control characters"); }
+        if (url.host || url.hash || recipients.startsWith("//")) fail("Card link must use mailto recipients without an authority or fragment");
+        const checkRecipients = (list) => {
+          if (!list) return;
+          for (const address of list.split(",").map((item) => item.trim())) {
+            const parts = address.split("@");
+            if (parts.length !== 2 || !/^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/i.test(parts[0])
+              || !parts[1].split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label))) {
+              fail("Card link contains an invalid email recipient");
+            }
+          }
+        };
+        checkRecipients(recipients);
+        const fields = new Set();
+        // Mailto query fields use URI encoding; a literal + is part of an
+        // address or message, unlike application/x-www-form-urlencoded data.
+        for (const pair of url.search.slice(1).split("&").filter(Boolean)) {
+          const separator = pair.indexOf("=");
+          if (separator < 1) fail("Card link contains an invalid email field");
+          const key = decodeURIComponent(pair.slice(0, separator));
+          const field = decodeURIComponent(pair.slice(separator + 1));
+          const name = key.toLowerCase();
+          if (!["to", "cc", "bcc", "subject", "body"].includes(name) || fields.has(name) || controls.test(field)) {
+            fail("Card link contains an unsupported or repeated email field");
+          }
+          fields.add(name);
+          if (["to", "cc", "bcc"].includes(name)) checkRecipients(field);
+        }
+      }
+      card.linkUrl = url.href;
+    }
+    if (raw.alt !== undefined) card.alt = string(raw.alt, 1024, "Card alternative text");
+    if (raw.displayWidth !== undefined) {
+      const value = string(raw.displayWidth, 32, "Card display width").trim();
+      const match = value.match(/^(\d+(?:\.\d+)?|\.\d+)(%)?$/);
+      const width = match && Number(match[1]);
+      if (!match || !Number.isFinite(width) || (match[2] ? width < 1 : width <= 0) || width > (match[2] ? 100 : 16384)) {
+        fail("Card display width must be positive pixels up to 16384 or a percentage from 1% to 100%");
+      }
+      card.displayWidth = String(width) + (match[2] || "");
+    }
+    cardCallCount(card);
+    return card;
+  }
+  function cardCallCount(card) {
+    if (card.endpoint !== "stack") return 1;
+    const children = (card.params.cards || "").split(",").map((item) => item.trim()).filter(Boolean);
+    if (!children.length) fail("Stack requires at least one card");
+    if (children.some((name) => !STACK_ENDPOINTS.includes(name))) fail("Stack contains an unsupported or recursive card endpoint");
+    const calls = 1 + children.length;
+    if (calls > LIMITS.MAX_CARD_CALLS) fail("A design can invoke at most 8 card endpoints, including stack children");
+    return calls;
+  }
+  function cardPath(card) {
+    // Encode keys and values independently; never interpolate raw query text into SVG.
+    const query = Object.entries(card.params).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join("&");
+    return `/api/${card.endpoint}${query ? `?${query}` : ""}`;
   }
 
   function imageDimensions(binary, format) {
@@ -220,6 +336,7 @@
     else if (type === "image") Object.assign(normalized, {
       src: embeddedImage(raw.src), fit: choice(raw.fit, ["cover", "contain"], "Image fit"),
     });
+    else if (type === "card") Object.assign(normalized, normalizeCard(raw));
     else Object.assign(normalized, {
       fill: color(raw.fill, "Shape fill", ["none"]),
       stroke: color(raw.stroke, "Shape stroke", ["none"]),
@@ -255,10 +372,13 @@
       elements: raw.elements.map(normalizeElement),
     };
     const ids = new Set();
+    let cardCalls = 0;
     for (const element of normalized.elements) {
       if (ids.has(element.id)) fail("Element IDs must be unique");
       ids.add(element.id);
+      if (element.type === "card") cardCalls += cardCallCount(element);
     }
+    if (cardCalls > LIMITS.MAX_CARD_CALLS) fail("A design can invoke at most 8 card endpoints, including stack children");
     if (jsonBytes(normalized) > LIMITS.MAX_FILE_BYTES) fail("Document exceeds the 8 MiB file limit");
     const imageSources = new Set();
     let totalPixels = 0;
@@ -298,6 +418,7 @@
       image: { width: 320, height: 240, fit: "cover" },
       rect: { width: 240, height: 160, fill: "#d55c3c", stroke: "none", strokeWidth: 0, radius: 0 },
       ellipse: { width: 180, height: 180, fill: "#d55c3c", stroke: "none", strokeWidth: 0, radius: 0 },
+      card: { width: 600, height: 280, endpoint: "hero", params: {} },
     };
     return normalizeElement({ type, x: 80, y: 80, rotation: 0, opacity: 1,
       ...defaults[type], ...overrides, id: overrides.id ?? newElementId(), type });
@@ -382,7 +503,86 @@
   }
   function svgNumber(value) { return String(Math.round(value * 1000) / 1000); }
 
-  function renderSVG(document, { interactive = false } = {}) {
+  function regexEscape(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+  // These helpers accept only renderer output, never a document field or imported SVG.
+  // Nested SVG viewports do not isolate styles: scope selectors, IDs, animations and
+  // embedded font families separately so repeated cards can use different themes.
+  function scopeCSS(css, scope) {
+    let output = "";
+    let cursor = 0;
+    while (cursor < css.length) {
+      const open = css.indexOf("{", cursor);
+      if (open < 0) return output + css.slice(cursor);
+      const selector = css.slice(cursor, open).trim();
+      let depth = 1;
+      let quote = "";
+      let end = open + 1;
+      for (; end < css.length && depth; end++) {
+        const char = css[end];
+        if (quote) {
+          if (char === "\\") end++;
+          else if (char === quote) quote = "";
+        } else if (char === "'" || char === '"') quote = char;
+        else if (char === "{") depth++;
+        else if (char === "}") depth--;
+      }
+      if (depth) fail("Card renderer returned invalid CSS");
+      const body = css.slice(open + 1, end - 1);
+      if (/^@(?:media|supports|layer)\b/.test(selector)) output += `${selector}{${scopeCSS(body, scope)}}`;
+      else if (selector.startsWith("@")) output += `${selector}{${body}}`;
+      else output += `${selector.split(",").map((part) => `#${scope} ${part.trim()}`).join(",")}{${body}}`;
+      cursor = end;
+    }
+    return output;
+  }
+
+  function isolateSVG(svg, prefix) {
+    if (typeof svg !== "string" || !/^\s*<svg\b/.test(svg) || !/^[a-z][a-z0-9_-]*$/i.test(prefix)) {
+      fail("Card renderer must return a complete SVG");
+    }
+    const ids = new Set(Array.from(svg.matchAll(/\bid="([^"]+)"/g), (match) => match[1]));
+    const animations = new Set();
+    const families = new Set();
+    for (const [, css] of svg.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)) {
+      for (const match of css.matchAll(/@(?:-webkit-)?keyframes\s+([\w-]+)/g)) animations.add(match[1]);
+      for (const match of css.matchAll(/@font-face\s*\{[^}]*font-family\s*:\s*['"]([^'"]+)['"]/g)) families.add(match[1]);
+    }
+    let result = svg.replace(/\bid="([^"]+)"/g, (_, id) => `id="${prefix}${id}"`)
+      .replace(/((?:xlink:)?href=")#([^"]+)(")/g, (_, start, id, end) => `${start}#${ids.has(id) ? prefix : ""}${id}${end}`)
+      .replace(/url\(#([^)]+)\)/g, (_, id) => `url(#${ids.has(id) ? prefix : ""}${id})`);
+    function rewriteStyles(css) {
+      for (const id of ids) css = css.replace(new RegExp(`#${regexEscape(id)}(?=[^\\w-]|$)`, "g"), `#${prefix}${id}`);
+      for (const name of animations) {
+        const token = new RegExp(`(?<![\\w-])${regexEscape(name)}(?![\\w-])`, "g");
+        css = css.replace(/(@(?:-webkit-)?keyframes\s+)([\w-]+)/g, (match, start, value) => start + (value === name ? prefix + value : value));
+        css = css.replace(/(\banimation(?:-name)?\s*:\s*)([^;}]+)/g, (_, start, value) => start + value.replace(token, `${prefix}${name}`));
+      }
+      for (const family of families) css = css.replace(new RegExp(`(['"])${regexEscape(family)}\\1`, "g"), `'${prefix}${family}'`);
+      return css;
+    }
+    result = result.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/g, (_, css) => `<style>${scopeCSS(rewriteStyles(css), `${prefix}scope`)}</style>`)
+      .replace(/\bstyle="([^"]*)"/g, (_, css) => `style="${rewriteStyles(css)}"`)
+      .replace(/\bfont-family="([^"]*)"/g, (_, family) => `font-family="${rewriteStyles(family)}"`);
+    return result.replace(/^(\s*<svg\b[^>]*>)/, `$1<g id="${prefix}scope">`).replace(/<\/svg>\s*$/, "</g></svg>");
+  }
+
+  function positionedCard(svg, element, prefix) {
+    const tag = svg.match(/^\s*<svg\b([^>]*)>/);
+    if (!tag) fail("Card renderer must return a complete SVG");
+    let attrs = tag[1];
+    if (!/\bviewBox=/.test(attrs)) {
+      const w = attrs.match(/\bwidth="([\d.]+)"/);
+      const h = attrs.match(/\bheight="([\d.]+)"/);
+      if (!w || !h) fail("Card renderer SVG has no dimensions");
+      attrs += ` viewBox="0 0 ${w[1]} ${h[1]}"`;
+    }
+    attrs = attrs.replace(/\s+(?:x|y|width|height|preserveAspectRatio|overflow)="[^"]*"/g, "");
+    const placed = svg.replace(tag[0], `<svg x="${element.x}" y="${element.y}" width="${element.width}" height="${element.height}" preserveAspectRatio="none" overflow="hidden"${attrs}>`);
+    return isolateSVG(placed, prefix);
+  }
+
+  function renderSVG(document, { interactive = false, cardMarkup } = {}) {
     const doc = normalizeDocument(document);
     const elements = doc.elements.map((element, index) => {
       const { id, type, x, y, width, height, rotation, opacity } = element;
@@ -398,6 +598,10 @@
         body = `${clip}<text xml:space="preserve" font-family="${escape(FONT_FAMILIES[element.fontFamily])}" font-size="${element.fontSize}" font-weight="${element.fontWeight}" fill="${element.color}" text-anchor="${anchor}" clip-path="url(#${clipId})">${spans}</text>`;
       } else if (type === "image") {
         body = `${clip}<image ${box} href="${element.src}" preserveAspectRatio="xMidYMid ${element.fit === "cover" ? "slice" : "meet"}" clip-path="url(#${clipId})"/>`;
+      } else if (type === "card") {
+        body = cardMarkup && Object.hasOwn(cardMarkup, id)
+          ? positionedCard(cardMarkup[id], element, `pk-card-${index}-${id}-`)
+          : `<image ${box} href="${escape((element.sourceOrigin || "") + cardPath(element))}" preserveAspectRatio="none"/>`;
       } else {
         const appearance = `fill="${element.fill}" stroke="${element.stroke}" stroke-width="${element.strokeWidth}"`;
         body = type === "rect" ? `<rect ${box} rx="${element.radius}" ${appearance}/>`
@@ -409,5 +613,6 @@
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${doc.width}" height="${doc.height}" viewBox="0 0 ${doc.width} ${doc.height}" overflow="hidden" role="img" aria-label="${escape(doc.name || "Profile card")}"><title>${escape(doc.name || "Profile card")}</title><rect width="${doc.width}" height="${doc.height}" fill="${doc.background}"/>\n${elements}\n</svg>`;
   }
 
-  return { LIMITS, FONT_FAMILIES, createDocument, createElement, normalizeDocument, parseDocument, serializeDocument, renderSVG, textLayout, imageInfo };
+  return { LIMITS, FONT_FAMILIES, CARD_ENDPOINTS, STACK_ENDPOINTS, createDocument, createElement, normalizeDocument, normalizeCard,
+    normalizeOrigin, cardCallCount, cardPath, parseDocument, serializeDocument, renderSVG, textLayout, imageInfo, isolateSVG };
 });

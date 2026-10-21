@@ -1,6 +1,6 @@
 const { CARDS } = require("../src/endpoints/catalog");
 
-const ALLOWED = new Set([...Object.keys(CARDS), "catalog"]);
+const ALLOWED = new Set([...Object.keys(CARDS), "catalog", "design"]);
 
 module.exports = async (req, res) => {
   // The dynamic segment is named [endpoint], not [name], on purpose:

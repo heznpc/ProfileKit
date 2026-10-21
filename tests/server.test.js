@@ -28,6 +28,7 @@ test.after(async () => {
 
 test("ALLOWED set includes catalog and health alongside the 28 cards", () => {
   assert.ok(ALLOWED.has("catalog"), "catalog must be allowlisted");
+  assert.ok(ALLOWED.has("design"), "live designs must be allowlisted");
   assert.ok(ALLOWED.has("health"), "health must be allowlisted");
   assert.ok(ALLOWED.has("divider"), "card endpoints must be allowlisted");
   // Path-traversal-style names must NOT be in the set.
@@ -110,7 +111,7 @@ test("/index.html preserves the original card library and README composer", asyn
 });
 
 test("shared editor modules are served as JavaScript", async () => {
-  for (const file of ["card-schema.js", "composition.js", "editor-model.js", "editor-presets.js", "editor.js"]) {
+  for (const file of ["card-schema.js", "composition.js", "editor-model.js", "card-design.js", "editor-presets.js", "editor.js"]) {
     const res = await fetch(`${baseUrl}/${file}`);
     assert.equal(res.status, 200);
     assert.match(res.headers.get("content-type"), /text\/javascript/);
@@ -174,4 +175,35 @@ test("PUBLIC_DIR resolves to the repo's public/ directory", () => {
       PUBLIC_DIR.endsWith("/public"),
     `PUBLIC_DIR must end in /public, got ${PUBLIC_DIR}`
   );
+});
+
+
+test("live README designs render identically through standalone and Vercel adapters", async () => {
+  const Model = require("../public/editor-model");
+  const Design = require("../public/card-design");
+  const adapter = require("../api/[endpoint]");
+  const document = Model.createDocument({ width: 900, height: 220, background: "transparent", elements: [
+    Model.createElement("card", { id: "matrix", endpoint: "matrix", params: { color: "70A5FD", density: "0.6", speed: "0.5", width: "900", height: "220" }, x: 0, y: 0, width: 900, height: 220 }),
+    Model.createElement("text", { id: "name", text: "My README", x: 24, y: 24, width: 500, height: 100 }),
+  ] });
+  const url = `/api/design?d=${Design.encodeDocument(document)}`;
+  const response = await fetch(baseUrl + url);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/svg+xml");
+  const standalone = await response.text();
+  assert.match(standalone, /My README/);
+  assert.match(standalone, /<animateTransform\b/);
+  assert.doesNotMatch(standalone, /href="https?:/);
+  const headers = {};
+  let vercel;
+  await adapter({ url, query: { endpoint: "design" } }, {
+    setHeader(name, value) { headers[name.toLowerCase()] = value; return this; },
+    status(code) { assert.equal(code, 200); return this; },
+    send(value) { vercel = value; },
+  });
+  assert.equal(vercel, standalone);
+  assert.equal(headers["cache-control"], response.headers.get("cache-control"));
+  const invalid = await fetch(baseUrl + "/api/design?d=invalid");
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.headers.get("cache-control"), "public, max-age=300, s-maxage=300, stale-while-revalidate=300");
 });
