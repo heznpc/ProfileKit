@@ -13,18 +13,21 @@
   if (openLegacyLink()) return;
   window.addEventListener("hashchange", openLegacyLink);
   const M = window.ProfileKitEditorModel;
+  const Design = window.ProfileKitCardDesign;
+  const catalog = window.ProfileKitCards.CARDS;
   const presets = window.ProfileKitEditorPresets;
   const $ = (id) => document.getElementById(id);
   const host = $("canvas-host");
-  const DRAFT_KEY = "profilekit.editor.v1";
+  const DRAFT_KEY = "profilekit.readme-studio.v2";
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const clone = (value) => ({ ...value, elements: value.elements.map((element) => ({ ...element })) });
-  let doc = presets.editorial.make();
-  let selectedId = null;
+  const clone = (value) => ({ ...value, elements: value.elements.map((element) => ({ ...element, ...(element.params ? { params: { ...element.params } } : {}) })) });
+  let doc = presets.header.make();
+  let selectedId = doc.elements[0]?.id || null;
   let past = [], future = [], pendingEdit = null, gesture = null;
   let dirty = false, persisted = true, revision = 0, saveTimer, frame;
-  let draftError = false, photoPromise, imageTargetId = null;
+  let draftError = false, imageTargetId = null;
   let lastStoredDraft = null, storageConflict = false;
+  const nativeMeasurements = new Map();
 
   function status(message, error = false) {
     $("status-message").textContent = message;
@@ -52,21 +55,21 @@
   }
   function saveDraft() {
     clearTimeout(saveTimer);
-    if (gesture) { saveTimer = setTimeout(saveDraft, 400); return; }
+    if (gesture || nativeMeasurements.size) { saveTimer = setTimeout(saveDraft, 400); return; }
     try {
       if (storageConflict || localStorage.getItem(DRAFT_KEY) !== lastStoredDraft) {
         storageConflict = true; persisted = false;
-        status("다른 탭에서 초안이 변경됐습니다. 덮어쓰기를 멈췄으니 이 탭의 작업은 ‘원본 저장’으로 보관하세요.", true);
+        status("다른 탭에서 초안이 변경됐습니다. 덮어쓰기를 멈췄으니 이 탭의 작업은 ‘프로젝트 저장’으로 보관하세요.", true);
         return;
       }
       const serialized = M.serializeDocument(doc);
       localStorage.setItem(DRAFT_KEY, serialized);
       lastStoredDraft = serialized;
       persisted = true;
-      status("이 브라우저에 저장됨 · 다른 기기에서는 원본 파일을 열어주세요.");
+      status("이 브라우저에 저장됨 · 다른 기기에서는 프로젝트 파일을 열어주세요.");
     } catch {
       persisted = false;
-      status("브라우저에 저장하지 못했습니다. ‘원본 저장’으로 파일을 보관하세요.", true);
+      status("브라우저에 저장하지 못했습니다. ‘프로젝트 저장’으로 파일을 보관하세요.", true);
     }
   }
   function finishEdit() {
@@ -99,6 +102,7 @@
     finishEdit();
     const from = backward ? past : future, to = backward ? future : past;
     if (!from.length) return;
+    nativeMeasurements.clear();
     to.push({ doc: clone(doc), selectedId });
     const snapshot = from.pop(); doc = snapshot.doc; selectedId = snapshot.selectedId;
     if (!selected()) selectedId = null;
@@ -112,6 +116,7 @@
     updateHistory();
   }
   function elementLabel(element) {
+    if (element.type === "card") return `${cardLabel(element.endpoint)} · ${element.params.username || element.params.name || element.params.title || element.endpoint}`;
     return element.type === "text" ? element.text.split("\n")[0] || "빈 텍스트" : ({ image: "이미지", rect: "사각형", ellipse: "타원" })[element.type];
   }
   function renderLayers() {
@@ -126,7 +131,7 @@
       button.setAttribute("aria-pressed", String(element.id === selectedId));
       const icon = document.createElement("span");
       icon.className = "layer-icon"; icon.setAttribute("aria-hidden", "true");
-      icon.textContent = ({ text: "T", image: "▧", rect: "□", ellipse: "○" })[element.type];
+      icon.textContent = ({ card: "◈", text: "T", image: "▧", rect: "□", ellipse: "○" })[element.type];
       const label = document.createElement("span"); label.textContent = elementLabel(element);
       button.append(icon, label); list.append(button);
     });
@@ -166,10 +171,10 @@
     const overlay = svgNode("svg", { class: "selection-overlay", viewBox: `0 0 ${doc.width} ${doc.height}`, "aria-hidden": "true" });
     const cx = element.x + element.width / 2, cy = element.y + element.height / 2;
     const group = svgNode("g", { transform: `rotate(${element.rotation} ${cx} ${cy})` });
-    group.append(svgNode("rect", { x: element.x, y: element.y, width: element.width, height: element.height, fill: "none", stroke: "#c94d35", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
-    group.append(svgNode("line", { x1: cx, y1: element.y, x2: cx, y2: element.y - rotationOffset, stroke: "#c94d35", "vector-effect": "non-scaling-stroke" }));
-    group.append(svgNode("circle", { cx, cy: element.y - rotationOffset, r: size / 2, fill: "#fff", stroke: "#c94d35", "data-handle": "rotate", "vector-effect": "non-scaling-stroke" }));
-    group.append(svgNode("rect", { x: element.x + element.width - size / 2, y: element.y + element.height - size / 2, width: size, height: size, rx: size / 6, fill: "#fff", stroke: "#c94d35", "data-handle": "resize", "vector-effect": "non-scaling-stroke" }));
+    group.append(svgNode("rect", { x: element.x, y: element.y, width: element.width, height: element.height, fill: "none", stroke: "#818cf8", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
+    group.append(svgNode("line", { x1: cx, y1: element.y, x2: cx, y2: element.y - rotationOffset, stroke: "#818cf8", "vector-effect": "non-scaling-stroke" }));
+    group.append(svgNode("circle", { cx, cy: element.y - rotationOffset, r: size / 2, fill: "#fff", stroke: "#818cf8", "data-handle": "rotate", "vector-effect": "non-scaling-stroke" }));
+    group.append(svgNode("rect", { x: element.x + element.width - size / 2, y: element.y + element.height - size / 2, width: size, height: size, rx: size / 6, fill: "#fff", stroke: "#818cf8", "data-handle": "resize", "vector-effect": "non-scaling-stroke" }));
     overlay.append(group); host.append(overlay);
   }
   const elementFields = {
@@ -180,11 +185,287 @@
     "element-stroke-width": "strokeWidth", "element-radius": "radius", "element-fit": "fit",
   };
   const numeric = new Set(["x", "y", "width", "height", "rotation", "opacity", "fontSize", "fontWeight", "strokeWidth", "radius"]);
+  const cardLabel = (endpoint) => catalog[endpoint]?.label || (endpoint === "stack" ? "Stack" : endpoint);
+  const paramLabels = { bg: "배경 효과", align: "정렬", density: "밀도", style: "스타일", username: "사용자명", name: "이름", title: "제목", subtitle: "소개", text: "문구", theme: "테마", font: "글꼴", color: "색상", accent_color: "강조색", bg_color: "배경색", text_color: "글자색", width: "카드 너비", height: "카드 높이", layout: "레이아웃", repo: "저장소", description: "설명", speed: "속도", border_radius: "모서리", hide_border: "테두리 숨김", hide_bar: "상단 바 숨김", lines: "줄 내용", items: "항목", tags: "태그", animate: "애니메이션" };
+  let cardInspectorKey = "";
+  function cardFields(endpoint) { return catalog[endpoint]?.params || []; }
+  function renderCardInspector(element) {
+    $("card-endpoint-label").textContent = "/" + element.endpoint;
+    for (const [id, key] of [["card-meta-alt", "alt"], ["card-meta-width", "displayWidth"], ["card-meta-link", "linkUrl"]]) if (document.activeElement !== $(id)) $(id).value = element[key] || "";
+    const container = $("card-params"), fields = cardFields(element.endpoint);
+    const key = `${element.id}:${element.endpoint}`;
+    if (cardInspectorKey !== key) {
+      cardInspectorKey = key; container.replaceChildren();
+      for (const param of fields) {
+        const label = document.createElement("label"); label.className = "field";
+        const caption = document.createElement("span"); caption.textContent = paramLabels[param.name] || param.name;
+        const field = document.createElement(["select", "boolean"].includes(param.type) ? "select" : "input");
+        field.id = "card-param-" + param.name; field.dataset.param = param.name; field.spellcheck = false;
+        if (param.type === "select" || param.type === "boolean") {
+          const values = param.type === "boolean" ? ["", "true", "false"] : [...new Set(["", ...param.options])];
+          for (const value of values) {
+            const option = document.createElement("option"); option.value = value;
+            option.textContent = value === "" ? "기본값" : value === "true" ? "켜기" : value === "false" ? "끄기" : value;
+            field.append(option);
+          }
+        } else {
+          field.type = param.type === "number" ? "number" : "text";
+          field.placeholder = param.placeholder || (param.default !== undefined ? String(param.default) : param.type === "color" ? "기본색 · 예: 7aa2f7" : "기본값");
+          if (param.type === "number") field.step = "any";
+        }
+        field.addEventListener("change", () => {
+          if (selected()?.type !== "card") return;
+          const previous = beforeCardChange(selected());
+          const changed = transact((next) => {
+            const card = next.elements.find((item) => item.id === selectedId);
+            if (field.value === "" && ["select", "boolean", "number", "color"].includes(param.type)) delete card.params[param.name];
+            else card.params[param.name] = field.value;
+            delete card.nativeWidth; delete card.nativeHeight;
+          });
+          if (changed) refreshNativeSize(previous);
+        });
+        label.append(caption, field); container.append(label);
+      }
+    }
+    for (const field of container.querySelectorAll("[data-param]")) {
+      const value = element.params[field.dataset.param] ?? "";
+      if (field.tagName === "SELECT" && !Array.from(field.options).some((option) => option.value === value)) {
+        const option = document.createElement("option"); option.value = value; option.textContent = value; field.append(option);
+      }
+      if (document.activeElement !== field) field.value = value;
+    }
+    if (document.activeElement !== $("card-extra-params")) {
+      const known = new Set(fields.map((field) => field.name));
+      $("card-extra-params").value = new URLSearchParams(Object.entries(element.params).filter(([name]) => !known.has(name))).toString();
+    }
+  }
+  $("card-apply-params").addEventListener("click", () => {
+    if (selected()?.type !== "card") return;
+    try {
+      const element = selected(), known = new Set(cardFields(element.endpoint).map((field) => field.name));
+      const params = Object.fromEntries(Object.entries(element.params).filter(([key]) => known.has(key)));
+      for (const [key, value] of new URLSearchParams($("card-extra-params").value.trim().replace(/^\?/, ""))) {
+        if (Object.hasOwn(params, key)) throw new Error("중복된 매개변수입니다. 위 카드 설정에서 바꿔주세요: " + key);
+        params[key] = value;
+      }
+      const previous = beforeCardChange(element);
+      if (transact((next) => { const card = next.elements.find((item) => item.id === selectedId); card.params = params; delete card.nativeWidth; delete card.nativeHeight; })) refreshNativeSize(previous);
+    } catch (error) { status(error.message, true); }
+  });
+  for (const [id, key] of [["card-meta-alt", "alt"], ["card-meta-width", "displayWidth"], ["card-meta-link", "linkUrl"]]) $(id).addEventListener("change", () => {
+    if (selected()?.type !== "card") return;
+    transact((next) => { const card = next.elements.find((item) => item.id === selectedId); if ($(id).value) card[key] = $(id).value; else delete card[key]; });
+  });
+  function beforeCardChange(card) {
+    const baseline = nativeMeasurements.get(card.id)?.previous;
+    return { ...card, nativeWidth: card.nativeWidth ?? baseline?.nativeWidth, nativeHeight: card.nativeHeight ?? baseline?.nativeHeight };
+  }
+  async function waitForCardSizes() {
+    while (nativeMeasurements.size) await Promise.all(Array.from(nativeMeasurements.values(), (entry) => entry.promise));
+  }
+  function refreshNativeSize(previous) {
+    const current = doc.elements.find((element) => element.id === previous.id);
+    if (!current) return;
+    const signature = JSON.stringify(current.params), sizeBefore = { width: current.width, height: current.height };
+    const ticket = { previous };
+    nativeMeasurements.set(previous.id, ticket);
+    ticket.promise = (async () => {
+      try {
+        const size = await measureCard(current);
+        const card = doc.elements.find((element) => element.id === previous.id);
+        if (nativeMeasurements.get(previous.id) !== ticket || !card || JSON.stringify(card.params) !== signature) return;
+        const fitted = doc.elements.length === 1 && card.x === 0 && card.y === 0 && card.width === doc.width && card.height === doc.height;
+        const keptAspect = previous.nativeWidth && previous.nativeHeight && Math.abs(previous.width / previous.height - previous.nativeWidth / previous.nativeHeight) < 0.001;
+        if (keptAspect && card.width === sizeBefore.width && card.height === sizeBefore.height) {
+          const scale = Math.min(previous.width / previous.nativeWidth, (2048 - Math.max(0, card.x)) / size.nativeWidth, (2048 - Math.max(0, card.y)) / size.nativeHeight);
+          card.width = Math.max(1, Math.round(size.nativeWidth * scale));
+          card.height = Math.max(1, Math.round(size.nativeHeight * scale));
+          if (fitted) { doc.width = card.width; doc.height = card.height; }
+          else {
+            doc.width = Math.min(2048, Math.max(doc.width, Math.ceil(card.x + card.width)));
+            doc.height = Math.min(2048, Math.max(doc.height, Math.ceil(card.y + card.height)));
+          }
+        }
+        card.nativeWidth = size.nativeWidth; card.nativeHeight = size.nativeHeight;
+        markChanged(); render();
+      } catch { if (nativeMeasurements.get(previous.id) === ticket) status("카드 크기를 갱신하지 못했습니다. 연결을 확인한 뒤 다시 변경해 주세요.", true); }
+      finally { if (nativeMeasurements.get(previous.id) === ticket) nativeMeasurements.delete(previous.id); }
+    })();
+    return ticket.promise;
+  }
+  async function fetchCardSVG(card) {
+    const response = await fetch(M.cardPath(card), { signal: AbortSignal.timeout(20000) });
+    if (!response.ok || !response.headers.get("content-type")?.includes("image/svg+xml")) throw new Error(`${cardLabel(card.endpoint)} 카드를 불러오지 못했습니다. 계정·저장소·내용을 확인하세요.`);
+    const svg = await response.text();
+    if (!/^\s*<svg\b/.test(svg)) throw new Error("카드 응답이 SVG가 아닙니다.");
+    const parsed = new DOMParser().parseFromString(svg, "image/svg+xml").documentElement;
+    const error = parsed.getAttribute("aria-label") || "";
+    if (error.startsWith("Error:")) throw new Error(`${cardLabel(card.endpoint)}: ${error.slice(6).trim()}. URL 임베드를 사용하거나 이 배포의 연결 설정을 확인하세요.`);
+    return svg;
+  }
+  async function measureCard(card) {
+    const image = new Image();
+    const timer = setTimeout(() => { image.src = ""; }, 20000);
+    try {
+      image.src = Design.cardUrl(card, card.sourceOrigin || location.origin);
+      await image.decode();
+      const scale = Math.min(1, 2048 / image.naturalWidth, 2048 / image.naturalHeight);
+      if (!image.naturalWidth || !image.naturalHeight) throw new Error("카드 크기를 확인할 수 없습니다.");
+      return { width: Math.max(1, Math.round(image.naturalWidth * scale)), height: Math.max(1, Math.round(image.naturalHeight * scale)), nativeWidth: image.naturalWidth, nativeHeight: image.naturalHeight };
+    } finally { clearTimeout(timer); }
+  }
+  $("import-card-button").addEventListener("click", async () => {
+    const button = $("import-card-button"); button.disabled = true;
+    const startRevision = revision;
+    try {
+      const importedDesign = Design.parseDesignInput($("import-card-input").value, location.origin);
+      if (importedDesign) {
+        if (dirty && !confirmReplace()) return;
+        replaceDocument(importedDesign); select(doc.elements[0]?.id || null);
+        status("조합한 README를 불러왔습니다. 카드와 요소를 다시 편집할 수 있습니다."); return;
+      }
+      const card = Design.parseCardInput($("import-card-input").value, location.origin);
+      status("기존 카드와 크기를 불러오는 중…");
+      const size = await measureCard(card);
+      if ((dirty || revision !== startRevision) && !confirmReplace()) return;
+      const element = M.createElement("card", { ...card, ...size, x: 0, y: 0 });
+      replaceDocument(M.createDocument({ name: `${cardLabel(card.endpoint)} · ${card.params.username || card.params.title || card.params.name || "My README"}`, width: size.width, height: size.height, background: "transparent", elements: [element] }));
+      select(element.id);
+      status("카드를 불러왔습니다. 기존 옵션은 그대로 유지됩니다. 오른쪽에서 편집하세요.");
+    } catch (error) { status(error.message, true); }
+    finally { button.disabled = false; }
+  });
+  function newCardParams(endpoint) {
+    const params = {};
+    for (const field of cardFields(endpoint)) if (field.default !== undefined) params[field.name] = String(field.default);
+    const username = $("profile-username").value.trim() || "octocat";
+    if (Object.hasOwn(params, "username")) params.username = username;
+    if (endpoint === "social") params.github = username;
+    if (endpoint === "pin") params.repo = username === "octocat" ? "Hello-World" : username;
+    if (endpoint === "hero") { params.name = username; params.subtitle = "Building, learning, sharing."; params.width = "900"; params.height = "220"; }
+    if (cardFields(endpoint).some((field) => field.name === "theme")) params.theme = $("theme-apply").value;
+    return params;
+  }
+  function renderCatalog() {
+    const query = $("card-search").value.trim().toLowerCase(), container = $("card-catalog"); container.replaceChildren();
+    for (const [endpoint, entry] of Object.entries(catalog)) {
+      if (!`${endpoint} ${entry.label} ${entry.group} ${entry.desc}`.toLowerCase().includes(query)) continue;
+      const button = document.createElement("button"); button.type = "button"; button.className = "catalog-card"; button.dataset.endpoint = endpoint; button.dataset.card = endpoint;
+      const label = document.createElement("strong"); label.className = "catalog-card-name"; label.textContent = entry.label;
+      const group = document.createElement("span"); group.className = "catalog-card-detail"; group.textContent = entry.group;
+      button.append(label, group); button.title = entry.desc; container.append(button);
+    }
+    if (!container.children.length) { const hint = document.createElement("p"); hint.className = "field-hint"; hint.textContent = "일치하는 카드가 없습니다."; container.append(hint); }
+  }
+  $("card-search").addEventListener("input", renderCatalog);
+  $("card-catalog").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-endpoint]"); if (!button) return;
+    button.disabled = true;
+    const card = { endpoint: button.dataset.endpoint, params: newCardParams(button.dataset.endpoint), sourceOrigin: Design.DEFAULT_ORIGIN };
+    try {
+      status(`${cardLabel(card.endpoint)} 카드를 불러오는 중…`);
+      const size = await measureCard(card);
+      const y = doc.elements.length ? Math.max(...doc.elements.map((element) => element.y + element.height)) + 16 : 0;
+      if (y + size.height > 2048) throw new Error("캔버스 최대 높이(2048px)를 넘습니다. 카드를 줄이거나 옆으로 배치해 공간을 만든 뒤 추가하세요.");
+      const element = M.createElement("card", { ...card, ...size, x: 0, y });
+      if (transact((next) => { next.width = Math.max(next.width, size.width); next.height = Math.max(next.height, y + size.height); next.elements.push(element); }, element.id)) status("카드를 추가했습니다. 같은 테마를 적용하거나 자유롭게 배치하세요.");
+    } catch (error) { status(error.message, true); }
+    finally { button.disabled = false; }
+  });
+  $("fit-card-canvas").addEventListener("click", () => {
+    if (selected()?.type !== "card") return;
+    transact((next) => { const card = next.elements.find((item) => item.id === selectedId); next.width = Math.min(2048, card.width); next.height = Math.min(2048, card.height); card.x = 0; card.y = 0; next.background = "transparent"; });
+  });
+  $("theme-apply").replaceChildren(...window.ProfileKitCards.THEMES.map((theme) => { const option = document.createElement("option"); option.value = theme; option.textContent = theme.replace(/_/g, " "); return option; }));
+  $("theme-apply").value = "tokyo_night";
+  $("apply-theme").addEventListener("click", () => {
+    if (!doc.elements.some((element) => element.type === "card")) { status("먼저 카드를 추가하세요.", true); return; }
+    transact((next) => { for (const element of next.elements) if (element.type === "card") element.params.theme = $("theme-apply").value; });
+  });
+  for (const theme of ["dark", "light"]) $("preview-" + theme).addEventListener("click", () => {
+    document.querySelector(".canvas-viewport").classList.toggle("preview-light", theme === "light");
+    document.body.dataset.preview = theme;
+    for (const value of ["dark", "light"]) $("preview-" + value).setAttribute("aria-pressed", String(value === theme));
+  });
+  const htmlEscape = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  function assetReadme() {
+    const path = $("asset-path").value.trim();
+    if (!path || /^(?:[a-z][a-z0-9+.-]*:|\/|\\)/i.test(path) || /[\u0000-\u001f\\?#]/.test(path) || path.split("/").includes("..")) throw new Error("저장소 안의 상대 경로를 사용하세요. 예: assets/profilekit.svg");
+    return `<img src="${htmlEscape(path)}" alt="${htmlEscape(doc.name)}" width="${doc.width}" />`;
+  }
+  let verifiedDesignUrl = null;
+  function canExportCards() {
+    return doc.elements.length > 1 && doc.elements.every((element) => element.type === "card" && element.rotation === 0 && element.opacity === 1
+      && element.nativeWidth && element.nativeHeight && Math.abs(element.width / element.height - element.nativeWidth / element.nativeHeight) < 0.001);
+  }
+  function refreshEmbed() {
+    $("embed-code").value = ""; $("embed-url").value = "";
+    $("embed-copy").disabled = true; $("embed-download").disabled = true; $("verify-deployment").hidden = true;
+    const cards = canExportCards() && $("export-mode").value === "cards";
+    $("embed-url").closest("label").hidden = cards;
+    $("export-mode-hint").textContent = cards ? "각 카드의 링크와 README 표시 너비를 유지합니다. 위에서 아래 순서로 넣으며, 캔버스의 간격과 겹침은 합친 이미지 방식에서 유지됩니다." : "현재 배치를 하나의 이미지로 만듭니다. 합친 이미지 안의 개별 카드는 따로 클릭할 수 없습니다.";
+    try {
+      const origin = M.normalizeOrigin($("deployment-origin").value.trim());
+      const url = cards ? origin : Design.designUrl(doc, origin);
+      $("embed-code").value = cards ? Design.readmeCards(doc, origin) : Design.readme(doc, origin);
+      $("embed-url").value = cards ? "" : url;
+      const address = new URL(url), local = ["localhost", "127.0.0.1", "[::1]"].includes(address.hostname);
+      const composed = !cards && address.pathname === "/api/design";
+      const needsVerification = composed && !local && verifiedDesignUrl !== url;
+      $("verify-deployment").hidden = !needsVerification;
+      $("embed-message").textContent = local ? "이 주소는 로컬 미리보기용입니다. README에서는 공개 배포 주소를 입력하거나 SVG 파일을 저장소에 넣으세요." : needsVerification ? "합친 이미지는 새 /api/design 기능이 배포된 주소가 필요합니다. 먼저 배포에서 이미지를 확인하세요." : composed ? "배포된 이미지가 열리는 것을 확인했습니다. 이 코드를 README에 넣으면 됩니다." : "기존 카드 URL을 사용합니다. 코드를 README에 붙여넣으면 됩니다. GitHub 이미지 캐시에 따라 변경 반영에 시간이 걸릴 수 있습니다.";
+      $("embed-copy").disabled = local || needsVerification; $("embed-download").disabled = local || needsVerification;
+    } catch (error) { $("embed-message").textContent = error.message; }
+    try { $("asset-readme").value = assetReadme(); $("asset-copy").disabled = false; }
+    catch (error) { $("asset-readme").value = error.message; $("asset-copy").disabled = true; }
+  }
+  $("verify-deployment").addEventListener("click", async () => {
+    const button = $("verify-deployment"), url = $("embed-url").value; button.disabled = true;
+    const image = new Image(); image.referrerPolicy = "no-referrer";
+    const timer = setTimeout(() => { image.src = ""; }, 20000);
+    try {
+      image.src = url; await image.decode();
+      if (url === $("embed-url").value) { verifiedDesignUrl = url; refreshEmbed(); }
+    } catch { $("embed-message").textContent = "이미지를 확인하지 못했습니다. 이 주소에 새 버전이 배포되어 있는지 확인하거나 SVG 파일 방식을 사용하세요."; }
+    finally { clearTimeout(timer); button.disabled = false; }
+  });
+  $("export-mode").addEventListener("change", refreshEmbed);
+  $("deployment-origin").value = location.origin;
+  $("embed-open").addEventListener("click", async () => {
+    finishEdit();
+    const button = $("embed-open"); button.disabled = true;
+    if (nativeMeasurements.size) status("카드 크기를 확인한 뒤 README 코드를 준비합니다…");
+    await waitForCardSizes(); button.disabled = false;
+    const canSplit = canExportCards();
+    $("export-mode-field").hidden = !canSplit;
+    $("export-mode").value = canSplit ? "cards" : "design";
+    if (!$("deployment-origin").dataset.edited) {
+      try { $("deployment-origin").value = canSplit ? (doc.elements[0].sourceOrigin || location.origin) : new URL(Design.designUrl(doc)).origin; }
+      catch { $("deployment-origin").value = location.origin; }
+      // New multi-element designs need this deployment's newly implemented route.
+      if (!canSplit && (doc.elements.length !== 1 || doc.elements[0].type !== "card")) $("deployment-origin").value = location.origin;
+    }
+    refreshEmbed(); $("embed-dialog").showModal();
+  });
+  $("embed-close").addEventListener("click", () => $("embed-dialog").close());
+  $("deployment-origin").addEventListener("input", () => { $("deployment-origin").dataset.edited = "true"; refreshEmbed(); });
+  $("asset-path").addEventListener("input", refreshEmbed);
+  async function copyCode(field) {
+    try { await navigator.clipboard.writeText($(field).value); $("embed-message").textContent = "README 코드를 복사했습니다."; }
+    catch { $(field).focus(); $(field).select(); $("embed-message").textContent = "복사가 제한됐습니다. 선택된 코드를 직접 복사하세요."; }
+  }
+  $("embed-copy").addEventListener("click", () => copyCode("embed-code"));
+  $("asset-copy").addEventListener("click", () => copyCode("asset-readme"));
+  $("embed-download").addEventListener("click", () => download(new Blob([$("embed-code").value + "\n"], { type: "text/markdown;charset=utf-8" }), "README.md"));
+  renderCatalog();
+
   function renderInspector() {
     const element = selected();
     $("selection-empty").hidden = !!element; $("selection-panel").hidden = !element;
     if (!element) return;
-    $("selection-type").textContent = ({ text: "텍스트", image: "이미지", rect: "사각형", ellipse: "타원" })[element.type];
+    $("selection-type").textContent = ({ card: "ProfileKit 카드", text: "텍스트", image: "이미지", rect: "사각형", ellipse: "타원" })[element.type];
+    $("card-controls").hidden = element.type !== "card";
+    if (element.type === "card") renderCardInspector(element);
     $("text-controls").hidden = element.type !== "text";
     $("shape-controls").hidden = !["rect", "ellipse"].includes(element.type);
     $("image-controls").hidden = element.type !== "image";
@@ -245,9 +526,9 @@
     const element = M.createElement(type, { ...base, ...overrides });
     return transact((next) => next.elements.push(element), element.id);
   }
-  $("add-text").addEventListener("click", () => { add("text", { text: "나를 소개하는 한 문장", width: 460, height: 120, fontSize: 40 }); $("element-text").focus(); $("element-text").select(); });
-  $("add-rect").addEventListener("click", () => add("rect", { width: 220, height: 140, fill: "#d45d40", radius: 12 }));
-  $("add-ellipse").addEventListener("click", () => add("ellipse", { width: 160, height: 160, fill: "#b9c5a7" }));
+  $("add-text").addEventListener("click", () => { add("text", { text: "Build something meaningful.", width: 460, height: 100, fontSize: 32, color: "#e6edf3" }); $("element-text").focus(); $("element-text").select(); });
+  $("add-rect").addEventListener("click", () => add("rect", { width: 220, height: 140, fill: "#6366f1", radius: 12 }));
+  $("add-ellipse").addEventListener("click", () => add("ellipse", { width: 160, height: 160, fill: "#22d3ee" }));
   function removeSelected() {
     if (!selected()) return;
     transact((next) => { next.elements = next.elements.filter((element) => element.id !== selectedId); }, null);
@@ -374,13 +655,6 @@
       return { src: canvas.toDataURL("image/webp", .9), width: canvas.width, height: canvas.height };
     } finally { URL.revokeObjectURL(url); }
   }
-  async function coastPhoto() {
-    if (!photoPromise) photoPromise = fetch("/editor-assets/coast.png").then((response) => {
-      if (!response.ok) throw new Error("시작 카드 이미지를 불러오지 못했습니다.");
-      return response.blob();
-    }).then(readImage).then((result) => result.src).catch((error) => { photoPromise = null; throw error; });
-    return photoPromise;
-  }
   $("add-image").addEventListener("click", () => { imageTargetId = null; $("image-file").click(); });
   $("replace-image").addEventListener("click", () => { imageTargetId = selectedId; $("image-file").click(); });
   $("image-file").addEventListener("change", async (event) => {
@@ -402,24 +676,23 @@
       }
     } catch (error) { status(error.message, true); }
   });
-  function confirmReplace() { return !dirty || confirm("다른 카드를 열까요? 현재 작업을 보관하려면 취소 후 ‘원본 저장’을 눌러주세요. 변경 직후에는 실행 취소로 돌아갈 수 있습니다."); }
+  function confirmReplace() { return !dirty || confirm("다른 카드를 열까요? 현재 작업을 보관하려면 취소 후 ‘프로젝트 저장’을 눌러주세요. 변경 직후에는 실행 취소로 돌아갈 수 있습니다."); }
   function replaceDocument(next) {
     finishGesture();
+    nativeMeasurements.clear();
     finishEdit(); pushHistory(clone(doc)); doc = M.normalizeDocument(next); selectedId = null;
     markChanged(); render();
   }
-  $("template-list").addEventListener("click", async (event) => {
+  $("template-list").addEventListener("click", (event) => {
     const button = event.target.closest("[data-preset]"); if (!button || !presets[button.dataset.preset]) return;
     if (!confirmReplace()) return;
-    const startRevision = revision;
-    button.disabled = true;
     try {
-      const imageSrc = button.dataset.preset === "collage" ? await coastPhoto() : undefined;
-      finishGesture();
-      if (revision !== startRevision && !confirmReplace()) return;
-      replaceDocument(presets[button.dataset.preset].make({ imageSrc }));
+      replaceDocument(presets[button.dataset.preset].make({ username: $("profile-username").value.trim() || "octocat" }));
+      select(doc.elements[0]?.id || null);
+      for (const item of $("template-list").querySelectorAll("[data-preset]")) {
+        item.classList.toggle("is-selected", item === button); item.setAttribute("aria-pressed", String(item === button));
+      }
     } catch (error) { status(error.message, true); }
-    finally { button.disabled = false; }
   });
   function download(blob, filename) {
     const url = URL.createObjectURL(blob), link = document.createElement("a");
@@ -427,11 +700,12 @@
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
   const filename = (name) => name.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-").slice(0, 80).trim() || "profilekit-card";
-  function saveProject() {
+  async function saveProject() {
     finishEdit();
+    await waitForCardSizes();
     try {
       download(new Blob([M.serializeDocument(doc)], { type: "application/json" }), filename(doc.name) + ".profilekit.json");
-      dirty = false; status("원본 파일을 내보냈습니다. ‘원본 열기’에서 이어서 편집할 수 있어요.");
+      dirty = false; status("원본 파일을 내보냈습니다. ‘열기’에서 이어서 편집할 수 있어요.");
     } catch (error) { status(error.message, true); }
   }
   $("project-save").addEventListener("click", saveProject);
@@ -451,23 +725,37 @@
       replaceDocument(next); dirty = false; status("원본을 열었습니다. 모든 요소를 다시 편집할 수 있어요.");
     } catch (error) { status(error.message, true); }
   });
-  $("export-svg").addEventListener("click", () => {
-    finishEdit();
-    try { download(new Blob([M.renderSVG(doc)], { type: "image/svg+xml;charset=utf-8" }), filename(doc.name) + ".svg"); status("SVG를 내보냈습니다. 이미지를 포함한 독립 파일입니다."); }
-    catch (error) { status(error.message, true); }
+  // Resolve only this deployment's allowlisted renderers; do not embed remote SVG
+  // supplied by an imported document. Uploaded rasters remain in the local file.
+  async function standaloneSVG(snapshot) {
+    const cardMarkup = Object.create(null);
+    await Promise.all(snapshot.elements.filter((element) => element.type === "card").map(async (element) => {
+      cardMarkup[element.id] = await fetchCardSVG(element);
+    }));
+    return M.renderSVG(snapshot, { cardMarkup });
+  }
+  $("export-svg").addEventListener("click", async () => {
+    finishEdit(); const snapshot = clone(doc), button = $("export-svg"); button.disabled = true;
+    try {
+      const svg = await standaloneSVG(snapshot);
+      download(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }), filename(snapshot.name) + ".svg");
+      status("SVG를 저장했습니다. 애니메이션은 유지되며 통계는 저장 시점의 값입니다.");
+      $("embed-message").textContent = "SVG를 저장소에 올리고 파일용 README 코드를 사용하세요. 통계는 저장 시점의 값이며 URL 방식은 계속 갱신됩니다.";
+    } catch (error) { status(error.message, true); $("embed-message").textContent = error.message; }
+    finally { button.disabled = false; }
   });
   $("export-png").addEventListener("click", async () => {
     finishEdit(); const snapshot = clone(doc), button = $("export-png"); button.disabled = true;
     let url;
     try {
-      url = URL.createObjectURL(new Blob([M.renderSVG(snapshot)], { type: "image/svg+xml;charset=utf-8" }));
+      url = URL.createObjectURL(new Blob([await standaloneSVG(snapshot)], { type: "image/svg+xml;charset=utf-8" }));
       const image = new Image(); image.src = url; await image.decode();
       const canvas = document.createElement("canvas"); canvas.width = snapshot.width * 2; canvas.height = snapshot.height * 2;
       canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
       if (!blob) throw new Error("PNG 변환에 실패했습니다.");
-      download(blob, filename(snapshot.name) + ".png"); status("PNG를 2배 해상도로 내보냈습니다.");
-    } catch (error) { status(error.message, true); }
+      download(blob, filename(snapshot.name) + ".png"); status("정지 이미지 PNG를 2배 해상도로 저장했습니다.");
+    } catch (error) { status(error.message, true); $("embed-message").textContent = error.message; }
     finally { if (url) URL.revokeObjectURL(url); button.disabled = false; }
   });
   window.addEventListener("keydown", (event) => {
@@ -498,27 +786,22 @@
   window.addEventListener("storage", (event) => {
     if ((event.key === DRAFT_KEY || event.key === null) && event.newValue !== lastStoredDraft) {
       storageConflict = true; persisted = false; clearTimeout(saveTimer);
-      status("다른 탭에서 초안이 변경됐습니다. 이 탭의 작업은 ‘원본 저장’으로 보관하세요.", true);
+      status("다른 탭에서 초안이 변경됐습니다. 이 탭의 작업은 ‘프로젝트 저장’으로 보관하세요.", true);
     }
   });
-  // Thumbnails use the actual document renderer, in isolated SVG images so
-  // their clip IDs cannot interfere with the editable canvas.
-  for (const button of $("template-list").querySelectorAll("[data-preset]")) {
-    button.classList.remove("is-selected"); button.removeAttribute("aria-pressed");
-    const thumb = button.querySelector(".template-thumb");
-    if (!thumb) continue;
-    const fillThumbnail = (imageSrc) => {
-      const image = document.createElement("img"); image.alt = "";
-      image.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(M.renderSVG(presets[button.dataset.preset].make({ imageSrc })));
-      Object.assign(image.style, { position: "absolute", inset: "0", width: "100%", height: "100%", objectFit: "contain", transform: "none" });
-      thumb.replaceChildren(image);
-    };
-    if (button.dataset.preset === "collage") coastPhoto().then(fillThumbnail).catch(() => {});
-    else fillThumbnail();
-  }
-  try { lastStoredDraft = localStorage.getItem(DRAFT_KEY); if (lastStoredDraft) { doc = M.parseDocument(lastStoredDraft); dirty = true; } }
+  let legacyDraft = null;
+  try { legacyDraft = localStorage.getItem("profilekit.editor.v1"); $("legacy-recover").hidden = !legacyDraft; }
+  catch { /* Storage can be unavailable in private browsing. */ }
+  $("legacy-recover").addEventListener("click", () => {
+    try {
+      if (!confirmReplace()) return;
+      replaceDocument(M.parseDocument(legacyDraft)); select(doc.elements[0]?.id || null);
+      status("이전 버전의 초안을 복원했습니다. 프로젝트로 저장해 계속 편집할 수 있습니다.");
+    } catch (error) { status(error.message, true); }
+  });
+  try { lastStoredDraft = localStorage.getItem(DRAFT_KEY); if (lastStoredDraft) { doc = M.parseDocument(lastStoredDraft); dirty = true; selectedId = doc.elements[0]?.id || null; } }
   catch { draftError = true; }
   render();
   if (draftError) status("이전 임시 저장을 열지 못했습니다. 저장해 둔 원본 파일을 열어주세요.", true);
-  else status("카드를 골라 시작하거나, 텍스트·이미지·도형을 자유롭게 추가하세요.");
+  else status("기존 카드 URL을 불러오거나 카드를 골라 편집한 뒤, README에 넣기를 누르세요.");
 })();

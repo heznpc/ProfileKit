@@ -105,7 +105,7 @@ test("normalization clamps finite geometry without mutating the source", () => {
   Object.assign(doc.elements[0], { x: -99999, y: 99999, width: 0, height: 99999, rotation: 900, opacity: -1, strokeWidth: 100, radius: 800 });
   const normalized = model.normalizeDocument(doc);
   assert.equal(normalized.width, 2048);
-  assert.equal(normalized.height, 64);
+  assert.equal(normalized.height, 1);
   assert.deepEqual(normalized.elements[0], { id: "bounds", type: "rect", x: -4096, y: 4096, width: 1, height: 4096, rotation: 360, opacity: 0,
     fill: "#d55c3c", stroke: "none", strokeWidth: 64, radius: 0.5 });
   assert.equal(doc.elements[0].x, -99999);
@@ -298,4 +298,82 @@ test("the browser UMD build renders the same SVG as the Node export", () => {
   sandbox.json = json;
   const rendered = vm.runInContext("ProfileKitEditorModel.renderSVG(ProfileKitEditorModel.parseDocument(json))", sandbox);
   assert.equal(rendered, model.renderSVG(model.parseDocument(json)));
+});
+
+test("live card layers preserve all string parameters and use escaped image URLs in previews", () => {
+  const card = model.createElement("card", { id: "live", endpoint: "hero", x: 12, y: 20, width: 300, height: 100,
+    params: { name: '<script>"&', custom: "", hide_border: "false", border_radius: "0", "hero.theme_url": "https://gist.githubusercontent.com/test/theme" } });
+  const doc = documentWith(card);
+  assert.deepEqual(model.parseDocument(model.serializeDocument(doc)), doc);
+  const svg = model.renderSVG(doc);
+  assert.match(svg, /<image x="12" y="20" width="300" height="100" href="\/api\/hero\?name=%3Cscript%3E%22%26&amp;custom=&amp;hide_border=false&amp;border_radius=0/);
+  assert.match(svg, /preserveAspectRatio="none"/);
+  assert.doesNotMatch(svg, /<script/);
+  assert.match(model.renderSVG(documentWith({ ...card, sourceOrigin: "https://profilekit.vercel.app" })), /href="https:\/\/profilekit\.vercel\.app\/api\/hero/);
+});
+
+test("card input limits reject raw markup, prototype keys, secrets and excess endpoint fanout", () => {
+  for (const endpoint of ["design", "health", "../stats", "https://example.com"]) {
+    assert.throws(() => model.createElement("card", { endpoint }), /endpoint/);
+  }
+  for (const key of ["constructor", "__proto__", "hero.prototype", "hero.__defineGetter__", "access_token", "apiKey"]) {
+    assert.throws(() => model.createElement("card", { params: JSON.parse(`{"${key}":"value"}`) }), /parameter/i);
+  }
+  assert.throws(() => model.createElement("card", { params: { width: 200 } }), /must be text/);
+  assert.throws(() => model.createElement("card", { params: { content: "a".repeat(model.LIMITS.MAX_CARD_PARAM_LENGTH + 1) } }), /at most/);
+  assert.throws(() => model.createElement("card", { markup: "<svg/>" }), /unsupported field/);
+  assert.throws(() => documentWith(...Array.from({ length: 9 }, (_, i) => model.createElement("card", { id: `card-${i}` }))), /at most 8/);
+  const stack = model.createElement("card", { endpoint: "stack", params: { cards: "hero,section,now" } });
+  assert.equal(model.cardCallCount(stack), 4);
+  assert.doesNotThrow(() => documentWith(stack, ...Array.from({ length: 4 }, (_, i) => model.createElement("card", { id: `card-${i}` }))));
+  assert.throws(() => model.createElement("card", { endpoint: "stack", params: { cards: "hero,stack" } }), /recursive/);
+  assert.throws(() => model.createElement("card", { endpoint: "stack", params: { cards: Array(8).fill("hero").join(",") } }), /at most 8/);
+});
+
+test("live card native dimensions and README metadata survive portable documents", () => {
+  const card = model.createElement("card", { id: "live", nativeWidth: 1200, nativeHeight: 280,
+    linkUrl: "https://example.com/profile?name=ren&from=readme", alt: 'Ren & <friends> "profile"', displayWidth: "49%" });
+  const doc = documentWith(card);
+  assert.deepEqual(model.parseDocument(model.serializeDocument(doc)), doc);
+  const resized = model.normalizeDocument({ ...doc, elements: [{ ...card, width: 600, height: 600 }] }).elements[0];
+  assert.equal(resized.nativeWidth, 1200);
+  assert.equal(resized.nativeHeight, 280);
+  assert.equal(model.normalizeCard({ endpoint: "hero", params: {}, displayWidth: "400.5" }).displayWidth, "400.5");
+  assert.equal(model.normalizeCard({ endpoint: "hero", params: {}, alt: "" }).alt, "");
+  assert.doesNotMatch(model.renderSVG(doc), /example\.com|<friends>/);
+});
+
+test("live card metadata rejects unsafe links, unbounded sizes and incomplete native geometry", () => {
+  for (const metadata of [
+    { nativeWidth: 1200 }, { nativeHeight: 280 }, { nativeWidth: 0, nativeHeight: 280 },
+    { nativeWidth: 1200, nativeHeight: -1 }, { nativeWidth: Infinity, nativeHeight: 280 },
+    { nativeWidth: 16385, nativeHeight: 280 }, { nativeWidth: "1200", nativeHeight: 280 },
+  ]) assert.throws(() => model.createElement("card", metadata), /Native card dimensions/);
+  for (const linkUrl of ["javascript:alert(1)", "data:text/html,bad", "/relative", "https://user:password@example.com", "https://example.com/" + "a".repeat(2048)]) {
+    assert.throws(() => model.createElement("card", { linkUrl }), /Card link/);
+  }
+  for (const displayWidth of ["0", "-1", "0%", "101%", "16385", "100px", '49%" onload="bad', 400]) {
+    assert.throws(() => model.createElement("card", { displayWidth }), /Card display width/);
+  }
+  assert.throws(() => model.createElement("card", { alt: "a".repeat(1025) }), /alternative text/);
+});
+
+test("trusted card markup is positioned and isolated without altering authored decorations", () => {
+  const svg = '<svg width="400" height="100"><defs><linearGradient id="gradient"/></defs><style>@keyframes pulse{from{opacity:0}to{opacity:1}}.text{fill:red;animation:pulse 2s infinite}@media (prefers-reduced-motion:reduce){.text{animation:none}}</style><text class="text" fill="url(#gradient)">Card</text></svg>';
+  const card = model.createElement("card", { id: "live", x: 30, y: 40, width: 500, height: 80, rotation: 20, opacity: 0.6 });
+  const doc = documentWith(card, model.createElement("text", { id: "title", text: "Decoration" }));
+  const rendered = model.renderSVG(doc, { cardMarkup: { live: svg } });
+  assert.match(rendered, /<svg x="30" y="40" width="500" height="80" preserveAspectRatio="none" overflow="hidden" viewBox="0 0 400 100"/);
+  assert.match(rendered, /transform="rotate\(20 280 80\)" opacity="0.6"/);
+  assert.match(rendered, /id="pk-card-0-live-gradient"/);
+  assert.match(rendered, /#pk-card-0-live-scope \.text\{fill:red;animation:pk-card-0-live-pulse/);
+  assert.match(rendered, /@media[^}]+#pk-card-0-live-scope \.text/);
+  assert.match(rendered, />Decoration<\/tspan>/);
+  assert.doesNotMatch(rendered, /<image/);
+});
+
+test("thin live cards retain their actual canvas height", () => {
+  const doc = model.createDocument({ width: 800, height: 1, background: "transparent",
+    elements: [model.createElement("card", { endpoint: "divider", x: 0, y: 0, width: 800, height: 1, params: { height: "1" } })] });
+  assert.equal(model.parseDocument(model.serializeDocument(doc)).height, 1);
 });
