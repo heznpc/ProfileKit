@@ -111,10 +111,22 @@ test("/index.html preserves the original card library and README composer", asyn
 });
 
 test("shared editor modules are served as JavaScript", async () => {
-  for (const file of ["card-schema.js", "composition.js", "editor-model.js", "card-design.js", "editor-presets.js", "editor.js"]) {
+  for (const file of ["card-schema.js", "composition.js", "editor-model.js", "card-design.js", "editor-presets.js", "editor.js", "readme-model.js", "readme-preview.js", "readme.js", "vendor/marked.umd.js", "vendor/purify.min.js"]) {
     const res = await fetch(`${baseUrl}/${file}`);
     assert.equal(res.status, 200);
     assert.match(res.headers.get("content-type"), /text\/javascript/);
+  }
+});
+
+test("whole README workspace serves its isolated preview and local assets", async () => {
+  const response = await fetch(baseUrl + "/readme.html");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /id="readme-preview"[^>]*sandbox=""/);
+  assert.match(html, /id="batch-dark-theme"/);
+  assert.match(html, /id="batch-light-theme"/);
+  for (const match of html.matchAll(/(?:src|href)="(\/[^"]+\.(?:js|css))"/g)) {
+    assert.equal((await fetch(baseUrl + match[1])).status, 200, match[1] + " must be served locally");
   }
 });
 

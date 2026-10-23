@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="README의 글과 배치는 그대로 두고, ProfileKit 카드의 계정과 디자인을 한곳에서 편집하세요." />
+  <title>README 편집 · ProfileKit</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/readme.css" />
+</head>
+<body class="readme-studio">
+  <a class="skip-link" href="#readme-preview-pane">README 미리보기로 이동</a>
+  <header class="readme-header">
+    <a class="readme-brand" href="/index.html" aria-label="ProfileKit 카드 라이브러리">
+      <span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18" /></svg></span>
+      <span>ProfileKit<span class="brand-caption">나를 담는 README</span></span>
+    </a>
+    <nav class="readme-route-nav" aria-label="편집기 선택">
+      <a href="/readme.html" aria-current="page">README 편집</a>
+      <a href="/editor.html">카드 꾸미기 <span aria-hidden="true">↗</span></a>
+    </nav>
+    <span class="header-note"><span class="local-dot" aria-hidden="true"></span>브라우저에서 편집</span>
+  </header>
+
+  <div class="readme-document-bar">
+    <div class="readme-document-name">
+      <span class="document-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v6h5M8 14h8M8 17h5"/></svg></span>
+      <label for="readme-name">작업 이름</label>
+      <input id="readme-name" type="text" value="My README" maxlength="120" autocomplete="off" />
+    </div>
+    <div class="readme-document-actions" aria-label="작업 저장과 README 내보내기">
+      <div class="project-actions">
+        <button id="readme-project-open" class="button quiet" type="button">작업 열기</button>
+        <button id="readme-project-save" class="button quiet" type="button">작업 저장</button>
+      </div>
+      <button id="readme-copy" class="button outline" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 7V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h3"/></svg>복사</button>
+      <button id="readme-download" class="button primary" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 14v3h12v-3"/></svg>README 다운로드</button>
+    </div>
+    <input id="readme-project-file" type="file" accept="application/json,.json" hidden />
+    <input id="readme-file" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden />
+  </div>
+
+  <div class="readme-import-bar">
+    <div class="readme-import-actions">
+      <button id="readme-show-import" class="button outline" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4H4v13h12V4h-3"/><rect x="7" y="2" width="6" height="4" rx="1"/><path d="M7 10h6M7 13h4"/></svg>README 붙여넣기</button>
+      <button id="readme-open" class="button quiet" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 6V4h6l2 2h8v10H2zM2 8h16"/></svg>.md 파일 열기</button>
+    </div>
+    <p>글과 배치는 그대로, <strong>카드만 내 것으로.</strong></p>
+    <div class="history-actions" aria-label="변경 기록">
+      <button id="readme-undo" class="icon-button" type="button" title="실행 취소" aria-label="실행 취소" disabled><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4-4 4 4 4M3 8h8a5 5 0 0 1 0 10" transform="translate(0 -2)"/></svg></button>
+      <button id="readme-redo" class="icon-button" type="button" title="다시 실행" aria-label="다시 실행" disabled><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4m4-4H9a5 5 0 0 0 0 10" transform="translate(0 -2)"/></svg></button>
+    </div>
+  </div>
+
+  <nav class="readme-mobile-nav" aria-label="작업 공간 이동"><a href="#readme-workbench">미리보기</a><a href="#readme-cards-heading">카드 목록</a><a href="#readme-settings-heading">카드 설정</a></nav>
+
+  <main class="readme-workspace">
+    <aside class="readme-library" aria-labelledby="readme-cards-heading">
+      <div class="panel-heading"><h1 id="readme-cards-heading">README 속 카드</h1><span id="card-count" class="count-badge" aria-label="발견한 카드 수">0</span></div>
+      <div class="selection-toolbar"><span>바꿀 카드를 선택하세요</span><div><button id="select-all" type="button">전체</button><span aria-hidden="true">·</span><button id="select-none" type="button">해제</button></div></div>
+      <div id="readme-card-list" class="readme-card-list" aria-label="README에서 찾은 ProfileKit 카드"><p class="list-empty">README를 불러오면<br />ProfileKit 카드가 여기에 모여요.</p></div>
+      <div class="library-footnote"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4v9a3 3 0 0 0 3 3h8M4 8h11"/><circle cx="4" cy="3" r="2"/><circle cx="16" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg><p>밝은 화면·어두운 화면용 카드는 원래의 연결 관계를 유지해요.</p></div>
+      <details class="readme-context" open>
+        <summary>README 위치 <span>선택 사항</span></summary>
+        <div class="context-fields">
+          <label class="field" for="readme-repository"><span>GitHub 저장소</span><input id="readme-repository" type="text" placeholder="owner/repo" autocomplete="off" spellcheck="false" /><small>README 안의 상대 경로 이미지와 링크를 미리 볼 때 사용해요.</small></label>
+          <details class="advanced-options"><summary>직접 호스팅한 ProfileKit</summary><label class="field" for="readme-origin"><span>ProfileKit 주소</span><input id="readme-origin" type="url" value="https://profilekit.vercel.app" placeholder="https://profilekit.vercel.app" autocomplete="off" spellcheck="false" /></label></details>
+        </div>
+      </details>
+    </aside>
+
+    <section id="readme-workbench" class="readme-workbench" aria-label="README 원본과 미리보기">
+      <div class="readme-preview-toolbar">
+        <div class="readme-view-tabs" role="tablist" aria-label="README 보기">
+          <button id="readme-view-preview" type="button" role="tab" aria-selected="true" aria-controls="readme-preview-pane">미리보기</button>
+          <button id="readme-view-source" type="button" role="tab" aria-selected="false" aria-controls="readme-source-pane">원본</button>
+        </div>
+        <div class="preview-options">
+          <div class="segmented-control device-control" aria-label="미리보기 화면 너비">
+            <button id="readme-preview-desktop" type="button" aria-pressed="true" title="넓은 화면"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="11" rx="1.5"/><path d="M7 17h6m-3-3v3"/></svg><span>데스크톱</span></button>
+            <button id="readme-preview-mobile" type="button" aria-pressed="false" title="좁은 화면"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="5" y="2" width="10" height="16" rx="2"/><path d="M9 15h2"/></svg><span>모바일</span></button>
+          </div>
+          <div class="segmented-control theme-control" aria-label="미리보기 화면 색상">
+            <button id="readme-preview-light" type="button" aria-pressed="true" title="밝은 화면"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/><path d="M10 1v2m0 14v2M1 10h2m14 0h2M3.6 3.6 5 5m10 10 1.4 1.4M3.6 16.4 5 15M15 5l1.4-1.4"/></svg><span class="sr-only">밝은 화면</span></button>
+            <button id="readme-preview-dark" type="button" aria-pressed="false" title="어두운 화면"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.5A7.2 7.2 0 0 1 7.5 3.5a7.2 7.2 0 1 0 9 9Z"/></svg><span class="sr-only">어두운 화면</span></button>
+          </div>
+        </div>
+      </div>
+      <div id="readme-preview-pane" class="readme-preview-pane" role="tabpanel" aria-labelledby="readme-view-preview">
+        <div class="preview-caption"><span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h7l3 3v9H3zM10 2v4h3"/></svg>README.md</span><span>README 전체 미리보기</span></div>
+        <div id="readme-preview-frame" class="readme-preview-frame" data-device="desktop" data-theme="light">
+          <iframe id="readme-preview" title="README 전체 미리보기" sandbox="" referrerpolicy="no-referrer"></iframe>
+          <div id="readme-empty" class="readme-empty">
+            <div class="empty-document" aria-hidden="true"><svg viewBox="0 0 44 52"><path d="M28 2H6a4 4 0 0 0-4 4v40a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4V16z"/><path d="M28 2v14h14M13 28h18M13 35h12"/></svg><span>md</span></div>
+            <span class="empty-eyebrow">YOUR README, YOUR STYLE</span>
+            <h2>이미 만든 README에서<br />시작하세요.</h2>
+            <p>소개글, 이미지, 두 칸 배치까지 그대로.<br />ProfileKit 카드의 계정과 디자인을 바꿔보세요.</p>
+            <button id="readme-empty-import" class="button primary" type="button">README 붙여넣기 <span aria-hidden="true">→</span></button>
+            <small>위의 <strong>.md 파일 열기</strong>로 가져올 수도 있어요.</small>
+          </div>
+        </div>
+        <p class="preview-note"><span aria-hidden="true">◐</span> 화면 색상은 미리보기에만 적용돼요. 카드의 색상은 오른쪽에서 바꿀 수 있어요.</p>
+      </div>
+      <div id="readme-source-pane" class="readme-source-pane" role="tabpanel" aria-labelledby="readme-view-source" hidden>
+        <div class="source-heading"><div><h2>README 원본</h2><p>README 전체를 붙여넣고 불러오세요.</p></div><span class="file-type">.md</span></div>
+        <label class="sr-only" for="readme-source">README 전체 Markdown 원본</label>
+        <textarea id="readme-source" spellcheck="false" placeholder="# 안녕하세요 👋&#10;&#10;README 전체를 이곳에 붙여넣으세요.&#10;글과 이미지, HTML 배치도 함께 가져올 수 있어요." aria-describedby="readme-source-help"></textarea>
+        <div class="source-footer"><p id="readme-source-help">원본을 직접 수정한 뒤에도 다시 불러올 수 있어요.</p><button id="readme-import" class="button primary" type="button">원본 불러오기 <span aria-hidden="true">→</span></button></div>
+      </div>
+    </section>
+
+    <aside class="readme-inspector" aria-labelledby="readme-settings-heading">
+      <div class="panel-heading"><h2 id="readme-settings-heading">카드 설정</h2><span class="panel-kicker">EDIT</span></div>
+      <section class="inspector-section selected-card-section" aria-labelledby="readme-card-title">
+        <div class="section-heading"><span class="section-step">01</span><h3 id="readme-card-title">카드를 선택하세요</h3></div>
+        <p class="section-description">왼쪽 목록에서 카드를 누르면 내용을 바꿀 수 있어요.</p>
+        <details id="readme-card-details" class="card-settings-disclosure">
+          <summary>선택한 카드 내용 편집</summary>
+          <div id="readme-params" class="readme-params"><p class="params-empty">선택한 카드의 설정이 여기에 표시돼요.</p></div>
+          <details class="extra-params"><summary>추가 설정</summary><label class="field" for="readme-extra-params"><span>카드 주소에 추가할 값</span><textarea id="readme-extra-params" rows="3" spellcheck="false" placeholder="label=Hello&amp;border=false"></textarea><small>표시되지 않은 설정은 이곳에서 수정할 수 있어요.</small></label></details>
+          <button id="readme-card-apply" class="button outline full-width" type="button">이 카드에 적용</button>
+        </details>
+      </section>
+
+      <section class="inspector-section batch-section" aria-labelledby="batch-heading">
+        <div class="section-heading"><span class="section-step">02</span><h3 id="batch-heading">선택한 카드 한 번에 바꾸기</h3></div>
+        <p class="section-description">필요한 항목만 채우면 나머지는 유지돼요.</p>
+        <div class="setting-group">
+          <h4>내 계정으로</h4>
+          <label class="field" for="batch-from-account"><span>바꿀 기존 계정 <span class="optional-label">선택 사항</span></span><input id="batch-from-account" type="text" placeholder="모든 계정" autocomplete="off" spellcheck="false" /><small>하나의 계정만 바꾸려면 입력하세요.</small></label>
+          <label class="field" for="batch-account"><span>새 GitHub 계정</span><div class="input-prefix"><span aria-hidden="true">@</span><input id="batch-account" type="text" placeholder="변경하지 않음" maxlength="39" autocomplete="off" spellcheck="false" /></div></label>
+          <label class="checkbox-field" for="batch-include-repos"><input id="batch-include-repos" type="checkbox" /><span>저장소 카드의 소유자도 변경</span></label>
+          <p class="field-warning">저장소 소유자는 기본으로 유지돼요. 선택하면 일치하는 GitHub 저장소 링크와 소유자를 함께 바꾸고, 저장소 이름은 유지해요.</p>
+        </div>
+        <div class="setting-group">
+          <h4>함께 쓰는 디자인</h4>
+          <label class="field" for="batch-theme"><span>기본 테마</span><select id="batch-theme"><option value="">변경하지 않음</option></select></label>
+          <div class="field-grid two-columns">
+            <label class="field" for="batch-light-theme"><span><span class="theme-dot light" aria-hidden="true"></span>밝은 화면용</span><select id="batch-light-theme"><option value="">변경하지 않음</option></select></label>
+            <label class="field" for="batch-dark-theme"><span><span class="theme-dot dark" aria-hidden="true"></span>어두운 화면용</span><select id="batch-dark-theme"><option value="">변경하지 않음</option></select></label>
+          </div>
+          <p class="field-help branch-help">화면별 카드가 있는 경우 각각의 테마를 지정할 수 있어요.</p>
+          <div class="field-grid two-columns">
+            <label class="field" for="batch-font"><span>글꼴</span><select id="batch-font"><option value="">변경하지 않음</option></select></label>
+            <label class="field" for="batch-accent"><span>강조 색상</span><input id="batch-accent" type="text" placeholder="변경하지 않음" autocomplete="off" spellcheck="false" /></label>
+          </div>
+          <label class="checkbox-field" for="batch-reset-colors"><input id="batch-reset-colors" type="checkbox" /><span>직접 지정한 색상 지우기</span></label>
+          <p class="field-help">배경·글자 색상을 지우고 선택한 테마의 색상을 써요.</p>
+        </div>
+        <button id="batch-apply" class="button primary full-width" type="button">선택한 카드에 적용 <span aria-hidden="true">→</span></button>
+      </section>
+      <section class="inspector-section changes-section" aria-labelledby="changes-heading"><div class="section-heading"><h3 id="changes-heading">변경한 내용</h3><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 4 4 8-8"/></svg></div><div id="change-summary" class="change-summary" aria-live="polite"><p>카드를 수정하면 변경한 내용을<br />여기서 확인할 수 있어요.</p></div></section>
+    </aside>
+  </main>
+  <footer class="readme-statusbar"><span id="readme-status" role="status" aria-live="polite">README를 붙여넣거나 .md 파일을 열어 시작하세요.</span><a href="/editor.html">새 카드 만들기 <span aria-hidden="true">↗</span></a></footer>
+
+  <script src="/card-schema.js"></script>
+  <script src="/editor-model.js"></script>
+  <script src="/card-design.js"></script>
+  <script src="/readme-model.js"></script>
+  <script src="/vendor/marked.umd.js"></script>
+  <script src="/vendor/purify.min.js"></script>
+  <script src="/readme-preview.js"></script>
+  <script src="/readme.js"></script>
+</body>
+</html>
