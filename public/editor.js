@@ -681,11 +681,14 @@
     $("card-part-edit").textContent = partMode ? "내부 편집 마치기" : "캔버스에서 직접 편집";
     if (partName) {
       const part = element.parts?.[partName] || { dx: 0, dy: 0, scale: 1 };
-      for (const [id, key] of [["part-dx", "dx"], ["part-dy", "dy"], ["part-scale", "scale"], ["part-color", "color"]]) {
-        if (document.activeElement !== $(id)) $(id).value = part[key] ?? (key === "scale" ? 1 : key === "color" ? "" : 0);
+      for (const [id, key] of [["part-dx", "dx"], ["part-dy", "dy"], ["part-scale", "scale"], ["part-color", "color"], ["part-fill", "fill"], ["part-stroke", "stroke"]]) {
+        if (document.activeElement !== $(id)) $(id).value = part[key] ?? (key === "scale" ? 1 : ["color", "fill", "stroke"].includes(key) ? "" : 0);
       }
       $("part-hidden").checked = !!part.hidden;
       $("part-color").disabled = !definitions[partName].color;
+      $("part-color").closest("label").hidden = !definitions[partName].color;
+      $("part-color-hint").hidden = !definitions[partName].color;
+      $("part-paint-controls").hidden = !definitions[partName].paint;
       const entry = cardPreviews.get(M.cardPath(element));
       $("card-part-retry").hidden = !entry?.error;
       $("card-part-hint").textContent = entry?.error ? "미리보기를 불러오지 못했습니다. " + entry.error
@@ -728,9 +731,9 @@
     cardPreviews.delete(M.cardPath(selected())); partMode = true;
     renderCanvas(); renderDecorationInspector();
   });
-  for (const key of ["dx", "dy", "scale", "color"]) $("part-" + key).addEventListener("change", () => {
+  for (const key of ["dx", "dy", "scale", "color", "fill", "stroke"]) $("part-" + key).addEventListener("change", () => {
     const value = $("part-" + key).value;
-    changePart((part) => { if (key === "color" && !value.trim()) delete part.color; else part[key] = key === "color" ? value.trim() : Number(value); });
+    changePart((part) => { if (["color", "fill", "stroke"].includes(key)) { if (value.trim()) part[key] = value.trim(); else delete part[key]; } else part[key] = Number(value); });
   });
   $("part-hidden").addEventListener("change", () => changePart((part) => { part.hidden = $("part-hidden").checked; }));
   $("part-reset").addEventListener("click", () => {

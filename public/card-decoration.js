@@ -32,9 +32,9 @@
     matrix: { bg: { label: "배경", color: false }, rain: { label: "문자 비", color: true }, textBackdrop: { label: "문구 뒤 배경", color: false }, text: { label: "문구", color: true } },
     snake: { bg: { label: "배경", color: false }, emptyCells: { label: "빈 셀", color: false }, snake: { label: "활동 셀·스네이크", color: false } },
     radar: { bg: { label: "배경", color: false }, grid: { label: "격자", color: false }, blips: { label: "신호", color: false }, sweep: { label: "회전 스캔", color: false }, text: { label: "문구", color: true } },
-  }).map(([endpoint, parts]) => [endpoint, Object.freeze(Object.fromEntries(Object.entries(parts).map(([name, spec]) => [name, Object.freeze(spec)])))])));
+  }).map(([endpoint, parts]) => [endpoint, Object.freeze(Object.fromEntries(Object.entries(parts).map(([name, spec]) => [name, Object.freeze({ ...spec, paint: !spec.color })])))])));
   const TARGETS = new Set(Object.values(PARTS).flatMap((parts) => Object.keys(parts)));
-  const PART_KEYS = ["dx", "dy", "scale", "color", "hidden"];
+  const PART_KEYS = ["dx", "dy", "scale", "color", "hidden", "fill", "stroke"];
   const EFFECT_KEYS = ["kind", "color", "blur", "opacity", "dx", "dy"];
   function record(value, label) {
     if (!value || typeof value !== "object" || Array.isArray(value)
@@ -52,7 +52,7 @@
     if (typeof value !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value)) throw new Error("Decoration color must be a hex color");
     return value.toLowerCase();
   }
-  function normalizePart(raw, allowColor) {
+  function normalizePart(raw, allowColor, allowPaint = true) {
     record(raw, "Card part");
     keys(raw, PART_KEYS, "Card part");
     const part = {
@@ -64,9 +64,13 @@
       if (!allowColor) throw new Error("This card part does not support a color override");
       part.color = color(raw.color);
     }
+    for (const key of ["fill", "stroke"]) if (raw[key] !== undefined) {
+      if (!allowPaint) throw new Error("This card part does not support shape paint");
+      part[key] = raw[key] === "none" ? "none" : color(raw[key]);
+    }
     if (raw.hidden !== undefined && typeof raw.hidden !== "boolean") throw new Error("Part hidden must be a boolean");
     if (raw.hidden) part.hidden = true;
-    return part.dx || part.dy || part.scale !== 1 || part.color || part.hidden ? part : undefined;
+    return part.dx || part.dy || part.scale !== 1 || part.color || part.hidden || part.fill || part.stroke ? part : undefined;
   }
   function partDefinitions(card) {
     const endpoint = typeof card === "string" ? card : card?.endpoint;
@@ -83,7 +87,7 @@
     const parts = {};
     // Registry order makes semantically identical decorations serialize identically.
     for (const name of Object.keys(supported)) if (Object.hasOwn(raw, name)) {
-      const part = normalizePart(raw[name], supported[name].color);
+      const part = normalizePart(raw[name], supported[name].color, supported[name].paint);
       if (part) parts[name] = part;
     }
     return Object.keys(parts).length ? parts : undefined;
@@ -167,7 +171,8 @@
   }
   function decorate(svg, nodes, targets) {
     const edits = [];
-    const textColors = new Map();
+    const paints = new Map();
+    const shapes = new Set(["path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "use"]);
     for (const { node, part } of targets) {
       const anchor = partAnchor(node, nodes);
       const scale = part.scale !== 1 ? ` translate(${anchor.x} ${anchor.y}) scale(${part.scale}) translate(${-anchor.x} ${-anchor.y})` : "";
@@ -176,15 +181,24 @@
       edits.push({ start: node.start, end: node.start, value: `<g${transform}${hidden}>`, phase: 2, order: -node.end });
       edits.push({ start: node.end, end: node.end, value: "</g>", phase: 0, order: -node.start });
       if (part.color) for (const child of nodes) {
-        if (child.start >= node.start && child.end <= node.end && ["text", "tspan", "textPath"].includes(child.name)) textColors.set(child, part.color);
+        if (child.start >= node.start && child.end <= node.end && ["text", "tspan", "textPath"].includes(child.name)) paints.set(child, { ...paints.get(child), fill: part.color });
+      }
+      if (part.fill || part.stroke) for (const child of nodes) {
+        if (child.start < node.start || child.end > node.end || !shapes.has(child.name)) continue;
+        let resource = false;
+        for (let parent = child.parent; parent; parent = parent.parent) {
+          if (["defs", "clipPath", "mask", "pattern", "marker"].includes(parent.name)) { resource = true; break; }
+        }
+        if (!resource) paints.set(child, { ...paints.get(child), ...(part.fill ? { fill: part.fill } : {}), ...(part.stroke ? { stroke: part.stroke } : {}) });
       }
     }
-    for (const [node, fill] of textColors) {
+    for (const [node, paint] of paints) {
+      const css = Object.entries(paint).map(([key, value]) => `${key}:${value}!important`).join(";");
       const style = node.attrs.style;
       // Inline !important overrides the renderer's class fill without exposing
       // a CSS field or changing its animation/transform declarations.
-      if (style) edits.push({ start: style.end, end: style.end, value: `;fill:${fill}!important`, phase: 1, order: 0 });
-      else edits.push({ start: node.insertAt, end: node.insertAt, value: ` style="fill:${fill}!important"`, phase: 1, order: 0 });
+      if (style) edits.push({ start: style.end, end: style.end, value: `;${css}`, phase: 1, order: 0 });
+      else edits.push({ start: node.insertAt, end: node.insertAt, value: ` style="${css}"`, phase: 1, order: 0 });
     }
     edits.sort((a, b) => a.start - b.start || a.phase - b.phase || a.order - b.order);
     let output = "";
@@ -235,7 +249,7 @@
     const parts = {};
     for (const [name, raw] of Object.entries(rawParts)) {
       if (card ? !Object.hasOwn(partDefinitions(card), name) : !TARGETS.has(name)) throw new Error("Card part target is not supported");
-      const part = normalizePart(raw, card ? partDefinitions(card)[name].color : name !== "bg");
+      const part = normalizePart(raw, card ? partDefinitions(card)[name].color : name !== "bg", card ? partDefinitions(card)[name].paint : true);
       if (part) parts[name] = part;
     }
     if (!Object.keys(parts).length) return svg;
