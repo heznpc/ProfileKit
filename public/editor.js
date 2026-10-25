@@ -25,13 +25,11 @@
   const DRAFT_KEY = "profilekit.readme-studio.v2" + (handoffToken ? "." + handoffToken : "");
   const Transfer = window.ProfileKitProjectTransfer;
   async function readDraft() {
-    if (!handoffToken) return localStorage.getItem(DRAFT_KEY);
     const value = await Transfer.get(DRAFT_KEY);
     return value ? M.serializeDocument(value) : null;
   }
   async function writeDraft(serialized) {
-    if (handoffToken) await Transfer.set(DRAFT_KEY, JSON.parse(serialized));
-    else localStorage.setItem(DRAFT_KEY, serialized);
+    return Transfer.compareAndSet(DRAFT_KEY, lastStoredDraft ? JSON.parse(lastStoredDraft) : null, JSON.parse(serialized));
   }
   let savingDraft = false, leavingEditor = false;
   let readmeHandoff = null;
@@ -125,7 +123,11 @@
       }
       const serialized = M.serializeDocument(doc);
       const savedRevision = revision;
-      await writeDraft(serialized);
+      if (!await writeDraft(serialized)) {
+        storageConflict = true; persisted = false;
+        status("다른 탭에서 초안이 변경됐습니다. 이 탭의 작업은 프로젝트 파일로 저장하세요.", true);
+        return;
+      }
       lastStoredDraft = serialized;
       persisted = revision === savedRevision;
       status("이 브라우저에 저장됨 · 다른 기기에서는 프로젝트 파일을 열어주세요.");
@@ -1060,8 +1062,10 @@
     return M.renderSVG(snapshot, { cardMarkup });
   }
   $("export-svg").addEventListener("click", async () => {
-    finishEdit(); const snapshot = clone(doc), button = $("export-svg"); button.disabled = true;
+    finishEdit(); const button = $("export-svg"); button.disabled = true;
     try {
+      await waitForCardSizes();
+      const snapshot = clone(doc);
       const svg = await standaloneSVG(snapshot);
       download(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }), filename(snapshot.name) + ".svg");
       status("SVG를 저장했습니다. 애니메이션은 유지되며 통계는 저장 시점의 값입니다.");
@@ -1070,9 +1074,11 @@
     finally { button.disabled = false; }
   });
   $("export-png").addEventListener("click", async () => {
-    finishEdit(); const snapshot = clone(doc), button = $("export-png"); button.disabled = true;
+    finishEdit(); const button = $("export-png"); button.disabled = true;
     let url;
     try {
+      await waitForCardSizes();
+      const snapshot = clone(doc);
       url = URL.createObjectURL(new Blob([await standaloneSVG(snapshot)], { type: "image/svg+xml;charset=utf-8" }));
       const image = new Image(); image.src = url; await image.decode();
       const canvas = document.createElement("canvas"); canvas.width = snapshot.width * 2; canvas.height = snapshot.height * 2;

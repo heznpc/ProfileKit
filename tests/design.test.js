@@ -350,9 +350,12 @@ test("single-card README metadata survives composed part edits and layer effects
   for (const path of ["", "/asset.svg", "../asset.svg", "assets/../asset.svg", "https://example.com/asset.svg", "javascript:alert(1)", "assets\\asset.svg", "asset.svg?raw=1"]) {
     assert.throws(() => Design.readmeAsset(document(plain), path), /repository-relative/);
   }
-  const legacyRotated = Design.readme(document({ ...plain, rotation: 15 }), ORIGIN);
-  assert.doesNotMatch(legacyRotated, /<a |My profile card|width="300"/);
-  assert.match(legacyRotated, /alt="Untitled card" width="600"/);
+  for (const transform of [{ rotation: 15 }, { x: 25 }, { opacity: 0.6 }, { width: 250 }]) {
+    for (const snippet of [Design.readme(document({ ...plain, ...transform }), ORIGIN), Design.readmeAsset(document({ ...plain, ...transform }), "assets/profile.svg")]) {
+      assert.match(snippet, /^<a href="https:\/\/github\.com\/example"><img /);
+      assert.match(snippet, /alt="My profile card" width="300" \/><\/a>$/);
+    }
+  }
 });
 
 test("composed decorations preserve new live child values, existing animation and authored text", async (t) => {
