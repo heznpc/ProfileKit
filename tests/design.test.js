@@ -15,6 +15,31 @@ function card(overrides = {}) { return Model.createElement("card", { id: "live",
 function document(...elements) { return Model.createDocument({ width: 600, height: 280, background: "transparent", elements }); }
 function requestUrl(doc) { return `/api/design?d=${Design.encodeDocument(doc)}`; }
 
+test("card overflow is explicit, survives README roundtrip and opens stack viewports only when requested", async () => {
+  const live = card({ endpoint: "stack", params: { cards: "hero,section", "hero.name": "Outside" }, overflow: "visible",
+    parts: { "stack-0-hero-name": { dx: 200 } } });
+  const doc = document(live);
+  const reopened = Design.decodeDocument(Design.encodeDocument(doc));
+  assert.equal(reopened.elements[0].overflow, "visible");
+  const response = await request(requestUrl(reopened));
+  assert.equal(response.statusCode, 200);
+  assert.equal((response.svg.match(/overflow="visible"/g) || []).length, 3);
+  assert.match(response.svg, /^<svg[^>]*overflow="hidden"/);
+  assert.throws(() => Design.readmeCards(doc), /composed design/);
+  assert.throws(() => document({ ...live, overflow: 'visible" onload="bad' }));
+  const ordinary = document(card({ overflow: "hidden", nativeWidth: 600, nativeHeight: 280 }));
+  assert.equal(ordinary.elements[0].overflow, undefined);
+  assert.equal(new URL(Design.designUrl(ordinary)).pathname, "/api/hero");
+  const open = document(card({ overflow: "visible", nativeWidth: 600, nativeHeight: 280 }));
+  assert.equal(new URL(Design.designUrl(open)).pathname, "/api/design");
+  assert.throws(() => Model.renderSVG(open), /rendered card markup/);
+  const rotated = Model.createDocument({ width: 1000, height: 800, elements: [card({ x: 100, y: 200, width: 300, height: 100,
+    rotation: 90, overflow: "visible", effect: { kind: "glow", color: "#fff", blur: 10, opacity: 1, dx: 0, dy: 0 } })] });
+  const rendered = Model.renderSVG(rotated, { cardMarkup: { live: '<svg width="300" height="100"><text x="500" y="10">Moved</text></svg>' } });
+  // The inverse-rotated canvas spans x=0..800, y=-500..500.
+  assert.match(rendered, /filterUnits="userSpaceOnUse" x="-31" y="-531" width="862" height="1062"/);
+});
+
 test("vector paint survives editable projects and README design URLs with animations intact", async () => {
   for (const [endpointName, target, paint] of [
     ["equalizer", "bars", { fill: "#fa1234" }],
