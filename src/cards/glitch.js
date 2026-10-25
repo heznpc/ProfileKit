@@ -86,12 +86,12 @@ function renderGlitchCard({
     }
   </style>
   <g clip-path="url(#glitch-clip)">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
-    <text class="glitch-text g-r" x="${cx}" y="${cy}" fill="${cloneR}" opacity="0.85">${safeText}</text>
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
+    <g data-cas-target="text"><text class="glitch-text g-r" x="${cx}" y="${cy}" fill="${cloneR}" opacity="0.85">${safeText}</text>
     <text class="glitch-text g-c" x="${cx}" y="${cy}" fill="${cloneC}" opacity="0.85">${safeText}</text>
     <text class="glitch-text" x="${cx}" y="${cy}" fill="${baseColor}">${safeText}</text>
     <text class="glitch-text g-slice-1" x="${cx}" y="${cy}" fill="${baseColor}" transform="translate(-2,0)">${safeText}</text>
-    <text class="glitch-text g-slice-2" x="${cx}" y="${cy}" fill="${baseColor}" transform="translate(2,0)">${safeText}</text>
+    <text class="glitch-text g-slice-2" x="${cx}" y="${cy}" fill="${baseColor}" transform="translate(2,0)">${safeText}</text></g>
   </g>
   <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"
         fill="none" stroke="${colors.border}" stroke-opacity="${hideBorder ? 0 : 1}"/>

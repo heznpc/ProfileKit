@@ -67,8 +67,9 @@ function renderTagsCard(rawTags, opts) {
     hideTitle,
     hideBar,
     borderRadius,
-    body: pills,
+    body: `<g data-cas-target="tags">${pills}</g>`,
     font,
+    titleTarget: "title",
   });
 }
 

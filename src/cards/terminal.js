@@ -67,7 +67,7 @@ function renderTerminalCard({
   const lastLine = lines[lines.length - 1];
   const lastEndX = padding + promptW + lastLine.cmd.length * charW + 4;
   const cursorAppearAt = (cumulative / 1000).toFixed(2);
-  const cursorMarkup = `<rect x="${lastEndX.toFixed(1)}" y="${(lastLine.lineY - fSize + 3).toFixed(1)}" width="8" height="${fSize}" fill="${textColor}" opacity="0">
+  const cursorMarkup = `<rect data-cas-target="cursor" x="${lastEndX.toFixed(1)}" y="${(lastLine.lineY - fSize + 3).toFixed(1)}" width="8" height="${fSize}" fill="${textColor}" opacity="0">
       <animate attributeName="opacity" values="1;0" keyTimes="0;1" begin="${cursorAppearAt}s" dur="0.6s" repeatCount="indefinite"/>
     </rect>`;
 
@@ -85,15 +85,15 @@ function renderTerminalCard({
     ${clipDefs}
   </defs>
   <g clip-path="url(#term-frame)">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
-    <rect x="0" y="0" width="${w}" height="${headerH}" fill="${headerBg}"/>
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
+    <rect data-cas-target="header" x="0" y="0" width="${w}" height="${headerH}" fill="${headerBg}"/>
     <line x1="0" y1="${headerH}" x2="${w}" y2="${headerH}" stroke="#30363d" stroke-width="1"/>
     <circle cx="18" cy="${headerH / 2}" r="6" fill="#ff5f56"/>
     <circle cx="38" cy="${headerH / 2}" r="6" fill="#ffbd2e"/>
     <circle cx="58" cy="${headerH / 2}" r="6" fill="#27c93f"/>
-    <text x="${w / 2}" y="${headerH / 2 + 4}" text-anchor="middle"
+    <text data-cas-target="title" x="${w / 2}" y="${headerH / 2 + 4}" text-anchor="middle"
           font-family="${fontFamily}" font-size="12" fill="#8b949e">${titleText}</text>
-    ${lineMarkup}
+    <g data-cas-target="commands">${lineMarkup}</g>
     ${cursorMarkup}
   </g>
   <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"

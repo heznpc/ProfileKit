@@ -52,8 +52,9 @@ function renderTocCard(rawItems, opts) {
     hideTitle,
     hideBar,
     borderRadius,
-    body: rows,
+    body: `<g data-cas-target="items">${rows}</g>`,
     font,
+    titleTarget: "title",
   });
 }
 

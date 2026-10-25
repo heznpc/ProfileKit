@@ -46,7 +46,7 @@ function renderWaveCard({
 
   const safeText = text ? escapeHtml(text) : "";
   const textMarkup = safeText
-    ? `<text x="${w / 2}" y="${h / 2 + 8}" text-anchor="middle"
+    ? `<text data-cas-target="text" x="${w / 2}" y="${h / 2 + 8}" text-anchor="middle"
         font-family="${family}" font-size="32" font-weight="700" fill="${colors.title}">
         ${safeText}
         <animate attributeName="opacity" from="0" to="1" dur="0.8s" fill="freeze"/>
@@ -64,8 +64,8 @@ function renderWaveCard({
     </clipPath>
   </defs>
   <g clip-path="url(#wave-clip)">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${colors.bg}"/>
-    ${layers.join("\n    ")}
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${colors.bg}"/>
+    <g data-cas-target="waves">${layers.join("\n    ")}</g>
   </g>
   <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"
         fill="none" stroke="${colors.border}" stroke-opacity="${hideBorder ? 0 : 1}"/>

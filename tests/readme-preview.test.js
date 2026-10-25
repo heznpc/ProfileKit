@@ -45,3 +45,32 @@ test('picture theme conditions depend on the selected preview theme', () => {
   assert.equal(themeMedia('(prefers-color-scheme: dark)', 'light'), '(width < 0px)');
   assert.equal(themeMedia('(min-width: 500px) and (prefers-color-scheme: light)', 'light'), '(min-width: 500px) and (width >= 0px)');
 });
+
+test('saved asset previews render validated documents locally without permitting source data URLs', async () => {
+  const fs = require('node:fs'), vm = require('node:vm');
+  const sandbox = { URL, URLSearchParams, TextEncoder, TextDecoder, btoa, atob, AbortSignal, fetch() { throw new Error('No requests expected'); } };
+  vm.createContext(sandbox);
+  for (const name of ['card-schema', 'card-decoration', 'editor-model', 'card-design', 'readme-model', 'readme-preview']) {
+    vm.runInContext(fs.readFileSync(require.resolve('../public/' + name + '.js'), 'utf8'), sandbox);
+  }
+  // Expose pure URL resolution for this test while retaining the same private prepared-map registry.
+  vm.runInContext(fs.readFileSync(require.resolve('../public/readme-preview.js'), 'utf8').replace('render: api.render, prepareAssets: api.prepareAssets', 'render: api.render, prepareAssets: api.prepareAssets, resolveURL: api.resolveURL, sanitizeSrcset: api.sanitizeSrcset'), sandbox);
+  const output = await vm.runInContext(`(async () => {
+    const doc = ProfileKitEditorModel.createDocument({ elements: [ProfileKitEditorModel.createElement('text', { text: '<script>alert(1)</script>' })] });
+    const assetPreviews = await ProfileKitReadmePreview.prepareAssets({ assetDesigns: { 'assets/profile.svg': doc } });
+    return {
+      url: ProfileKitReadmePreview.resolveURL('assets/profile.svg', 'image', { assetPreviews }),
+      srcset: ProfileKitReadmePreview.sanitizeSrcset('assets/profile.svg 2x', { assetPreviews }),
+      link: ProfileKitReadmePreview.resolveURL('assets/profile.svg', 'link', { assetPreviews }),
+      forged: ProfileKitReadmePreview.resolveURL('assets/profile.svg', 'image', { assetPreviews: new Map([['assets/profile.svg', 'data:image/svg+xml,<svg/>']]) }),
+    };
+  })()`, sandbox);
+  assert.match(output.url, /^data:image\/svg\+xml;charset=utf-8,/);
+  const svg = decodeURIComponent(output.url.split(',').slice(1).join(','));
+  assert.match(svg, /&lt;script&gt;/);
+  assert.doesNotMatch(svg, /<script>/);
+  assert.equal(output.srcset, output.url + ' 2x');
+  assert.equal(output.link, null);
+  assert.equal(output.forged, null);
+  assert.equal(resolveURL(output.url, 'image'), null);
+});

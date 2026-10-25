@@ -56,7 +56,7 @@ function renderDividerCard({ style, color, width, height, colors }) {
 
   return `<svg role="presentation" aria-hidden="true" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <style>@media (prefers-reduced-motion: reduce) { animate, animateTransform { display: none; } }</style>
-  ${content}
+  <g data-cas-target="divider">${content}</g>
 </svg>`;
 }
 

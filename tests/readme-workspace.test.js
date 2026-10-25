@@ -242,7 +242,9 @@ test("creator handoff flushes pending source and returns a validated URL with un
   assert.equal(record.savedDraft, app.storage.get(DRAFT_KEY));
   record.resultUrl = CardDesign.designUrl(designFixture());
   app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  app.session.set("profilekit.readme-studio.v2.test-handoff-token", "isolated creator draft");
   const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  assert.equal(app.session.has("profilekit.readme-studio.v2.test-handoff-token"), false);
   assert.equal(returned.element("readme-source").value, pending.replace(url, record.resultUrl));
   assert.equal(app.session.has(HANDOFF_KEY), false);
   returned.click("readme-undo");
@@ -300,4 +302,76 @@ test("creator cancel keeps the README source byte for byte", () => {
   const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
   assert.equal(returned.element("readme-source").value, source);
   assert.equal(app.session.has(HANDOFF_KEY), false);
+});
+
+test("asset returns persist editable documents, disable misleading inline editing, and support undo and creator reopening", () => {
+  const app = workspace();
+  const url = "https://profilekit.vercel.app/api/stats?username=alice";
+  const source = `<a href="https://example.com"><img src="${url}" width="450" alt="Profile"></a>`;
+  app.importSource(source); app.click("readme-open-editor");
+  const record = JSON.parse(app.session.get(HANDOFF_KEY));
+  record.resultAsset = { path: "assets/profile.svg", document: designFixture() };
+  app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  returned.flushTimers();
+  assert.equal(returned.draft().source, source.replace(url, "assets/profile.svg"));
+  assert.deepEqual(returned.draft().assetDesigns["assets/profile.svg"], record.resultAsset.document);
+  assert.equal(returned.element("readme-card-apply").disabled, true);
+  assert.equal(returned.element("batch-apply").disabled, true);
+  assert.match(returned.element("readme-design-hint").textContent, /교체할 SVG/);
+  returned.click("readme-undo"); returned.flushTimers();
+  assert.equal(returned.draft().source, source);
+  assert.deepEqual(returned.draft().assetDesigns, {});
+  returned.click("readme-redo"); returned.flushTimers();
+  const reopened = workspace(app.storage, app.session);
+  reopened.click("readme-open-editor");
+  const next = JSON.parse(app.session.get(HANDOFF_KEY));
+  assert.equal(next.originalUrl, "assets/profile.svg");
+  assert.equal(next.assetPath, "assets/profile.svg");
+  assert.deepEqual(JSON.parse(next.assetDocument), record.resultAsset.document);
+  next.resultUrl = next.originalUrl; app.session.set(HANDOFF_KEY, JSON.stringify(next));
+  const canceled = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  assert.equal(canceled.element("readme-source").value, source.replace(url, "assets/profile.svg"));
+});
+
+test("replacing an asset at the same path changes its editable document and undo restores it", () => {
+  const app = workspace();
+  const original = { kind: "profilekit-readme", version: 1, name: "README.md", source: "![Profile](assets/profile.svg)", repository: "", origin: "https://profilekit.vercel.app", theme: "dark", device: "desktop", assetDesigns: { "assets/profile.svg": designFixture() } };
+  app.storage.set(DRAFT_KEY, JSON.stringify(original));
+  const opened = workspace(app.storage, app.session); opened.click("readme-open-editor");
+  const record = JSON.parse(app.session.get(HANDOFF_KEY));
+  record.resultAsset = { path: "assets/profile.svg", document: { ...designFixture(), name: "Revised asset" } };
+  app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); returned.flushTimers();
+  assert.equal(returned.draft().source, original.source);
+  assert.equal(returned.draft().assetDesigns["assets/profile.svg"].name, "Revised asset");
+  returned.click("readme-undo"); returned.flushTimers();
+  assert.deepEqual(returned.draft().assetDesigns, original.assetDesigns);
+});
+
+test("new asset registration cannot shift the return edit onto an earlier image", () => {
+  const app = workspace();
+  const url = "https://profilekit.vercel.app/api/stats?username=alice";
+  const source = `![Existing file](assets/profile.svg)\n![Edit this](${url})`;
+  app.importSource(source); app.click("readme-open-editor");
+  const record = JSON.parse(app.session.get(HANDOFF_KEY));
+  record.resultAsset = { path: "assets/profile.svg", document: designFixture() };
+  app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  assert.equal(returned.element("readme-source").value, source.replace(url, "assets/profile.svg"));
+});
+
+test("returning to another card's asset path rejects aliases without changing the saved project", () => {
+  const app = workspace();
+  const original = { kind: "profilekit-readme", version: 1, name: "README.md", source: "![Owned](assets/profile.svg)\n![New](https://profilekit.vercel.app/api/stats?username=alice)", repository: "", origin: "https://profilekit.vercel.app", theme: "dark", device: "desktop", assetDesigns: { "assets/profile.svg": designFixture() } };
+  app.storage.set(DRAFT_KEY, JSON.stringify(original));
+  const opened = workspace(app.storage, app.session); opened.selectOnly("card-2"); opened.click("readme-open-editor");
+  const record = JSON.parse(app.session.get(HANDOFF_KEY));
+  record.resultAsset = { path: "./assets/profile.svg", document: { ...designFixture(), name: "Overwrite attempt" } };
+  app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); returned.flushTimers();
+  assert.deepEqual(returned.draft().assetDesigns, original.assetDesigns);
+  assert.equal(returned.draft().source, original.source);
+  assert.match(returned.element("readme-status").textContent, /다른 디자인/);
+  assert.ok(app.session.has(HANDOFF_KEY));
 });

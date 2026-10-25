@@ -1,8 +1,8 @@
 /* Source-preserving README image references. No DOM, network, or persistence. */
 (function (root, factory) {
-  if (typeof module === "object" && module.exports) module.exports = factory(require("./card-schema"), require("./card-design"));
-  else root.ProfileKitReadmeModel = factory(root.ProfileKitCards, root.ProfileKitCardDesign);
-})(typeof globalThis !== "undefined" ? globalThis : this, (schema, Design) => {
+  if (typeof module === "object" && module.exports) module.exports = factory(require("./card-schema"), require("./card-design"), require("./editor-model"));
+  else root.ProfileKitReadmeModel = factory(root.ProfileKitCards, root.ProfileKitCardDesign, root.ProfileKitEditorModel);
+})(typeof globalThis !== "undefined" ? globalThis : this, (schema, Design, Editor) => {
   "use strict";
 
   const DEFAULT_ORIGIN = "https://profilekit.vercel.app";
@@ -35,6 +35,23 @@
     const bytes = typeof TextEncoder !== "undefined" ? new TextEncoder().encode(source).length : unescape(encodeURIComponent(source)).length;
     if (bytes > LIMITS.MAX_SOURCE_BYTES) error("README exceeds the 1 MiB limit");
     return source;
+  }
+
+  function assetPath(value) {
+    text(value, 512, "Asset path");
+    if (!/^(?:\.\/)?[a-z0-9_-][a-z0-9._-]*(?:\/[a-z0-9_-][a-z0-9._-]*)*\.svg$/i.test(value) || value.split("/").some((part) => part === "..")) error("Asset path must be a repository-relative SVG path without traversal");
+    return value.replace(/^\.\//, "");
+  }
+  function normalizeAssetDesigns(value = {}) {
+    record(value, "Asset designs");
+    if (Object.keys(value).length > LIMITS.MAX_CARDS || new TextEncoder().encode(JSON.stringify(value)).length > 32 * 1024 * 1024) error("Asset designs exceed the project limit");
+    const result = Object.create(null);
+    for (const [path, document] of Object.entries(value)) {
+      const canonical = assetPath(path);
+      if (has(result, canonical)) error("Duplicate asset path aliases are not allowed");
+      result[canonical] = Editor.normalizeDocument(document);
+    }
+    return result;
   }
 
   function originOption(options) {
@@ -229,6 +246,7 @@
   const referenceLabel = (value) => decode(value, "markdown").value.replace(/\s+/g, " ").trim().toLowerCase();
 
   function inspect(source, options = {}) {
+    const assets = normalizeAssetDesigns(options.assetDesigns);
     sourceText(source);
     const origin = originOption(options);
     const warnings = [];
@@ -370,14 +388,17 @@
     for (const candidate of candidates.sort((a, b) => a.start - b.start)) {
       const raw = source.slice(candidate.start, candidate.end);
       let decoded;
-      let url;
+      let url, savedAsset;
       try {
         decoded = decode(raw, candidate.syntax);
-        if (!/^(?:https?:\/\/|\/api\/)/i.test(decoded.value)) continue;
+        let candidateAsset;
+        try { candidateAsset = assetPath(decoded.value); } catch { /* Only validated paths can refer to saved assets. */ }
+        savedAsset = candidateAsset && has(assets, candidateAsset) ? candidateAsset : null;
+        if (!savedAsset && !/^(?:https?:\/\/|\/api\/)/i.test(decoded.value)) continue;
         url = new URL(decoded.value, origin);
       } catch { continue; }
       if (![DEFAULT_ORIGIN, origin].includes(url.origin) || url.username || url.password || !/^https?:$/.test(url.protocol)) continue;
-      const endpoint = url.pathname.match(/^\/api\/([a-z]+)$/)?.[1];
+      const endpoint = savedAsset ? "design" : url.pathname.match(/^\/api\/([a-z]+)$/)?.[1];
       if (!ENDPOINTS.has(endpoint)) continue;
       if (cards.length === LIMITS.MAX_CARDS) { warnings.push(`Only the first ${LIMITS.MAX_CARDS} ProfileKit image references are editable; remaining source is preserved.`); break; }
       const params = Object.create(null);
@@ -389,8 +410,8 @@
       }
       if (Object.keys(params).length > LIMITS.MAX_PARAMS) invalid = true;
       if (invalid) { warnings.push(`Skipped an unsafe or oversized ${endpoint} image URL.`); continue; }
-      let design;
-      if (endpoint === "design") {
+      let design = savedAsset ? assets[savedAsset] : undefined;
+      if (endpoint === "design" && !savedAsset) {
         try {
           if (decoded.value.length > Design.MAX_DESIGN_URL_LENGTH) error("Design URL is too large");
           design = validateDesign(params);
@@ -399,8 +420,9 @@
       const node = candidate.metadataNode || candidate.node;
       const alt = node?.attrs.alt?.value ?? (candidate.altSpan ? decode(source.slice(candidate.altSpan.start, candidate.altSpan.end), "markdown").value : "");
       const fragmentVariant = url.hash.match(/^#gh-(dark|light)-mode-only$/)?.[1];
-      const card = { id: `card-${cards.length + 1}`, start: candidate.start, end: candidate.end, raw, url: url.href, endpoint, params, syntax: candidate.syntax, attribute: candidate.attribute, variant: fragmentVariant || candidate.variant, groupId: candidate.groupId, alt, width: node?.attrs.width?.value ?? "" };
+      const card = { id: `card-${cards.length + 1}`, start: candidate.start, end: candidate.end, raw, url: savedAsset ? decoded.value : url.href, endpoint, params, syntax: candidate.syntax, attribute: candidate.attribute, variant: fragmentVariant || candidate.variant, groupId: candidate.groupId, alt, width: node?.attrs.width?.value ?? "" };
       if (design) card.design = design;
+      if (savedAsset) card.assetPath = savedAsset;
       if (candidate.link) card.linkUrl = candidate.link.value;
       let urlEditWarning;
       if (candidate.definition) {
@@ -494,17 +516,26 @@
     const seen = new Set();
     for (const update of updates) {
       record(update, "Update");
-      if (Object.keys(update).some((key) => !["id", "params", "url", "alt", "width", "linkUrl"].includes(key))) error("Unsupported update field");
+      if (Object.keys(update).some((key) => !["id", "params", "url", "assetPath", "alt", "width", "linkUrl"].includes(key))) error("Unsupported update field");
       const internal = parsed.internals.get(update.id);
       if (!internal || seen.has(update.id)) error("Update contains an unknown or repeated card ID");
       seen.add(update.id);
       const { card } = internal;
+      if (has(update, "assetPath")) {
+        if (has(update, "url") || has(update, "params")) error("Asset path cannot be combined with URL or parameter updates");
+        const path = assetPath(update.assetPath);
+        if (!has(normalizeAssetDesigns(options.assetDesigns), path)) error("Asset design must be registered before changing its path");
+        if (path !== internal.decoded.value) {
+          if (internal.urlEditWarning) error(internal.urlEditWarning);
+          patches.push({ start: card.start, end: card.end, value: path });
+        }
+      }
       if (has(update, "url")) {
         if (has(update, "params")) error("URL and parameter updates cannot be combined");
         const url = text(update.url, LIMITS.MAX_URL_LENGTH, "Image URL");
         if (/\s/.test(url)) error("Replacement must be a safe ProfileKit image URL without whitespace");
         const eligible = scan(`<img src="${html(url)}">`, options);
-        if (eligible.cards.length !== 1 || eligible.warnings.length) error("Replacement must be a safe ProfileKit image URL");
+        if (eligible.cards.length !== 1 || eligible.warnings.length || (eligible.cards[0].assetPath && eligible.cards[0].url !== card.url)) error("Replacement must be a safe ProfileKit image URL");
         if (url !== internal.decoded.value && eligible.cards[0].url !== card.url) {
           if (internal.urlEditWarning) error(internal.urlEditWarning);
           const value = card.syntax === "html" ? html(url) : url.replace(/[()<>\\]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
@@ -512,6 +543,7 @@
         }
       }
       if (has(update, "params")) {
+        if (card.assetPath) error("Download a replacement SVG in the creator to edit a saved asset");
         const value = queryUpdate(internal, paramsRecord(update.params, card.endpoint));
         if (card.endpoint === "design" && decode(value, card.syntax).value.length > Design.MAX_DESIGN_URL_LENGTH) error("Updated design URL is too large");
         if (value.length > LIMITS.MAX_URL_LENGTH) error("Updated image URL is too large");
@@ -590,6 +622,7 @@
     const matches = (value) => typeof value === "string" && (operation.fromAccount ? value.toLowerCase() === operation.fromAccount.toLowerCase() : /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(value));
     for (const card of parsed.cards) {
       if (selected && !selected.has(card.id)) continue;
+      if (card.assetPath) { warnings.push("Saved SVG assets require editing in the creator and downloading a replacement SVG: " + card.assetPath); continue; }
       if (card.endpoint === "design") {
         if (parsed.internals.get(card.id).urlEditWarning) continue;
         const doc = card.design;
@@ -695,5 +728,5 @@
     return { source: applyUpdates(source, updates, options), changedCards: changes.length, changes, warnings };
   }
 
-  return { DEFAULT_ORIGIN, LIMITS, scan, applyUpdates, batchUpdate };
+  return { DEFAULT_ORIGIN, LIMITS, normalizeAssetDesigns, normalizeAssetPath: assetPath, scan, applyUpdates, batchUpdate };
 });

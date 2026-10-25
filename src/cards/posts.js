@@ -52,8 +52,9 @@ function renderPostsCard(posts, opts) {
     hideTitle,
     hideBar,
     borderRadius,
-    body: rows,
+    body: `<g data-cas-target="posts">${rows}</g>`,
     font,
+    titleTarget: "title",
   });
 }
 

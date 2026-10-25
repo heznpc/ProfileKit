@@ -68,8 +68,9 @@ function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, ti
       hideTitle: !cardTitle,
       hideBar,
       borderRadius,
-      body: iconsMarkup,
+      body: `<g data-cas-target="links">${iconsMarkup}</g>`,
       font,
+      titleTarget: "title",
     });
   }
 
@@ -103,8 +104,9 @@ function renderSocialCard(links, { colors, hideBorder, hideBar, borderRadius, ti
     hideTitle: !cardTitle,
     hideBar,
     borderRadius,
-    body: rows,
+    body: `<g data-cas-target="links">${rows}</g>`,
     font,
+    titleTarget: "title",
   });
 }
 

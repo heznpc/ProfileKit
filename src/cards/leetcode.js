@@ -45,7 +45,7 @@ function renderLeetcodeCard(stats, { colors, hideBorder, hideTitle, hideBar, bor
       const fillWidth = Math.max(barWidth * pct, 2);
       const color = difficultyColors[diff.key];
 
-      return `<g transform="translate(${barStartX}, ${y})">
+      return `<g data-cas-target="${diff.key}" transform="translate(${barStartX}, ${y})">
       <text x="0" y="10" class="lang-name" fill="${color}" font-weight="600">${diff.label}</text>
       <text x="${barWidth}" y="10" text-anchor="end" class="stat-value" font-size="12" fill="${color}">${diff.data.solved}<tspan class="lang-pct"> / ${diff.data.total}</tspan></text>
       <rect x="0" y="16" width="${barWidth}" height="7" rx="3.5" fill="${colors.border}" opacity="0.4"/>
@@ -55,7 +55,7 @@ function renderLeetcodeCard(stats, { colors, hideBorder, hideTitle, hideBar, bor
     .join("\n    ");
 
   const height = startY + 130;
-  const body = `${circleMarkup}\n    ${barsMarkup}`;
+  const body = `<g data-cas-target="solved">${circleMarkup}</g>\n    ${barsMarkup}`;
 
   return renderCard({
     width,
@@ -68,6 +68,7 @@ function renderLeetcodeCard(stats, { colors, hideBorder, hideTitle, hideBar, bor
     borderRadius,
     body,
     font,
+    titleTarget: "title",
   });
 }
 

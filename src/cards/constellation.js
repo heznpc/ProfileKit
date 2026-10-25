@@ -71,7 +71,7 @@ function renderConstellationCard({
 
   const safeText = text ? escapeHtml(text) : "";
   const overlay = safeText
-    ? `<text x="${w / 2}" y="${h / 2 + 10}" text-anchor="middle"
+    ? `<text data-cas-target="text" x="${w / 2}" y="${h / 2 + 10}" text-anchor="middle"
         font-family="${family}" font-size="32" font-weight="700"
         fill="${colors.title}" letter-spacing="3">${safeText}
         <animate attributeName="opacity" from="0" to="1" dur="1s" fill="freeze"/>
@@ -93,10 +93,10 @@ function renderConstellationCard({
     </radialGradient>
   </defs>
   <g clip-path="url(#con-clip)">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
     <rect x="0" y="0" width="${w}" height="${h}" fill="url(#con-bg)"/>
-    ${lineMarkup}
-    ${starMarkup}
+    <g data-cas-target="links">${lineMarkup}</g>
+    <g data-cas-target="stars">${starMarkup}</g>
     ${overlay}
   </g>
   <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"

@@ -66,9 +66,16 @@
     const node = visiblePartNode();
     if (!node || selected().parts?.[partName]?.hidden) return null;
     const box = node.getBoundingClientRect(), canvas = host.getBoundingClientRect();
-    if (!box.width || !box.height) return null;
-    return { x: (box.left - canvas.left) * doc.width / canvas.width, y: (box.top - canvas.top) * doc.height / canvas.height,
-      width: box.width * doc.width / canvas.width, height: box.height * doc.height / canvas.height };
+    const card = node.closest("[data-element-id]").getBoundingClientRect();
+    const minX = Math.max(canvas.left, card.left), maxX = Math.min(canvas.right, card.right);
+    const minY = Math.max(canvas.top, card.top), maxY = Math.min(canvas.bottom, card.bottom);
+    const left = Math.max(minX, box.left - (box.width < 6 ? 3 : 0));
+    const right = Math.min(maxX, box.right + (box.width < 6 ? 3 : 0));
+    const top = Math.max(minY, box.top - (box.height < 6 ? 3 : 0));
+    const bottom = Math.min(maxY, box.bottom + (box.height < 6 ? 3 : 0));
+    if (right <= left || bottom <= top) return null;
+    return { x: (left - canvas.left) * doc.width / canvas.width, y: (top - canvas.top) * doc.height / canvas.height,
+      width: (right - left) * doc.width / canvas.width, height: (bottom - top) * doc.height / canvas.height };
   }
 
   function status(message, error = false) {
@@ -380,7 +387,7 @@
     const button = $("import-card-button"); button.disabled = true;
     const startRevision = revision;
     try {
-      const importOrigin = readmeHandoff ? new URL(readmeHandoff.originalUrl).origin : location.origin;
+      const importOrigin = readmeHandoff ? new URL(readmeHandoff.originalUrl, readmeHandoff.project.origin || location.origin).origin : location.origin;
       const importedDesign = Design.parseDesignInput($("import-card-input").value, importOrigin);
       if (importedDesign) {
         if (dirty && !confirmReplace()) return;
@@ -416,9 +423,15 @@
       if (!cancel) await waitForCardSizes();
       const current = JSON.parse(sessionStorage.getItem(handoffKey));
       if (!current || current.originalUrl !== readmeHandoff.originalUrl || current.cardId !== readmeHandoff.cardId) throw new Error("원래 README 연결을 찾지 못했습니다. 프로젝트를 저장해 주세요.");
-      const original = new URL(current.originalUrl);
+      const original = new URL(current.originalUrl, current.project.origin || location.origin);
       const unchanged = M.serializeDocument(doc) === current.originalDocument;
-      current.resultUrl = cancel || unchanged ? current.originalUrl : Design.designUrl(doc, original.origin) + original.hash;
+      delete current.resultAsset;
+      if (!cancel && !unchanged && current.assetDocument) { showAssetReturn(); return; }
+      try { current.resultUrl = cancel || unchanged ? current.originalUrl : Design.designUrl(doc, original.origin) + original.hash; }
+      catch (error) {
+        if (error.message.includes("design URL is too large")) { showAssetReturn(); return; }
+        throw error;
+      }
       sessionStorage.setItem(handoffKey, JSON.stringify(current));
       clearTimeout(saveTimer);
       persisted = true;
@@ -429,6 +442,38 @@
       status(error.message, true);
     }
   }
+  function showAssetReturn() {
+    $("readme-return").disabled = false;
+    $("readme-return-cancel").disabled = false;
+    $("asset-return").hidden = false;
+    $("asset-path").value = readmeHandoff.assetPath || "assets/profilekit-" + handoffToken.slice(0, 8) + ".svg";
+    document.querySelector(".asset-export").open = true;
+    refreshEmbed();
+    $("embed-message").textContent = "이 디자인은 SVG 파일로 README에 넣습니다. 파일을 내려받고 지정한 저장소 경로에 추가하세요. 편집 원본은 README 프로젝트에도 보관됩니다.";
+    $("embed-dialog").showModal();
+  }
+  $("asset-return").addEventListener("click", async () => {
+    const button = $("asset-return"); button.disabled = true;
+    try {
+      finishEdit(); await waitForCardSizes();
+      const path = $("asset-path").value.trim();
+      if (!/^(?:\.\/)?[A-Za-z0-9_-][A-Za-z0-9._-]*(?:\/[A-Za-z0-9_-][A-Za-z0-9._-]*)*\.svg$/.test(path) || path.split("/").includes("..")) throw new Error("SVG 상대 경로를 입력하세요. 예: assets/profilekit.svg");
+      const snapshot = M.normalizeDocument(doc);
+      const svg = await standaloneSVG(snapshot);
+      const current = JSON.parse(sessionStorage.getItem(handoffKey));
+      if (!current || current.originalUrl !== readmeHandoff.originalUrl || current.cardId !== readmeHandoff.cardId) throw new Error("README 연결을 찾지 못했습니다. 프로젝트를 저장해 주세요.");
+      const canonicalPath = path.replace(/^\.\//, "");
+      const originalPath = (current.assetPath || "").replace(/^\.\//, "");
+      if (Object.keys(current.project.assetDesigns || {}).some((key) => key.replace(/^\.\//, "") === canonicalPath) && originalPath !== canonicalPath) throw new Error("이 SVG 경로는 다른 디자인에서 사용 중입니다. 다른 파일 이름을 선택하세요.");
+      delete current.resultUrl;
+      current.resultAsset = { path: canonicalPath, document: snapshot };
+      sessionStorage.setItem(handoffKey, JSON.stringify(current));
+      download(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }), path.split("/").pop());
+      clearTimeout(saveTimer); persisted = true;
+      location.assign("/readme.html#design-return=" + handoffToken);
+    } catch (error) { $("embed-message").textContent = error.message; }
+    finally { button.disabled = false; }
+  });
   $("readme-return").addEventListener("click", () => returnToReadme(false));
   $("readme-return-cancel").addEventListener("click", () => returnToReadme(true));
   function newCardParams(endpoint) {
@@ -487,7 +532,7 @@
   function assetReadme() {
     const path = $("asset-path").value.trim();
     if (!path || /^(?:[a-z][a-z0-9+.-]*:|\/|\\)/i.test(path) || /[\u0000-\u001f\\?#]/.test(path) || path.split("/").includes("..")) throw new Error("저장소 안의 상대 경로를 사용하세요. 예: assets/profilekit.svg");
-    return `<img src="${htmlEscape(path)}" alt="${htmlEscape(doc.name)}" width="${doc.width}" />`;
+    return Design.readmeAsset(doc, path);
   }
   let verifiedDesignUrl = null;
   function canExportCards() {
@@ -617,7 +662,7 @@
         : partMode && !entry?.svg ? "카드 내부 요소를 불러오는 중…"
         : partMode && !visiblePartNode() ? "현재 카드에 이 요소가 없습니다. 카드 설정에서 내용을 넣거나 다른 요소를 선택하세요."
         : part.hidden ? "이 요소를 숨겼습니다. 체크를 해제하면 다시 표시됩니다."
-        : partMode ? "이름·제목·설명을 직접 끌어 이동하세요. 모서리 핸들로 크기를 조절할 수 있습니다."
+        : partMode ? "선택한 요소를 직접 끌어 이동하세요. 모서리 핸들로 크기를 조절할 수 있습니다."
         : "카드 안의 요소를 꾸며도 계정 정보와 애니메이션은 유지됩니다.";
     }
     const effect = element.effect || { kind: "none", color: "#8b5cf6", blur: 12, opacity: .6, dx: 0, dy: 8 };
@@ -797,6 +842,15 @@
     }
     gesture = { pointerId: event.pointerId, before: clone(doc), original: clone({ elements: [element] }).elements[0], origin: point(event), action,
       part: partName, bounds: partBounds(), native: { width: element.nativeWidth || element.width, height: element.nativeHeight || element.height } };
+    if (action === "part-move" || action === "part-scale") {
+      const node = visiblePartNode();
+      if (!node) { gesture = null; return; }
+      let wrapper = node.parentElement;
+      if (!element.parts?.[partName]) {
+        wrapper = svgNode("g", {}); node.before(wrapper); wrapper.append(node);
+      }
+      gesture.partNode = node; gesture.partWrapper = wrapper;
+    }
     clearTimeout(saveTimer);
     host.setPointerCapture(event.pointerId);
   });
@@ -841,7 +895,22 @@
       element.rotation = Math.round(((angle + 540) % 360) - 180);
     }
     element.x = Math.max(-4096, Math.min(4096, element.x)); element.y = Math.max(-4096, Math.min(4096, element.y));
-    if (!frame) frame = requestAnimationFrame(() => { frame = null; renderCanvas(); renderInspector(); });
+    if (!frame) frame = requestAnimationFrame(() => {
+      frame = null;
+      if (gesture?.partNode?.isConnected) {
+        // Change only the outer decoration transform: animated descendants keep
+        // their DOM identity and animation clock throughout the gesture.
+        const markup = Decoration.partMarkup(gesture.partNode.outerHTML, selected().parts[gesture.part]);
+        const root = new DOMParser().parseFromString(`<svg xmlns="${SVG_NS}">${markup}</svg>`, "image/svg+xml").documentElement.firstElementChild;
+        if (root !== null) {
+          const transform = root.hasAttribute("data-cas-target") ? null : root.getAttribute("transform");
+          if (transform) gesture.partWrapper.setAttribute("transform", transform);
+          else gesture.partWrapper.removeAttribute("transform");
+        }
+        renderSelection();
+      } else renderCanvas();
+      renderInspector();
+    });
   });
   function finishGesture(cancel = false) {
     if (!gesture) return;
@@ -1067,6 +1136,15 @@
     try {
       const record = JSON.parse(sessionStorage.getItem(handoffKey));
       if (!record || record.version !== 1 || typeof record.originalUrl !== "string" || typeof record.cardId !== "string" || !record.project) throw new Error("README 연결이 만료됐습니다. README에서 카드를 다시 열어 주세요.");
+      readmeHandoff = record;
+      if (record.assetDocument) {
+        const assetDoc = M.parseDocument(record.assetDocument);
+        if (!lastStoredDraft || draftError) replaceDocument(assetDoc);
+        select(doc.elements[0]?.id || null); rememberHandoffDocument();
+        handoffReady = true; $("readme-return").disabled = false;
+        status("저장한 SVG의 편집 원본을 열었습니다. 변경 후 SVG를 다시 저장해 README에 반영하세요.");
+        return;
+      }
       const url = new URL(record.originalUrl);
       const importUrl = new URL(url); importUrl.hash = "";
       const imported = Design.parseDesignInput(importUrl.href, url.origin);

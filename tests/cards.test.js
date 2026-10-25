@@ -267,3 +267,27 @@ test("renderCard escapes titleTarget before interpolating data-cas-target", () =
   assert.ok(svg.includes('data-cas-target="username&quot; onclick=&quot;alert(1)"'));
   assert.ok(!svg.includes('data-cas-target="username" onclick="alert(1)"'));
 });
+
+test("every card exposes semantic parts that survive decoration with animation and links intact", () => {
+  const Decoration = require("../public/card-decoration");
+  const Schema = require("../public/card-schema");
+  assert.deepEqual(Object.keys(Decoration.PARTS).sort(), Object.keys(Schema.CARDS).sort());
+  for (const [name, render] of makeCardCases({ colors: getTheme("dark") })) {
+    const endpoint = name.split(" ")[0];
+    const svg = render();
+    const targets = [...svg.matchAll(/data-cas-target="([^"]+)"/g)].map((match) => match[1]);
+    assert.ok(targets.length, `${name} exposes editable parts`);
+    assert.equal(new Set(targets).size, targets.length, `${name} has unique targets`);
+    for (const target of targets) {
+      const spec = Decoration.PARTS[endpoint][target];
+      assert.ok(spec, `${name}/${target} is registered`);
+      const parts = Decoration.normalizeParts(endpoint, { [target]: { dx: 17, dy: -8, scale: 1.25, ...(spec.color ? { color: "#12abcd" } : {}) } });
+      const decorated = Decoration.applyParts(svg, parts);
+      assert.notEqual(decorated, svg, `${name}/${target} changes visibly`);
+      assertHealthySvg(`${name}/${target}`, decorated);
+      assert.doesNotThrow(() => Decoration.applyParts(decorated, { [target]: { hidden: true } }), `${name}/${target} remains balanced XML`);
+      assert.deepEqual([...decorated.matchAll(/<style[^>]*>[\s\S]*?<\/style>/g)].map(m => m[0]), [...svg.matchAll(/<style[^>]*>[\s\S]*?<\/style>/g)].map(m => m[0]), `${name}/${target} retains animation styles`);
+      assert.deepEqual([...decorated.matchAll(/(?:href|clip-path|filter)="[^"]*"/g)].map(m => m[0]), [...svg.matchAll(/(?:href|clip-path|filter)="[^"]*"/g)].map(m => m[0]), `${name}/${target} retains links and effects`);
+    }
+  }
+});

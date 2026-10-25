@@ -39,7 +39,7 @@ function renderTimelineCard(rawItems, opts) {
   const nodeOffset = 16;
   const verticalLine =
     items.length > 1
-      ? `<line x1="${lineX}" y1="${startY + nodeOffset}" x2="${lineX}" y2="${startY + (items.length - 1) * itemHeight + nodeOffset}"
+      ? `<line data-cas-target="rail" x1="${lineX}" y1="${startY + nodeOffset}" x2="${lineX}" y2="${startY + (items.length - 1) * itemHeight + nodeOffset}"
             stroke="${colors.border}" stroke-width="2"/>`
       : "";
 
@@ -72,8 +72,9 @@ function renderTimelineCard(rawItems, opts) {
     hideTitle,
     hideBar,
     borderRadius,
-    body: verticalLine + nodes,
+    body: `${verticalLine}<g data-cas-target="items">${nodes}</g>`,
     font,
+    titleTarget: "title",
   });
 }
 

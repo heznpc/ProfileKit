@@ -36,7 +36,7 @@ function renderDefault(stats, visible, { colors, hideBorder, hideTitle, hideBar,
       const value = formatNumber(stats[item.field]);
       const delay = i * 150;
       const c = colors.accent || item.color;
-      return `<g transform="translate(25, ${y})" class="stagger" style="animation-delay: ${delay}ms">
+      return `<g data-cas-target="${item.key}" transform="translate(25, ${y})" class="stagger" style="animation-delay: ${delay}ms">
       <circle cx="10" cy="8" r="12" fill="${c}" opacity="0.1"/>
       <svg x="2" y="0" viewBox="0 0 16 16" width="16" height="16" fill="${c}">
         ${item.icon}
@@ -68,7 +68,7 @@ function renderCompact(stats, visible, { colors, hideBorder, hideTitle, hideBar,
       const value = formatNumber(stats[item.field]);
       const delay = i * 100;
       const c = colors.accent || item.color;
-      return `<g transform="translate(${x}, ${y})" class="stagger" style="animation-delay: ${delay}ms">
+      return `<g data-cas-target="${item.key}" transform="translate(${x}, ${y})" class="stagger" style="animation-delay: ${delay}ms">
       <circle cx="10" cy="10" r="12" fill="${c}" opacity="0.1"/>
       <svg x="2" y="2" viewBox="0 0 16 16" width="16" height="16" fill="${c}">
         ${item.icon}

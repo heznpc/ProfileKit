@@ -35,7 +35,7 @@ function renderDefault(languages, { colors, hideBorder, hideTitle, hideBar, bord
     })
     .join("\n  ");
 
-  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: rows, font, titleTarget: "username" });
+  return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: `<g data-cas-target="legend">${rows}</g>`, font, titleTarget: "username" });
 }
 
 function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font }) {
@@ -59,7 +59,7 @@ function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, bord
       <rect x="25" y="${startY}" width="${barWidth}" height="10" rx="5"/>
     </clipPath>
   </defs>
-  <g clip-path="url(#bar-clip)">
+  <g data-cas-target="chart" clip-path="url(#bar-clip)">
     <rect x="25" y="${startY}" width="${barWidth}" height="10" fill="${colors.border}" opacity="0.4"/>
     ${barSegments}
   </g>`;
@@ -82,7 +82,7 @@ function renderCompact(languages, { colors, hideBorder, hideTitle, hideBar, bord
   const legendRows = Math.ceil(languages.length / 4);
   const totalHeight = startY + 24 + legendRows * 20 + 12;
 
-  return renderCard({ width, height: totalHeight, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: `${barGroup}\n  ${legendItems}`, font, titleTarget: "username" });
+  return renderCard({ width, height: totalHeight, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body: `${barGroup}\n  <g data-cas-target="legend">${legendItems}</g>`, font, titleTarget: "username" });
 }
 
 function renderDonut(languages, { colors, hideBorder, hideTitle, hideBar, borderRadius, cardTitle, cardWidth, font }) {
@@ -130,9 +130,9 @@ function renderDonut(languages, { colors, hideBorder, hideTitle, hideBar, border
   const height = startY + contentHeight + 10;
 
   const body = `
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors.border}" stroke-width="${strokeWidth}" opacity="0.3"/>
-    ${segments}
-    ${legendItems}`;
+    <g data-cas-target="chart"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors.border}" stroke-width="${strokeWidth}" opacity="0.3"/>
+    ${segments}</g>
+    <g data-cas-target="legend">${legendItems}</g>`;
 
   return renderCard({ width, height, title: cardTitle, colors, hideBorder, hideTitle, hideBar, borderRadius, body, font, titleTarget: "username" });
 }

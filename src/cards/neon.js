@@ -58,9 +58,9 @@ function renderNeonCard({
     }
   </style>
   <g clip-path="url(#neon-clip)">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
-    <rect x="0" y="0" width="${w}" height="${h}" fill="url(#neon-bg)"/>
-    <text class="neon-text" x="${w / 2}" y="${h / 2 + fSize * 0.35}" text-anchor="middle"
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
+    <rect data-cas-target="glow" x="0" y="0" width="${w}" height="${h}" fill="url(#neon-bg)"/>
+    <text data-cas-target="text" class="neon-text" x="${w / 2}" y="${h / 2 + fSize * 0.35}" text-anchor="middle"
           font-family="${fontFamily}" font-size="${fSize}" font-weight="700"
           fill="${c}" stroke="#ffffff" stroke-width="0.5"
           filter="url(#neon-glow)">${safeText}</text>

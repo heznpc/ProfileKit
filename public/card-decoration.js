@@ -6,10 +6,32 @@
   "use strict";
 
   const PARTS = Object.freeze(Object.fromEntries(Object.entries({
-    hero: { name: { label: "Name", color: true }, subtitle: { label: "Subtitle", color: true }, bg: { label: "Background", color: false } },
-    stats: { username: { label: "Title", color: true } },
-    languages: { username: { label: "Title", color: true } },
-    pin: { repo: { label: "Repository", color: true }, description: { label: "Description", color: true } },
+    hero: { name: { label: "이름", color: true }, subtitle: { label: "소개 문구", color: true }, bg: { label: "배경 효과", color: false }, accent: { label: "강조선", color: false } },
+    stats: { username: { label: "제목", color: true }, commits: { label: "커밋", color: true }, prs: { label: "PR", color: true }, issues: { label: "이슈", color: true }, stars: { label: "스타", color: true }, repos: { label: "저장소", color: true }, contributed: { label: "기여", color: true } },
+    languages: { username: { label: "제목", color: true }, chart: { label: "차트", color: false }, legend: { label: "언어 목록", color: true } },
+    pin: { repo: { label: "저장소 이름", color: true }, description: { label: "설명", color: true }, footer: { label: "언어·스타·포크", color: true } },
+    leetcode: { title: { label: "제목", color: true }, solved: { label: "풀이 합계", color: true }, easy: { label: "Easy", color: true }, medium: { label: "Medium", color: true }, hard: { label: "Hard", color: true } },
+    social: { title: { label: "제목", color: true }, links: { label: "소셜 링크", color: false } },
+    timeline: { title: { label: "제목", color: true }, items: { label: "타임라인 내용", color: true }, rail: { label: "연결선", color: false } },
+    toc: { title: { label: "제목", color: true }, items: { label: "목차 항목", color: true } },
+    tags: { title: { label: "제목", color: true }, tags: { label: "태그", color: true } },
+    reviews: { title: { label: "제목", color: true }, approval: { label: "승인 비율", color: true }, totalReviews: { label: "리뷰 합계", color: true }, approved: { label: "승인", color: true }, changesRequested: { label: "수정 요청", color: true }, reposReviewed: { label: "리뷰 저장소", color: true } },
+    posts: { title: { label: "제목", color: true }, posts: { label: "글 목록", color: true } },
+    now: { title: { label: "제목", color: true }, coding: { label: "코딩", color: true }, learning: { label: "학습", color: true }, reading: { label: "독서", color: true }, listening: { label: "음악", color: true }, playing: { label: "게임", color: true }, building: { label: "제작", color: true }, watching: { label: "시청", color: true } },
+    section: { title: { label: "제목", color: true }, subtitle: { label: "소개 문구", color: true }, icon: { label: "아이콘", color: true }, underline: { label: "밑줄", color: false } },
+    quote: { quote: { label: "인용문", color: true }, author: { label: "작성자", color: true }, mark: { label: "따옴표", color: true } },
+    divider: { divider: { label: "구분선", color: false } },
+    glitch: { bg: { label: "배경", color: false }, text: { label: "글리치 글자", color: true } },
+    heartbeat: { bg: { label: "배경", color: false }, waveform: { label: "심박 파형", color: false }, text: { label: "문구", color: true }, bpm: { label: "BPM 표시", color: true }, pulse: { label: "맥박 표시", color: false } },
+    typing: { bg: { label: "배경", color: false }, bar: { label: "상단 바", color: false }, text: { label: "타이핑 문구", color: true }, cursor: { label: "커서", color: false } },
+    neon: { bg: { label: "배경", color: false }, glow: { label: "주변 빛", color: false }, text: { label: "네온 문구", color: true } },
+    constellation: { bg: { label: "배경", color: false }, links: { label: "별 연결선", color: false }, stars: { label: "별", color: false }, text: { label: "문구", color: true } },
+    equalizer: { bg: { label: "배경", color: false }, label: { label: "문구", color: true }, bars: { label: "이퀄라이저 막대", color: false } },
+    terminal: { bg: { label: "배경", color: false }, header: { label: "창 상단", color: false }, title: { label: "창 제목", color: true }, commands: { label: "명령어", color: true }, cursor: { label: "커서", color: false } },
+    wave: { bg: { label: "배경", color: false }, waves: { label: "파도", color: false }, text: { label: "문구", color: true } },
+    matrix: { bg: { label: "배경", color: false }, rain: { label: "문자 비", color: true }, textBackdrop: { label: "문구 뒤 배경", color: false }, text: { label: "문구", color: true } },
+    snake: { bg: { label: "배경", color: false }, emptyCells: { label: "빈 셀", color: false }, snake: { label: "활동 셀·스네이크", color: false } },
+    radar: { bg: { label: "배경", color: false }, grid: { label: "격자", color: false }, blips: { label: "신호", color: false }, sweep: { label: "회전 스캔", color: false }, text: { label: "문구", color: true } },
   }).map(([endpoint, parts]) => [endpoint, Object.freeze(Object.fromEntries(Object.entries(parts).map(([name, spec]) => [name, Object.freeze(spec)])))])));
   const TARGETS = new Set(Object.values(PARTS).flatMap((parts) => Object.keys(parts)));
   const PART_KEYS = ["dx", "dy", "scale", "color", "hidden"];
