@@ -448,3 +448,45 @@ test("valid design data above ordinary parameter limits remains individually and
   assert.equal(result.elements[0].params.theme, "nord");
   assert.deepEqual(result.elements.slice(1), doc.elements.slice(1));
 });
+
+test("only registered relative SVG assets are editable and asset replacements preserve surrounding source", () => {
+  const doc = designDoc(live("stats", "stats", { username: "old" }));
+  const assetDesigns = { "assets/profile.svg": doc };
+  const source = '<a href="https://example.com"><img src="assets/profile.svg" alt="Kept" width="450"></a>\r\n![Other](assets/other.svg)';
+  assert.equal(Model.scan(source).cards.length, 0);
+  const card = Model.scan(source, { assetDesigns }).cards[0];
+  assert.equal(card.assetPath, "assets/profile.svg");
+  assert.equal(card.url, "assets/profile.svg");
+  assert.deepEqual(card.design, doc);
+  assert.equal(Model.applyUpdates(source, [{ id: card.id, url: card.url }], { assetDesigns }), source);
+  const newPath = "./images/new-profile.svg";
+  const updated = Model.applyUpdates(source, [{ id: card.id, assetPath: newPath }], { assetDesigns: { ...assetDesigns, [newPath]: doc } });
+  assert.equal(updated, source.replace("assets/profile.svg", newPath.slice(2)));
+  assert.throws(() => Model.applyUpdates(source, [{ id: card.id, params: { d: Design.encodeDocument(doc) } }], { assetDesigns }), /replacement SVG/);
+  const batch = Model.batchUpdate(source, { toAccount: "new" }, { assetDesigns });
+  assert.equal(batch.source, source);
+  assert.equal(batch.changedCards, 0);
+  assert.match(batch.warnings.join(" "), /replacement SVG/);
+});
+
+test("asset paths require registered validated documents and cannot broaden URL mutation permissions", () => {
+  const doc = designDoc();
+  for (const path of ["../bad.svg", "/bad.svg", "https://example.com/a.svg", "assets/../bad.svg", "a%2fb.svg", "a.svg?x=1", "a.svg#x", "a.png", "a\\b.svg"]) {
+    assert.throws(() => Model.normalizeAssetDesigns({ [path]: doc }), /Asset path/);
+  }
+  assert.throws(() => Model.normalizeAssetDesigns({ "safe.svg": {} }));
+  const source = image("stats", "username=old");
+  const assetDesigns = { "safe.svg": doc };
+  assert.throws(() => Model.applyUpdates(source, [{ id: "card-1", assetPath: "missing.svg" }], { assetDesigns }), /registered/);
+  assert.throws(() => Model.applyUpdates(source, [{ id: "card-1", url: "safe.svg" }], { assetDesigns }), /safe ProfileKit/);
+  assert.equal(Model.applyUpdates(source, [{ id: "card-1", assetPath: "safe.svg" }], { assetDesigns }), '<img src="safe.svg">');
+});
+
+test("asset aliases use a canonical path and duplicate aliases are rejected", () => {
+  const doc = designDoc();
+  assert.throws(() => Model.normalizeAssetDesigns({ "./assets/card.svg": doc, "assets/card.svg": doc }), /Duplicate asset/);
+  const card = Model.scan("![Profile](./assets/card.svg)", { assetDesigns: { "assets/card.svg": doc } }).cards[0];
+  assert.equal(card.assetPath, "assets/card.svg");
+  assert.equal(card.url, "./assets/card.svg");
+  assert.equal(Model.applyUpdates("![Profile](./assets/card.svg)", [{ id: card.id, url: card.url }], { assetDesigns: { "assets/card.svg": doc } }), "![Profile](./assets/card.svg)");
+});

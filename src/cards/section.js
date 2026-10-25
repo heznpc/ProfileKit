@@ -43,7 +43,7 @@ function renderSectionCard({
   const underlineX = titleX + (titleEstW - underlineWidth) / 2;
 
   const iconMarkup = safeIcon
-    ? `<text x="${iconX}" y="${titleY}" font-size="26" fill="${accentColor}">${safeIcon}</text>`
+    ? `<text data-cas-target="icon" x="${iconX}" y="${titleY}" font-size="26" fill="${accentColor}">${safeIcon}</text>`
     : "";
 
   const ariaLabel = safeSub ? `${safeTitle}, ${safeSub}` : safeTitle;
@@ -64,9 +64,9 @@ function renderSectionCard({
     }
   </style>
   ${iconMarkup}
-  <text x="${titleX}" y="${titleY}" class="sec-title">${safeTitle}</text>
-  ${safeTitle ? `<rect class="sec-underline" x="${underlineX}" y="${underlineY}" width="${underlineWidth}" height="3" rx="1.5" fill="${accentColor}"/>` : ""}
-  ${safeSub ? `<text x="${titleX}" y="${subY}" class="sec-sub">${safeSub}</text>` : ""}
+  <text data-cas-target="title" x="${titleX}" y="${titleY}" class="sec-title">${safeTitle}</text>
+  ${safeTitle ? `<rect data-cas-target="underline" class="sec-underline" x="${underlineX}" y="${underlineY}" width="${underlineWidth}" height="3" rx="1.5" fill="${accentColor}"/>` : ""}
+  ${safeSub ? `<text data-cas-target="subtitle" x="${titleX}" y="${subY}" class="sec-sub">${safeSub}</text>` : ""}
 </svg>`;
 }
 

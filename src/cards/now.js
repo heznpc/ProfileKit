@@ -29,7 +29,7 @@ function renderNowCard(values, opts) {
         .map((item, i) => {
           const y = startY + i * rowHeight;
           const delay = i * 100;
-          return `<g transform="translate(25, ${y})" class="stagger" style="animation-delay: ${delay}ms">
+          return `<g data-cas-target="${item.key}" transform="translate(25, ${y})" class="stagger" style="animation-delay: ${delay}ms">
       <rect x="0" y="-14" width="22" height="22" rx="5" fill="${accent}" fill-opacity="0.12"/>
       <text x="11" y="2" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="${accent}">${item.icon}</text>
       <text x="36" y="-2" class="lang-pct">${item.label.toUpperCase()}</text>
@@ -50,6 +50,7 @@ function renderNowCard(values, opts) {
     borderRadius,
     body: rows,
     font,
+    titleTarget: "title",
   });
 }
 

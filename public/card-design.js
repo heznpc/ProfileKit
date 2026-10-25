@@ -153,14 +153,24 @@
     }
     return img;
   }
+  function composedImage(doc, src) {
+    const cards = doc.elements.filter((element) => element.type === "card");
+    const only = cards.length === 1 ? cards[0] : null;
+    // A single card owns the embed metadata even when other layers decorate it.
+    // Multiple cards have no unambiguous destination or display metadata.
+    const card = directCard(doc) || (only && (doc.elements.length > 1 || only.parts || only.effect) ? only : null);
+    const img = `<img src="${escape(src)}" alt="${escape(card?.alt ?? (doc.name || "Profile card"))}" width="${escape(card?.displayWidth ?? doc.width)}" />`;
+    return linkedImage(img, card);
+  }
   function readme(document, origin) {
     const doc = Model.normalizeDocument(document);
-    // Opt-in decoration keeps a lone card's embed metadata when it switches to
-    // the composed endpoint. Undecorated documents retain their existing output.
-    const only = doc.elements.length === 1 && doc.elements[0].type === "card" ? doc.elements[0] : null;
-    const card = directCard(doc) || (only?.parts || only?.effect ? only : null);
-    const img = `<img src="${escape(designUrl(doc, origin))}" alt="${escape(card?.alt ?? (doc.name || "Profile card"))}" width="${escape(card?.displayWidth ?? doc.width)}" />`;
-    return linkedImage(img, card);
+    return composedImage(doc, designUrl(doc, origin));
+  }
+  function readmeAsset(document, path) {
+    if (typeof path !== "string") throw new Error("Use a repository-relative asset path");
+    path = path.trim();
+    if (!path || /^(?:[a-z][a-z0-9+.-]*:|\/|\\)/i.test(path) || /[\u0000-\u001f\\?#]/.test(path) || path.split("/").includes("..")) throw new Error("Use a repository-relative asset path");
+    return composedImage(Model.normalizeDocument(document), path);
   }
   function readmeCards(document, origin) {
     const doc = Model.normalizeDocument(document);
@@ -170,5 +180,5 @@
     return doc.elements.map((card) => linkedImage(`<img src="${escape(cardUrl(card, origin))}" alt="${escape(card.alt ?? (doc.name || "Profile card"))}" width="${escape(card.displayWidth ?? card.width)}" />`, card)).join("\n");
   }
 
-  return { DEFAULT_ORIGIN, MAX_DESIGN_URL_LENGTH, ENDPOINTS, parseCardInput, parseDesignInput, cardUrl, encodeDocument, decodeDocument, designUrl, readme, readmeCards };
+  return { DEFAULT_ORIGIN, MAX_DESIGN_URL_LENGTH, ENDPOINTS, parseCardInput, parseDesignInput, cardUrl, encodeDocument, decodeDocument, designUrl, readme, readmeAsset, readmeCards };
 });

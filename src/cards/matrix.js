@@ -70,8 +70,8 @@ function renderMatrixCard({
 
   const safeText = text ? escapeHtml(text) : "";
   const overlay = safeText
-    ? `<rect x="0" y="${h / 2 - 32}" width="${w}" height="64" fill="${bg}" opacity="0.55"/>
-       <text x="${w / 2}" y="${h / 2 + 10}" text-anchor="middle"
+    ? `<rect data-cas-target="textBackdrop" x="0" y="${h / 2 - 32}" width="${w}" height="64" fill="${bg}" opacity="0.55"/>
+       <text data-cas-target="text" x="${w / 2}" y="${h / 2 + 10}" text-anchor="middle"
         font-family="${overlayFamily}" font-size="32" font-weight="700"
         fill="${c}" letter-spacing="2">${safeText}</text>`
     : "";
@@ -87,8 +87,8 @@ function renderMatrixCard({
     </clipPath>
   </defs>
   <g clip-path="url(#mtx-clip)" font-family="${rainFamily}" font-size="${fontSize}" text-anchor="middle">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
-    ${columns.join("\n    ")}
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
+    <g data-cas-target="rain">${columns.join("\n    ")}</g>
     ${overlay}
   </g>
   <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"

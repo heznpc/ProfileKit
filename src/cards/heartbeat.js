@@ -70,20 +70,20 @@ function renderHeartbeatCard({
     <path id="hb-path" d="${path}" fill="none" stroke="${accent}" stroke-linecap="round" stroke-linejoin="round"/>
   </defs>
   <g clip-path="url(#hb-clip)">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
-    <g>
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
+    <g data-cas-target="waveform">
       <use href="#hb-path" stroke-width="2.5" filter="url(#hb-glow)" opacity="0.5"/>
       <use href="#hb-path" stroke-width="2"/>
       <animateTransform attributeName="transform" type="translate" from="0 0" to="${-cycleW} 0" dur="${cycleDur.toFixed(2)}s" repeatCount="indefinite"/>
     </g>
-    <rect x="0" y="0" width="${w}" height="${h}" fill="url(#hb-fade)"/>
+    <rect x="0" y="0" width="${w}" height="${h}" fill="url(#hb-fade)" pointer-events="none"/>
     ${
       safeText
-        ? `<text x="${padding}" y="${padding + 10}" font-family="${textFamily}" font-size="14" font-weight="600" fill="${colors.title}">${safeText}</text>
-           <text x="${padding}" y="${padding + 28}" font-family="${textFamily}" font-size="11" fill="${colors.muted}">${bpm} BPM</text>`
-        : `<text x="${padding}" y="${padding + 10}" font-family="${monoFamily}" font-size="13" font-weight="700" fill="${accent}">${bpm} BPM</text>`
+        ? `<text data-cas-target="text" x="${padding}" y="${padding + 10}" font-family="${textFamily}" font-size="14" font-weight="600" fill="${colors.title}">${safeText}</text>
+           <text data-cas-target="bpm" x="${padding}" y="${padding + 28}" font-family="${textFamily}" font-size="11" fill="${colors.muted}">${bpm} BPM</text>`
+        : `<text data-cas-target="bpm" x="${padding}" y="${padding + 10}" font-family="${monoFamily}" font-size="13" font-weight="700" fill="${accent}">${bpm} BPM</text>`
     }
-    <circle cx="${w - padding - 4}" cy="${padding + 4}" r="4" fill="${accent}">
+    <circle data-cas-target="pulse" cx="${w - padding - 4}" cy="${padding + 4}" r="4" fill="${accent}">
       <animate attributeName="opacity" values="1;0.3;1" dur="${cycleDur.toFixed(2)}s" repeatCount="indefinite"/>
       <animate attributeName="r" values="4;5.5;4" dur="${cycleDur.toFixed(2)}s" repeatCount="indefinite"/>
     </circle>

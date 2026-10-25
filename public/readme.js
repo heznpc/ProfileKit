@@ -9,11 +9,12 @@
   const DRAFT_KEY = "profilekit.readme-document.v1";
   const MAX_BYTES = 1024 * 1024;
   let source = "", sourceViewValue = "", name = "README.md", parsed = { cards: [], warnings: [] };
+  let assetDesigns = {};
   let selectedElementId = null;
   let selectedId = null, checked = new Set(), past = [], future = [];
   let theme = "dark", device = "desktop", view = "preview", dirty = false;
   let savedDraft = null, storageConflict = false, persisted = true, saveTimer, previewTimer;
-  let lastSummary = "";
+  let lastSummary = "", previewGeneration = 0;
   const labels = {
     username: "GitHub 계정", github: "GitHub 계정", repo: "저장소", name: "이름",
     title: "제목", subtitle: "소개", text: "문구", theme: "테마", font: "글꼴",
@@ -28,7 +29,7 @@
     $("readme-status").textContent = message;
     $("readme-status").classList.toggle("is-error", !!error);
   }
-  function options() { return { origin: $("readme-origin").value.trim() || "https://profilekit.vercel.app" }; }
+  function options() { return { origin: $("readme-origin").value.trim() || "https://profilekit.vercel.app", assetDesigns }; }
   function selected() { return parsed.cards.find((card) => card.id === selectedId); }
   function assertSource(value) {
     if (typeof value !== "string" || new TextEncoder().encode(value).length > MAX_BYTES) throw new Error("README는 1MB 이하의 텍스트여야 합니다.");
@@ -37,18 +38,19 @@
   function embeddedCards(card) { return card?.design?.elements.filter((element) => element.type === "card") || []; }
   function label(card) { return card.endpoint === "design" ? card.design?.name || "합성 디자인" : Schema.CARDS[card.endpoint]?.label || card.endpoint; }
   function editableCard(card) {
+    if (card?.assetPath) return null;
     if (card?.endpoint !== "design") return card;
     const cards = embeddedCards(card);
     return cards.find((element) => element.id === selectedElementId) || cards[0];
   }
   function branchLabel(card) { return ({ dark: "어두운 화면", light: "밝은 화면", default: "공통" })[card.variant] || "공통"; }
   function snapshot() {
-    return { source, selectedId, checked: Array.from(checked), fromAccount: $("batch-from-account").value, toAccount: $("batch-account").value };
+    return { source, assetDesigns, selectedId, checked: Array.from(checked), fromAccount: $("batch-from-account").value, toAccount: $("batch-account").value };
   }
   function pushHistory() {
     past.push(snapshot());
     let bytes = 0;
-    past = past.reverse().filter((item, index) => { bytes += item.source.length * 2; return index < 40 && bytes <= 12 * MAX_BYTES; }).reverse();
+    past = past.reverse().filter((item, index) => { bytes += (item.source.length + JSON.stringify(item.assetDesigns || {}).length) * 2; return index === 0 || (index < 40 && bytes <= 32 * MAX_BYTES); }).reverse();
     future = [];
   }
   function scan(value) { return Model.scan(assertSource(value), options()); }
@@ -80,14 +82,15 @@
     checked = nextChecked; selectedId = nextSelected;
     return ambiguous;
   }
-  function commit(value, message, resetSelection, reconcile) {
+  function commit(value, message, resetSelection, reconcile, nextAssets = assetDesigns) {
     try {
-      const next = scan(value);
-      if (value !== source) { pushHistory(); source = value; dirty = true; persisted = false; }
+      const next = Model.scan(assertSource(value), { ...options(), assetDesigns: nextAssets });
+      if (value !== source || JSON.stringify(nextAssets) !== JSON.stringify(assetDesigns)) { pushHistory(); source = value; dirty = true; persisted = false; }
       if (reconcile && reconcileSelection(next.cards)) message += " 중복 카드의 선택은 해제했으니 변경할 카드를 다시 선택하세요.";
+      assetDesigns = nextAssets;
       parsed = next;
       const ids = new Set(parsed.cards.map((card) => card.id));
-      checked = resetSelection ? ids : new Set(Array.from(checked).filter((id) => ids.has(id)));
+      checked = resetSelection ? new Set(parsed.cards.filter((card) => !card.assetPath).map((card) => card.id)) : new Set(Array.from(checked).filter((id) => ids.has(id) && !next.cards.find((card) => card.id === id)?.assetPath));
       if (!ids.has(selectedId) || resetSelection) selectedId = parsed.cards[0]?.id || null;
       $("readme-source").value = source;
       sourceViewValue = $("readme-source").value;
@@ -143,7 +146,7 @@
       const item = document.createElement("div"); item.className = "readme-card-item";
       item.classList.toggle("is-selected", card.id === selectedId);
       const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.className = "readme-card-select";
-      checkbox.checked = checked.has(card.id); checkbox.dataset.checkId = card.id;
+      checkbox.checked = checked.has(card.id); checkbox.disabled = !!card.assetPath; checkbox.dataset.checkId = card.id;
       checkbox.setAttribute("aria-label", label(card) + " " + branchLabel(card) + " 일괄 변경 선택");
       const button = document.createElement("button"); button.type = "button"; button.className = "readme-card-button"; button.dataset.cardId = card.id;
       button.setAttribute("aria-pressed", String(card.id === selectedId));
@@ -176,8 +179,9 @@
         option.textContent = (index + 1) + ". " + label(element) + (element.params.title || element.params.username ? " · " + (element.params.title || element.params.username) : "");
         picker.append(option);
       }
+      if (outer.assetPath) $("readme-design-hint").textContent = outer.assetPath + " · 저장된 SVG입니다. 제작기에서 수정한 뒤 교체할 SVG를 내려받으세요. 내용 편집과 일괄 변경은 파일에 자동 반영되지 않습니다.";
       selectedElementId = card?.id || null; picker.value = selectedElementId || "";
-      picker.disabled = !cards.length;
+      picker.disabled = !cards.length || !!outer.assetPath;
       if (!cards.length) {
         const hint = document.createElement("p"); hint.className = "field-hint";
         hint.textContent = "이 디자인에는 포함된 카드가 없습니다. 제작기에서 글과 도형을 편집하세요."; container.append(hint);
@@ -224,9 +228,17 @@
     $("readme-preview").style.colorScheme = theme;
     for (const value of ["dark", "light"]) $("readme-preview-" + value).setAttribute("aria-pressed", String(value === theme));
     for (const value of ["desktop", "mobile"]) $("readme-preview-" + value).setAttribute("aria-pressed", String(value === device));
+    const generation = ++previewGeneration;
     if (view !== "preview") return;
     try {
-      $("readme-preview").srcdoc = Preview.render(source, { theme, repository: $("readme-repository").value.trim(), ...options() });
+      const previewOptions = { theme, repository: $("readme-repository").value.trim(), ...options() };
+      $("readme-preview").srcdoc = Preview.render(source, previewOptions);
+      if (Preview.prepareAssets && Object.keys(assetDesigns).length) {
+        const previewSource = source;
+        Preview.prepareAssets(previewOptions).then((assetPreviews) => {
+          if (generation === previewGeneration && view === "preview") $("readme-preview").srcdoc = Preview.render(previewSource, { ...previewOptions, assetPreviews });
+        }).catch((error) => { if (generation === previewGeneration) status("저장된 디자인 미리보기를 만들지 못했습니다: " + error.message, true); });
+      }
     } catch (error) { status("미리보기를 만들지 못했습니다: " + error.message, true); }
   }
   function setView(next) {
@@ -275,7 +287,7 @@
     selectedId = button.dataset.cardId; selectedElementId = null; renderCards(); renderInspector();
     if ($("readme-card-details")) $("readme-card-details").open = true;
   });
-  $("select-all").addEventListener("click", () => { checked = new Set(parsed.cards.map((card) => card.id)); renderCards(); $("batch-apply").disabled = !checked.size; });
+  $("select-all").addEventListener("click", () => { checked = new Set(parsed.cards.filter((card) => !card.assetPath).map((card) => card.id)); renderCards(); $("batch-apply").disabled = !checked.size; });
   $("select-none").addEventListener("click", () => { checked.clear(); renderCards(); $("batch-apply").disabled = true; });
   $("readme-open-editor").addEventListener("click", (event) => {
     event.preventDefault();
@@ -284,7 +296,7 @@
     try {
       const token = crypto.randomUUID();
       saveDraft();
-      sessionStorage.setItem("profilekit.readme-handoff." + token, JSON.stringify({ version: 1, project: project(), cardId: card.id, originalUrl: card.url, resultUrl: null, savedDraft }));
+      sessionStorage.setItem("profilekit.readme-handoff." + token, JSON.stringify({ version: 1, project: project(), cardId: card.id, originalUrl: card.url, resultUrl: null, assetPath: card.assetPath, assetDocument: card.assetPath ? window.ProfileKitEditorModel.serializeDocument(card.design) : null, savedDraft }));
       window.location.href = "/editor.html#readme-edit=" + token;
     } catch { status("제작기로 작업을 전달할 수 없습니다. 브라우저의 세션 저장소를 확인하세요.", true); }
   });
@@ -349,7 +361,7 @@
     const from = backward ? past : future, to = backward ? future : past;
     if (!from.length) return;
     const next = from.pop(); to.push(snapshot());
-    source = next.source; selectedId = next.selectedId; checked = new Set(next.checked); parsed = scan(source);
+    source = next.source; assetDesigns = next.assetDesigns || {}; selectedId = next.selectedId; checked = new Set(next.checked); parsed = scan(source);
     $("batch-from-account").value = next.fromAccount;
     $("batch-account").value = next.toAccount;
     $("readme-source").value = source; sourceViewValue = $("readme-source").value; dirty = true; persisted = false;
@@ -365,20 +377,20 @@
     if (flushSource()) commit(source, "이 배포의 카드 주소를 다시 확인했습니다.", true);
   });
   $("readme-name").addEventListener("change", () => { name = $("readme-name").value.trim().slice(0, 120) || "README.md"; queueSave(); });
-  function project() { return { kind: "profilekit-readme", version: 1, name, source, repository: $("readme-repository").value.trim(), origin: options().origin, theme, device }; }
+  function project() { return { kind: "profilekit-readme", version: 1, name, source, repository: $("readme-repository").value.trim(), origin: options().origin, theme, device, assetDesigns }; }
   function parseProject(raw) {
     if (raw?.kind !== "profilekit-readme" || raw.version !== 1) throw new Error("ProfileKit README 프로젝트 파일이 아닙니다.");
     assertSource(raw.source);
     if (typeof raw.name !== "string" || raw.name.length > 120 || typeof raw.repository !== "string" || raw.repository.length > 200 || typeof raw.origin !== "string") throw new Error("프로젝트 설정이 올바르지 않습니다.");
     window.ProfileKitEditorModel.normalizeOrigin(raw.origin);
-    return raw;
+    return { ...raw, assetDesigns: Model.normalizeAssetDesigns(raw.assetDesigns) };
   }
   function loadProject(raw) {
     const value = parseProject(raw);
-    Model.scan(value.source, { origin: value.origin });
+    Model.scan(value.source, { origin: value.origin, assetDesigns: value.assetDesigns });
     $("readme-origin").value = value.origin; $("readme-repository").value = value.repository;
     name = value.name; theme = value.theme === "light" ? "light" : "dark"; device = value.device === "mobile" ? "mobile" : "desktop";
-    commit(value.source, "README 프로젝트를 열었습니다.", true); setView("preview");
+    commit(value.source, "README 프로젝트를 열었습니다.", true, false, value.assetDesigns); setView("preview");
   }
   function filename(value) { return value.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-").slice(0, 120).trim() || "README.md"; }
   function download(text, file, type) {
@@ -406,7 +418,7 @@
   $("readme-project-file").addEventListener("change", async (event) => {
     const file = event.target.files[0]; event.target.value = ""; if (!file) return;
     try {
-      if (file.size > MAX_BYTES * 3) throw new Error("프로젝트 파일은 3MB 이하여야 합니다.");
+      if (file.size > MAX_BYTES * 40) throw new Error("프로젝트 파일은 40MB 이하여야 합니다.");
       loadProject(JSON.parse(await file.text()));
     } catch (error) { status(error.message, true); }
   });
@@ -440,15 +452,24 @@
     try {
       const key = "profilekit.readme-handoff." + match[1];
       const record = JSON.parse(sessionStorage.getItem(key));
-      if (record?.version !== 1 || typeof record.cardId !== "string" || typeof record.resultUrl !== "string" || typeof record.originalUrl !== "string") throw new Error("제작기에서 돌아온 작업을 찾을 수 없습니다.");
+      if (record?.version !== 1 || typeof record.cardId !== "string" || (!record.resultAsset && typeof record.resultUrl !== "string") || typeof record.originalUrl !== "string") throw new Error("제작기에서 돌아온 작업을 찾을 수 없습니다.");
       const original = parseProject(record.project);
-      const originalCard = Model.scan(original.source, { origin: original.origin }).cards.find((card) => card.id === record.cardId);
+      const originalCard = Model.scan(original.source, { origin: original.origin, assetDesigns: original.assetDesigns }).cards.find((card) => card.id === record.cardId);
       if (!originalCard || originalCard.url !== record.originalUrl) throw new Error("원래 README 카드와 제작기 작업이 일치하지 않습니다.");
-      const result = Model.applyUpdates(original.source, [{ id: record.cardId, url: record.resultUrl }], { origin: original.origin });
+      if (record.resultAsset) {
+        const path = Model.normalizeAssetPath(record.resultAsset.path);
+        if (Object.hasOwn(original.assetDesigns, path) && originalCard.assetPath !== path) throw new Error("이 SVG 경로는 다른 디자인에서 사용 중입니다. 제작기에서 다른 파일 이름을 선택하세요.");
+        record.resultAsset.path = path;
+      }
+      const resultAssets = record.resultAsset ? Model.normalizeAssetDesigns({ ...original.assetDesigns, [record.resultAsset.path]: record.resultAsset.document }) : original.assetDesigns;
+      const target = Model.scan(original.source, { origin: original.origin, assetDesigns: resultAssets }).cards.find((card) => card.start === originalCard.start && card.end === originalCard.end);
+      if (!target) throw new Error("원래 카드 위치를 찾을 수 없습니다.");
+      const update = record.resultAsset ? { id: target.id, assetPath: record.resultAsset.path } : { id: target.id, url: record.resultUrl };
+      const result = Model.applyUpdates(original.source, [update], { origin: original.origin, assetDesigns: resultAssets });
       if (Object.hasOwn(record, "savedDraft") ? savedDraft !== record.savedDraft : savedDraft && JSON.parse(savedDraft).source !== original.source) {
         const recover = $("readme-return-recover"); recover.hidden = false;
         recover.addEventListener("click", () => {
-          download(JSON.stringify({ ...original, source: result }, null, 2), filename(original.name.replace(/\.md$/i, "")) + ".profilekit-readme.json", "application/json");
+          download(JSON.stringify({ ...original, source: result, assetDesigns: resultAssets }, null, 2), filename(original.name.replace(/\.md$/i, "")) + ".profilekit-readme.json", "application/json");
           status("제작기 결과를 프로젝트로 저장했습니다. 현재 초안을 보관한 뒤 프로젝트 열기로 불러오세요.");
         });
         status("다른 탭에서 README 초안이 바뀌어 현재 초안을 유지했습니다. ‘제작기 결과 프로젝트 저장’으로 편집 결과를 보관하세요.", true);
@@ -456,8 +477,9 @@
       }
       loadProject(original);
       selectedId = record.cardId;
-      if (!commit(result, result === original.source ? "수정 없이 README로 돌아왔습니다." : "제작기 변경을 README에 반영했습니다. 주변 글과 링크는 유지됩니다.")) return;
+      if (!commit(result, result === original.source && !record.resultAsset ? "수정 없이 README로 돌아왔습니다." : "제작기 변경을 README에 반영했습니다. 주변 글과 링크는 유지됩니다.", false, false, resultAssets)) return;
       sessionStorage.removeItem(key);
+      sessionStorage.removeItem("profilekit.readme-studio.v2." + match[1]);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } catch (error) { status(error.message, true); }
   }

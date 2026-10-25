@@ -2,13 +2,13 @@
 (function (root, factory) {
   const api = factory(root);
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else root.ProfileKitReadmePreview = { render: api.render };
+  else root.ProfileKitReadmePreview = { render: api.render, prepareAssets: api.prepareAssets };
 }(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
   'use strict';
 
   const TAGS = 'a abbr b blockquote br caption code dd del details div dl dt em h1 h2 h3 h4 h5 h6 hr i img input kbd li mark ol p picture pre q rp rt ruby s samp small source span strong sub summary sup table tbody td th thead tr ul var wbr'.split(' ');
   const ATTRS = 'href src srcset media type alt title width height align valign colspan rowspan start reversed open checked disabled'.split(' ');
-  const CSP = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src https: http:; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'";
+  const CSP = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src https: http: data:; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'";
   const CSS = `
     *{box-sizing:border-box}html{color-scheme:light;background:#fff;color:#1f2328}
     html[data-theme="dark"]{color-scheme:dark;background:#0d1117;color:#e6edf3}
@@ -37,6 +37,46 @@
     @media(max-width:600px){.markdown-body{padding:20px 16px}body{font-size:14px}th,td{padding:6px 10px}}
   `;
 
+  const preparedAssets = new WeakSet();
+  const assetCache = new Map();
+  async function prepareAssets(options = {}) {
+    const Model = root.ProfileKitReadmeModel, Editor = root.ProfileKitEditorModel;
+    if (!Model || !Editor) throw new Error('Asset preview models are unavailable');
+    const assets = Model.normalizeAssetDesigns(options.assetDesigns);
+    const origin = Editor.normalizeOrigin(root.location?.origin || options.origin || 'https://profilekit.vercel.app');
+    const previews = new Map();
+    await Promise.all(Object.entries(assets).map(async ([path, doc]) => {
+      const key = origin + Editor.serializeDocument(doc);
+      let pending = assetCache.get(key);
+      if (!pending) {
+        pending = (async () => {
+          const cardMarkup = Object.create(null);
+          let unavailable = false;
+          await Promise.all(doc.elements.filter((element) => element.type === 'card').map(async (card) => {
+            try {
+              const response = await root.fetch(origin + Editor.cardPath(card), { signal: AbortSignal.timeout(20000), credentials: 'omit', redirect: 'error' });
+              if (!response.ok || !response.headers.get('content-type')?.includes('image/svg+xml')) throw new Error('Card image unavailable');
+              const svg = await response.text();
+              if (svg.length > 2 * 1024 * 1024 || !/^\s*<svg\b/.test(svg)) throw new Error('Invalid card image');
+              cardMarkup[card.id] = root.DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true }, FORBID_TAGS: ['foreignObject', 'script'], FORBID_ATTR: ['onload', 'onclick'] });
+            } catch {
+              unavailable = true;
+              cardMarkup[card.id] = '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="280"><rect width="100%" height="100%" fill="#171b27"/><text x="20" y="40" fill="#c4b5fd" font-size="18">Card preview unavailable</text></svg>';
+            }
+          }));
+          if (unavailable) assetCache.delete(key);
+          return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Editor.renderSVG(doc, { cardMarkup }));
+        })();
+        assetCache.set(key, pending);
+        while (assetCache.size > 8) assetCache.delete(assetCache.keys().next().value);
+        pending.catch(() => assetCache.delete(key));
+      }
+      previews.set(path, await pending);
+    }));
+    preparedAssets.add(previews);
+    return previews;
+  }
+
   function repositoryContext(options) {
     const repository = String(options.repository || '').trim();
     if (!/^[a-z\d](?:[a-z\d-]{0,38})\/[a-z\d_.-]{1,100}$/i.test(repository)) return null;
@@ -48,6 +88,7 @@
 
   // No URL can inherit the srcdoc's parent origin by accident.
   function resolveURL(value, kind, options = {}) {
+    if (kind === 'image' && preparedAssets.has(options.assetPreviews) && options.assetPreviews.has(value)) return options.assetPreviews.get(value);
     const raw = String(value || '').trim();
     if (!raw || /[\x00-\x1f\x7f\\]/.test(raw)) return null;
     if (kind === 'link' && raw.startsWith('#')) return raw;
@@ -244,5 +285,5 @@
     return `<!doctype html><html lang="ko" data-theme="${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${CSP}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><title>README 미리보기</title><style>${CSS}</style></head><body><main class="markdown-body">${notice}${container.innerHTML}</main></body></html>`;
   }
 
-  return { render, resolveURL, sanitizeSrcset, themeMedia };
+  return { render, resolveURL, sanitizeSrcset, themeMedia, prepareAssets };
 }));

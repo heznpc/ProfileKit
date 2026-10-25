@@ -112,7 +112,7 @@ function renderPinCard(repo, { colors, hideBorder, hideBar, borderRadius, cardWi
   const body = `
     ${nameMarkup}
     ${descMarkup}
-    ${footerParts.join("\n    ")}
+    <g data-cas-target="footer">${footerParts.join("\n    ")}</g>
   `;
 
   const ariaLabel = desc

@@ -105,12 +105,12 @@ function renderTypingCard({
   const frameBg = bgColor || (useFrame ? colors.bg : null);
 
   const bgRect = frameBg
-    ? `<rect width="${width}" height="${height}" fill="${frameBg}" rx="${rx}"/>`
+    ? `<rect data-cas-target="bg" width="${width}" height="${height}" fill="${frameBg}" rx="${rx}"/>`
     : "";
 
   const barMarkup =
     useFrame && !hideBar
-      ? `<rect x="0" y="0" width="${width}" height="3" fill="${colors.accent || "#58a6ff"}"/>`
+      ? `<rect data-cas-target="bar" x="0" y="0" width="${width}" height="3" fill="${colors.accent || "#58a6ff"}"/>`
       : "";
 
   const borderRect =
@@ -130,7 +130,7 @@ function renderTypingCard({
     .join("\n  ");
 
   const cursorMarkup = cursor
-    ? `<line x1="${textX}" y1="${textY - size * 0.5}" x2="${textX}" y2="${textY + size * 0.5}"
+    ? `<line data-cas-target="cursor" x1="${textX}" y1="${textY - size * 0.5}" x2="${textX}" y2="${textY + size * 0.5}"
         stroke="${actualCursorColor}" stroke-width="${cursorWidth}" class="cursor"/>`
     : "";
 
@@ -149,7 +149,7 @@ function renderTypingCard({
   </style>
   ${bgRect}
   ${barMarkup}
-  ${textElements}
+  <g data-cas-target="text">${textElements}</g>
   ${cursorMarkup}
   ${borderRect}
 </svg>`;

@@ -333,10 +333,22 @@ test("single-card README metadata survives composed part edits and layer effects
     assert.equal(new URL(Design.designUrl(doc, ORIGIN)).pathname, Object.keys(change).length ? "/api/design" : "/api/hero");
     assert.ok(snippet.includes(Object.keys(change).length ? '/api/design?d=' : '/api/hero?name=Ren'));
   }
-  for (const extra of [card({ id: "second" }), Model.createElement("text", { id: "caption" })]) {
-    const snippet = Design.readme(document(plain, extra), ORIGIN);
+  const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAAFElEQVR4nGN8WObCwMDAxAAGUAoAH3IBoeysng8AAAAASUVORK5CYII=";
+  for (const extra of [Model.createElement("text", { id: "caption" }), Model.createElement("rect", { id: "shape" }), Model.createElement("image", { id: "photo", src: png })]) {
+    const decorated = document(plain, extra);
+    for (const snippet of [Design.readme(decorated, ORIGIN), Design.readmeAsset(decorated, "assets/profile.svg")]) {
+      assert.match(snippet, /^<a href="https:\/\/github\.com\/example"><img /);
+      assert.match(snippet, /alt="My profile card" width="300" \/><\/a>$/);
+    }
+  }
+  const multiple = document(plain, card({ id: "second" }), Model.createElement("text", { id: "caption" }));
+  for (const snippet of [Design.readme(multiple, ORIGIN), Design.readmeAsset(multiple, "assets/profile.svg")]) {
     assert.doesNotMatch(snippet, /<a |My profile card|width="300"/);
     assert.match(snippet, /alt="Untitled card" width="600"/);
+  }
+  assert.match(Design.readmeAsset(document(plain), ' assets/a&b".svg '), /src="assets\/a&amp;b&quot;\.svg"/);
+  for (const path of ["", "/asset.svg", "../asset.svg", "assets/../asset.svg", "https://example.com/asset.svg", "javascript:alert(1)", "assets\\asset.svg", "asset.svg?raw=1"]) {
+    assert.throws(() => Design.readmeAsset(document(plain), path), /repository-relative/);
   }
   const legacyRotated = Design.readme(document({ ...plain, rotation: 15 }), ORIGIN);
   assert.doesNotMatch(legacyRotated, /<a |My profile card|width="300"/);

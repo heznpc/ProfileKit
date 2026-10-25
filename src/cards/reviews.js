@@ -44,7 +44,7 @@ function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, bord
       const y = startY + 15 + i * 28;
       const value = formatNumber(stats[item.key]);
       const c = colors.accent || item.color;
-      return `<g transform="translate(${detailX}, ${y})" class="stagger" style="animation-delay: ${(i + 1) * 150}ms">
+      return `<g data-cas-target="${item.key}" transform="translate(${detailX}, ${y})" class="stagger" style="animation-delay: ${(i + 1) * 150}ms">
       <circle cx="10" cy="8" r="12" fill="${c}" opacity="0.1"/>
       <svg x="2" y="0" viewBox="0 0 16 16" width="16" height="16" fill="${c}">
         ${item.icon}
@@ -56,7 +56,7 @@ function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, bord
     .join("\n    ");
 
   const height = startY + 135;
-  const body = `${ringMarkup}\n    ${detailsMarkup}`;
+  const body = `<g data-cas-target="approval">${ringMarkup}</g>\n    ${detailsMarkup}`;
 
   return renderCard({
     width,
@@ -69,6 +69,7 @@ function renderReviewsCard(stats, { colors, hideBorder, hideTitle, hideBar, bord
     borderRadius,
     body,
     font,
+    titleTarget: "title",
   });
 }
 

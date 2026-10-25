@@ -48,7 +48,7 @@ function renderRadarCard({
         <stop offset="100%" stop-color="${accent}" stop-opacity="0"/>
       </linearGradient>
     </defs>
-    <g>
+    <g data-cas-target="sweep">
       <path d="M ${cx} ${cy} L ${cx} ${cy - radius} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy} Z" fill="url(#sweep-grad)"/>
       <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - radius}" stroke="${accent}" stroke-width="2"/>
       <animateTransform attributeName="transform" type="rotate" from="0 ${cx} ${cy}" to="360 ${cx} ${cy}" dur="${rotateDur}s" repeatCount="indefinite"/>
@@ -72,7 +72,7 @@ function renderRadarCard({
 
   const safeText = text ? escapeHtml(text) : "";
   const labelMarkup = safeText
-    ? `<text x="${cx}" y="${cy + radius + 18}" text-anchor="middle" font-family="${family}" font-size="11" fill="${accent}" letter-spacing="2">${safeText}</text>`
+    ? `<text data-cas-target="text" x="${cx}" y="${cy + radius + 18}" text-anchor="middle" font-family="${family}" font-size="11" fill="${accent}" letter-spacing="2">${safeText}</text>`
     : "";
 
   const ariaLabel = safeText ? `Radar: ${safeText}` : "Radar animation";
@@ -86,10 +86,10 @@ function renderRadarCard({
     </clipPath>
   </defs>
   <g clip-path="url(#rd-clip)">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
-    ${rings.join("\n    ")}
-    ${cross}
-    ${blipMarkup.join("\n    ")}
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
+    <g data-cas-target="grid">${rings.join("\n    ")}
+    ${cross}</g>
+    <g data-cas-target="blips">${blipMarkup.join("\n    ")}</g>
     ${sweep}
     <circle cx="${cx}" cy="${cy}" r="3" fill="${accent}"/>
     ${labelMarkup}

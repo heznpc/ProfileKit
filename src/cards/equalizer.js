@@ -54,7 +54,7 @@ function renderEqualizerCard({
   }
 
   const labelMarkup = label
-    ? `<text x="${padding}" y="${padding + 6}" font-family="${family}" font-size="13" font-weight="600" fill="${colors.title}">${escapeHtml(label)}</text>
+    ? `<text data-cas-target="label" x="${padding}" y="${padding + 6}" font-family="${family}" font-size="13" font-weight="600" fill="${colors.title}">${escapeHtml(label)}</text>
        <circle cx="${w - padding - 4}" cy="${padding}" r="4" fill="#f85149">
          <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
        </circle>
@@ -72,9 +72,9 @@ function renderEqualizerCard({
     </clipPath>
   </defs>
   <g clip-path="url(#eq-clip)">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
     ${labelMarkup}
-    ${barElements.join("\n    ")}
+    <g data-cas-target="bars">${barElements.join("\n    ")}</g>
   </g>
   <rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${rx}"
         fill="none" stroke="${colors.border}" stroke-opacity="${hideBorder ? 0 : 1}"/>

@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const Decoration = require("../public/card-decoration");
 
 test("part registry, strict values and no-op normalization bound the decoration surface", () => {
-  assert.deepEqual(Object.keys(Decoration.PARTS.hero), ["name", "subtitle", "bg"]);
+  assert.deepEqual(Object.keys(Decoration.PARTS.hero), ["name", "subtitle", "bg", "accent"]);
   assert.equal(Decoration.PARTS.hero.bg.color, false);
   assert.equal(Decoration.normalizeParts("hero", { name: { dx: 0, dy: 0, scale: 1, hidden: false } }), undefined);
   assert.deepEqual(Decoration.normalizeParts("hero", { name: { dx: 1e6, dy: -1e6, scale: 8, color: "#ABC" } }), {

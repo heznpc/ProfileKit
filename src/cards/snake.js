@@ -113,11 +113,11 @@ function renderSnakeCard({
     }
   </style>
   <g clip-path="url(#snake-clip)">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
-    <g fill="${dim}">
+    <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
+    <g data-cas-target="emptyCells" fill="${dim}">
       ${dimCells.join("\n      ")}
     </g>
-    <g fill="${accent}">
+    <g data-cas-target="snake" fill="${accent}">
       ${litCells.join("\n      ")}
       ${snakeNodes.join("\n      ")}
     </g>
