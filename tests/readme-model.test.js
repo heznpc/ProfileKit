@@ -490,3 +490,56 @@ test("asset aliases use a canonical path and duplicate aliases are rejected", ()
   assert.equal(card.url, "./assets/card.svg");
   assert.equal(Model.applyUpdates("![Profile](./assets/card.svg)", [{ id: card.id, url: card.url }], { assetDesigns: { "assets/card.svg": doc } }), "![Profile](./assets/card.svg)");
 });
+
+test("protocol-relative images preserve their URL spelling and reject foreign origins", () => {
+  const source = 'Before\r\n![Stats](//profilekit.vercel.app/api/stats?username=alice&theme=dark "Title")\r\nAfter';
+  const card = Model.scan(source).cards[0];
+  assert.equal(card.params.username, "alice");
+  assert.equal(Model.applyUpdates(source, [{ id: card.id, url: card.url }]), source);
+  assert.equal(Model.batchUpdate(source, { fromAccount: "alice", toAccount: "bob" }).source, source.replace("username=alice", "username=bob"));
+  assert.equal(Model.scan(source.replace("//profilekit.vercel.app", "//example.com")).cards.length, 0);
+});
+
+test("blockquote reference definitions preserve all container and source bytes", () => {
+  for (const prefix of ["> ", "> > "]) {
+    const source = `${prefix}![Stats][stats]\r\n${prefix}\r\n${prefix}[stats]: <${base}stats?username=alice&theme=dark> "Stats title"\r\n\r\n[Unrelated](https://example.com/alice)`;
+    assert.equal(Model.scan(source).cards.length, 1);
+    assert.equal(Model.applyUpdates(source, []), source);
+    assert.equal(Model.batchUpdate(source, { fromAccount: "alice", toAccount: "bob" }).source, source.replace("username=alice", "username=bob"));
+  }
+});
+
+test("reference wrappers pair repository edits and preserve their definitions and unrelated links", () => {
+  for (const imageSyntax of [`![Repo](${base}pin?username=alice&repo=example)`, '![Repo][card]']) {
+    const source = `[${imageSyntax}][repo]\r\n\r\n[repo]: <https://github.com/alice/example> "Repository"\r\n[card]: ${base}pin?username=alice&repo=example\r\n[Elsewhere](https://github.com/alice/other)`;
+    const card = Model.scan(source).cards[0];
+    assert.equal(card.linkUrl, "https://github.com/alice/example");
+    assert.equal(Model.applyUpdates(source, []), source);
+    const expected = imageSyntax.includes("[card]")
+      ? source.replace("https://github.com/alice/example", "https://github.com/bob/example").replace("username=alice", "username=bob")
+      : source.replace("username=alice", "username=bob").replace("https://github.com/alice/example", "https://github.com/bob/example");
+    const result = Model.batchUpdate(source, { fromAccount: "alice", toAccount: "bob", includeRepositories: true });
+    assert.equal(result.changedCards, 1);
+    assert.equal(result.source, expected);
+  }
+});
+
+test("shared reference wrappers warn and protect ordinary links from repository replacement", () => {
+  const source = `[![Repo](${base}pin?username=alice&repo=example)][repo]\n\n[Visit][repo]\n\n[repo]: https://github.com/alice/example`;
+  const scanned = Model.scan(source);
+  assert.equal(scanned.cards[0].linkUrl, "https://github.com/alice/example");
+  assert.match(scanned.warnings.join(" "), /shared link reference/);
+  assert.throws(() => Model.applyUpdates(source, [{ id: "card-1", linkUrl: "https://github.com/bob/example" }]), /shared link reference/);
+  assert.equal(Model.batchUpdate(source, { fromAccount: "alice", toAccount: "bob", includeRepositories: true }).source, source);
+});
+
+test("decorated sole repository designs update the exported outer link with their owner", () => {
+  const doc = designDoc(live("repo", "pin", { username: "alice", repo: "example" }), Editor.createElement("text", { id: "decoration", text: "Keep me" }));
+  const source = Design.readme(doc, "https://profilekit.vercel.app");
+  const result = Model.batchUpdate(source, { fromAccount: "alice", toAccount: "bob", includeRepositories: true });
+  assert.equal(result.changedCards, 1);
+  const card = Model.scan(result.source).cards[0];
+  assert.equal(card.linkUrl, "https://github.com/bob/example");
+  assert.equal(card.design.elements[0].params.username, "bob");
+  assert.deepEqual(card.design.elements[1], doc.elements[1]);
+});
