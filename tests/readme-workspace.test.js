@@ -32,7 +32,7 @@ class Element {
     this.listeners.get(type).push(listener);
   }
   dispatch(type, target = this) {
-    for (const listener of this.listeners.get(type) || []) listener({ type, target });
+    for (const listener of this.listeners.get(type) || []) listener({ type, target, preventDefault() {} });
   }
   matches(selector) {
     const key = { "[data-param]": "param", "[data-card-id]": "cardId", "[data-check-id]": "checkId" }[selector];
@@ -46,7 +46,7 @@ class Element {
   focus() {}
 }
 
-function workspace(storage = new Map()) {
+function workspace(storage = new Map(), session = new Map(), hash = "") {
   const elements = new Map();
   const element = (id) => {
     if (!elements.has(id)) elements.set(id, new Element(id === "readme-source" ? "textarea" : "div"));
@@ -57,7 +57,11 @@ function workspace(storage = new Map()) {
   const timers = new Map();
   const previews = [];
   const sandbox = {
-    URL, URLSearchParams, TextEncoder, TextDecoder,
+    URL, URLSearchParams, TextEncoder, TextDecoder, btoa, atob,
+    crypto: { randomUUID: () => "test-handoff-token" },
+    location: { href: "/readme.html" + hash, hash, pathname: "/readme.html", search: "" },
+    history: { replaceState() {} },
+    sessionStorage: { getItem: (key) => session.get(key) ?? null, setItem: (key, value) => session.set(key, value), removeItem: (key) => session.delete(key) },
     document: { getElementById: element, createElement: (tag) => new Element(tag) },
     localStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
     setTimeout: (callback) => { timers.set(++nextTimer, callback); return nextTimer; },
@@ -68,13 +72,13 @@ function workspace(storage = new Map()) {
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
-  for (const name of ["card-schema", "card-decoration", "editor-model", "readme-model", "readme"]) {
+  for (const name of ["card-schema", "card-decoration", "editor-model", "card-design", "readme-model", "readme"]) {
     vm.runInContext(publicSource(name), sandbox, { filename: `public/${name}.js` });
   }
   const click = (id) => element(id).dispatch("click");
   const editSource = (source) => { element("readme-source").value = source; element("readme-source").dispatch("input"); };
   return {
-    element, click, editSource, storage, previews,
+    element, click, editSource, storage, session, previews, location: sandbox.location,
     importSource(source) { editSource(source); click("readme-import"); },
     flushTimers() {
       for (let turns = 0; timers.size; turns++) {
@@ -197,4 +201,103 @@ test("inserting a duplicate URL preserves distinct image selection and clears am
   assert.deepEqual(app.checkedCards(), []);
   assert.equal(app.element("batch-apply").disabled, true);
   assert.match(app.element("readme-status").textContent, /중복 카드/);
+});
+
+const EditorModel = require("../public/editor-model");
+const CardDesign = require("../public/card-design");
+const ReadmeModel = require("../public/readme-model");
+const HANDOFF_KEY = "profilekit.readme-handoff.test-handoff-token";
+function designFixture() {
+  return EditorModel.createDocument({ name: "My composed profile", elements: [
+    EditorModel.createElement("rect", { id: "decoration", x: 10, y: 20, width: 700, height: 450 }),
+    EditorModel.createElement("card", { id: "stats", endpoint: "stats", params: { username: "alice" }, x: 30, y: 40, rotation: 7 }),
+    EditorModel.createElement("card", { id: "languages", endpoint: "languages", params: { username: "alice" }, x: 50, y: 330, opacity: 0.8 }),
+  ] });
+}
+
+test("design inspector edits a chosen embedded card while preserving geometry and sibling elements", () => {
+  const doc = designFixture(), app = workspace();
+  app.importSource(`![Profile](${CardDesign.designUrl(doc)})`);
+  assert.equal(app.element("batch-from-account").value, "alice");
+  assert.equal(app.element("readme-design-card").children.length, 2);
+  assert.equal(app.element("readme-extra-params").value, "");
+  assert.match(app.element("readme-card-title").textContent, /My composed profile/);
+  const picker = app.element("readme-design-card"); picker.value = "languages"; picker.dispatch("change");
+  const account = app.element("readme-params").querySelectorAll("[data-param]").find((field) => field.dataset.param === "username");
+  account.value = "bob"; app.click("readme-card-apply");
+  const actual = ReadmeModel.scan(app.element("readme-source").value).cards[0].design;
+  const expected = structuredClone(doc); expected.elements[2].params.username = "bob";
+  assert.deepEqual(actual, expected);
+});
+
+test("creator handoff flushes pending source and returns a validated URL with undo", () => {
+  const app = workspace();
+  const url = "https://profilekit.vercel.app/api/stats?username=alice";
+  app.importSource(`![Stats](${url})`);
+  const pending = `# New introduction\n\n<a href="https://example.com"><img src="${url}" alt="Kept" width="450"></a>`;
+  app.editSource(pending); app.click("readme-open-editor");
+  assert.equal(app.location.href, "/editor.html#readme-edit=test-handoff-token");
+  const record = JSON.parse(app.session.get(HANDOFF_KEY));
+  assert.equal(record.project.source, pending);
+  assert.equal(record.savedDraft, app.storage.get(DRAFT_KEY));
+  record.resultUrl = CardDesign.designUrl(designFixture());
+  app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  assert.equal(returned.element("readme-source").value, pending.replace(url, record.resultUrl));
+  assert.equal(app.session.has(HANDOFF_KEY), false);
+  returned.click("readme-undo");
+  assert.equal(returned.element("readme-source").value, pending);
+});
+
+test("return conflict preserves the current draft and retains a recoverable creator result", () => {
+  const app = workspace();
+  app.importSource("![Stats](https://profilekit.vercel.app/api/stats?username=alice)");
+  app.click("readme-open-editor");
+  const record = JSON.parse(app.session.get(HANDOFF_KEY));
+  record.resultUrl = CardDesign.designUrl(designFixture());
+  app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  const changed = { ...app.draft(), source: "# Work from another tab" };
+  app.storage.set(DRAFT_KEY, JSON.stringify(changed));
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  assert.equal(returned.element("readme-source").value, changed.source);
+  assert.equal(returned.element("readme-return-recover").hidden, false);
+  assert.match(returned.element("readme-status").textContent, /현재 초안/);
+  assert.equal(app.session.has(HANDOFF_KEY), true);
+  returned.flushTimers();
+  assert.equal(returned.draft().source, changed.source);
+});
+
+test("invalid returned URLs leave the README and handoff record intact", () => {
+  const app = workspace();
+  app.importSource("![Stats](https://profilekit.vercel.app/api/stats?username=alice)");
+  app.click("readme-open-editor");
+  const record = JSON.parse(app.session.get(HANDOFF_KEY));
+  record.resultUrl = "javascript:alert(1)";
+  app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  assert.equal(returned.element("readme-source").value, record.project.source);
+  assert.equal(app.session.has(HANDOFF_KEY), true);
+});
+
+test("decorative designs show no raw document field and still open in the creator", () => {
+  const doc = EditorModel.createDocument({ elements: [EditorModel.createElement("text", { text: "Hello" })] });
+  const app = workspace();
+  app.importSource(`![Design](${CardDesign.designUrl(doc)})`);
+  assert.equal(app.element("readme-card-apply").disabled, true);
+  assert.equal(app.element("readme-extra-settings").hidden, true);
+  assert.equal(app.element("readme-extra-params").value, "");
+  assert.equal(app.element("readme-open-editor").hidden, false);
+  app.click("readme-open-editor");
+  assert.ok(app.session.has(HANDOFF_KEY));
+});
+
+test("creator cancel keeps the README source byte for byte", () => {
+  const app = workspace();
+  const source = '<picture>\r\n  <img src="https://profilekit.vercel.app/api/stats?username=alice&amp;theme=dark" alt="Stats" width="450">\r\n</picture>';
+  app.importSource(source); app.click("readme-open-editor");
+  const record = JSON.parse(app.session.get(HANDOFF_KEY));
+  record.resultUrl = record.originalUrl; app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  assert.equal(returned.element("readme-source").value, source);
+  assert.equal(app.session.has(HANDOFF_KEY), false);
 });

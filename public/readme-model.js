@@ -1,13 +1,13 @@
 /* Source-preserving README image references. No DOM, network, or persistence. */
 (function (root, factory) {
-  if (typeof module === "object" && module.exports) module.exports = factory(require("./card-schema"));
-  else root.ProfileKitReadmeModel = factory(root.ProfileKitCards);
-})(typeof globalThis !== "undefined" ? globalThis : this, (schema) => {
+  if (typeof module === "object" && module.exports) module.exports = factory(require("./card-schema"), require("./card-design"));
+  else root.ProfileKitReadmeModel = factory(root.ProfileKitCards, root.ProfileKitCardDesign);
+})(typeof globalThis !== "undefined" ? globalThis : this, (schema, Design) => {
   "use strict";
 
   const DEFAULT_ORIGIN = "https://profilekit.vercel.app";
   const LIMITS = Object.freeze({ MAX_SOURCE_BYTES: 1024 * 1024, MAX_CARDS: 250, MAX_URL_LENGTH: 32768, MAX_PARAMS: 128, MAX_PARAM_LENGTH: 8192 });
-  const ENDPOINTS = new Set([...Object.keys(schema.CARDS), "stack"]);
+  const ENDPOINTS = new Set([...Object.keys(schema.CARDS), "stack", "design"]);
   const STACK_CARDS = new Set(["hero", "section", "divider", "now", "timeline", "tags", "toc", "stats", "languages"]);
   const GITHUB_CARDS = new Set(["stats", "languages", "reviews"]);
   const COLORS = new Set(["color", "bg_color", "text_color", "title_color", "icon_color", "border_color", "accent_color", "theme_url"]);
@@ -51,15 +51,21 @@
       && !key.split(/[.\[\]]/).some((part) => ["__proto__", "prototype", "constructor"].includes(part));
   }
 
-  function paramsRecord(params) {
+  function paramsRecord(params, endpoint) {
     record(params, "Parameters");
     if (Object.keys(params).length > LIMITS.MAX_PARAMS) error("Too many card parameters");
     const result = Object.create(null);
     for (const [key, value] of Object.entries(params)) {
       if (!safeKey(key)) error(`Unsafe parameter name: ${key}`);
-      result[key] = text(value, LIMITS.MAX_PARAM_LENGTH, `Parameter ${key}`);
+      result[key] = text(value, endpoint === "design" ? Design.MAX_DESIGN_URL_LENGTH : LIMITS.MAX_PARAM_LENGTH, `Parameter ${key}`);
     }
+    if (endpoint === "design") validateDesign(result);
     return result;
+  }
+
+  function validateDesign(params) {
+    if (!Design || Object.keys(params).length !== 1 || !has(params, "d")) error("Provide one ?d= encoded design document");
+    return Design.decodeDocument(params.d);
   }
 
   // Boundary maps let an edit retain the original spelling of HTML entities,
@@ -377,15 +383,24 @@
       const params = Object.create(null);
       let invalid = raw.length > LIMITS.MAX_URL_LENGTH;
       for (const [key, value] of url.searchParams) {
-        if (!safeKey(key) || value.length > LIMITS.MAX_PARAM_LENGTH) invalid = true;
+        if (!safeKey(key) || value.length > (endpoint === "design" ? Design?.MAX_DESIGN_URL_LENGTH || 0 : LIMITS.MAX_PARAM_LENGTH)) invalid = true;
+        if (endpoint === "design" && has(params, key)) invalid = true;
         if (!has(params, key)) params[key] = value;
       }
       if (Object.keys(params).length > LIMITS.MAX_PARAMS) invalid = true;
       if (invalid) { warnings.push(`Skipped an unsafe or oversized ${endpoint} image URL.`); continue; }
+      let design;
+      if (endpoint === "design") {
+        try {
+          if (decoded.value.length > Design.MAX_DESIGN_URL_LENGTH) error("Design URL is too large");
+          design = validateDesign(params);
+        } catch { warnings.push("Skipped an invalid or oversized design image URL."); continue; }
+      }
       const node = candidate.metadataNode || candidate.node;
       const alt = node?.attrs.alt?.value ?? (candidate.altSpan ? decode(source.slice(candidate.altSpan.start, candidate.altSpan.end), "markdown").value : "");
       const fragmentVariant = url.hash.match(/^#gh-(dark|light)-mode-only$/)?.[1];
       const card = { id: `card-${cards.length + 1}`, start: candidate.start, end: candidate.end, raw, url: url.href, endpoint, params, syntax: candidate.syntax, attribute: candidate.attribute, variant: fragmentVariant || candidate.variant, groupId: candidate.groupId, alt, width: node?.attrs.width?.value ?? "" };
+      if (design) card.design = design;
       if (candidate.link) card.linkUrl = candidate.link.value;
       let urlEditWarning;
       if (candidate.definition) {
@@ -479,13 +494,26 @@
     const seen = new Set();
     for (const update of updates) {
       record(update, "Update");
-      if (Object.keys(update).some((key) => !["id", "params", "alt", "width", "linkUrl"].includes(key))) error("Unsupported update field");
+      if (Object.keys(update).some((key) => !["id", "params", "url", "alt", "width", "linkUrl"].includes(key))) error("Unsupported update field");
       const internal = parsed.internals.get(update.id);
       if (!internal || seen.has(update.id)) error("Update contains an unknown or repeated card ID");
       seen.add(update.id);
       const { card } = internal;
+      if (has(update, "url")) {
+        if (has(update, "params")) error("URL and parameter updates cannot be combined");
+        const url = text(update.url, LIMITS.MAX_URL_LENGTH, "Image URL");
+        if (/\s/.test(url)) error("Replacement must be a safe ProfileKit image URL without whitespace");
+        const eligible = scan(`<img src="${html(url)}">`, options);
+        if (eligible.cards.length !== 1 || eligible.warnings.length) error("Replacement must be a safe ProfileKit image URL");
+        if (url !== internal.decoded.value && eligible.cards[0].url !== card.url) {
+          if (internal.urlEditWarning) error(internal.urlEditWarning);
+          const value = card.syntax === "html" ? html(url) : url.replace(/[()<>\\]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+          patches.push({ start: card.start, end: card.end, value });
+        }
+      }
       if (has(update, "params")) {
-        const value = queryUpdate(internal, paramsRecord(update.params));
+        const value = queryUpdate(internal, paramsRecord(update.params, card.endpoint));
+        if (card.endpoint === "design" && decode(value, card.syntax).value.length > Design.MAX_DESIGN_URL_LENGTH) error("Updated design URL is too large");
         if (value.length > LIMITS.MAX_URL_LENGTH) error("Updated image URL is too large");
         if (value !== card.raw) {
           if (internal.urlEditWarning) error(internal.urlEditWarning);
@@ -562,6 +590,44 @@
     const matches = (value) => typeof value === "string" && (operation.fromAccount ? value.toLowerCase() === operation.fromAccount.toLowerCase() : /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(value));
     for (const card of parsed.cards) {
       if (selected && !selected.has(card.id)) continue;
+      if (card.endpoint === "design") {
+        if (parsed.internals.get(card.id).urlEditWarning) continue;
+        const doc = card.design;
+        let linkUrl = card.linkUrl;
+        const internal = parsed.internals.get(card.id);
+        const sharedOuter = internal.link && parsed.cards.some((other) => other.id !== card.id && parsed.internals.get(other.id).link?.start === internal.link.start);
+        const nestedOperation = { ...operation };
+        delete nestedOperation.ids;
+        nestedOperation.theme = card.variant === "dark" ? operation.darkTheme || operation.theme : card.variant === "light" ? operation.lightTheme || operation.theme : operation.theme;
+        if (nestedOperation.theme === undefined) delete nestedOperation.theme;
+        // Reuse ordinary account/style and paired-repository rules on each live
+        // element. Copy only changed params/links back into the normalized design.
+        const elements = doc.elements.map((element) => {
+          if (element.type !== "card") return element;
+          const only = doc.elements.length === 1;
+          const pairedLink = element.linkUrl || (only ? card.linkUrl : undefined);
+          const outerConflict = card.linkUrl && (!only || (element.linkUrl && element.linkUrl !== card.linkUrl) || sharedOuter || (card.uses || 1) !== 1);
+          const localOperation = outerConflict ? { ...nestedOperation, includeRepositories: false } : nestedOperation;
+          const query = new URLSearchParams(element.params).toString();
+          const img = `<img src="${html(`${DEFAULT_ORIGIN}/api/${element.endpoint}?${query}`)}">`;
+          const nestedSource = pairedLink ? `<a href="${html(pairedLink)}">${img}</a>` : img;
+          const result = batchUpdate(nestedSource, localOperation);
+          warnings.push(...result.warnings.map((warning) => `${card.id}/${element.id}: ${warning}`));
+          if (!result.changedCards) return element;
+          const next = scan(result.source).cards[0];
+          const changed = { ...element, params: { ...next.params } };
+          if (element.linkUrl !== undefined) changed.linkUrl = next.linkUrl;
+          if (only && card.linkUrl && next.linkUrl !== pairedLink) linkUrl = next.linkUrl;
+          return changed;
+        });
+        if (elements.every((element, index) => element === doc.elements[index])) continue;
+        const params = { d: Design.encodeDocument({ ...doc, elements }) };
+        const update = { id: card.id, params };
+        if (linkUrl !== card.linkUrl) update.linkUrl = linkUrl;
+        updates.push(update);
+        changes.push({ id: card.id, endpoint: card.endpoint, variant: card.variant, keys: ["d", ...(linkUrl !== card.linkUrl ? ["linkUrl"] : [])], before: { d: card.params.d, linkUrl: card.linkUrl }, after: { d: params.d, linkUrl } });
+        continue;
+      }
       const params = { ...card.params };
       const update = { id: card.id, params };
       const stack = card.endpoint === "stack";

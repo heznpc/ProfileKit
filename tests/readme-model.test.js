@@ -325,3 +325,126 @@ test("README card capacity is independent of the eight-card design limit and pre
   assert.ok(result.source.endsWith(image("stats", "username=user250&theme=dark")));
   assert.equal(Model.applyUpdates(source, []), source);
 });
+
+const Editor = require("../public/editor-model");
+const Design = require("../public/card-design");
+const live = (id, endpoint, params, extra = {}) => Editor.createElement("card", { id, endpoint, params, ...extra });
+const designDoc = (...elements) => Editor.createDocument({ elements });
+const designImage = (doc, rest = "") => image("design", `d=${Design.encodeDocument(doc)}`, rest);
+
+test("decorated designs expose normalized documents and batch edits retain every non-parameter field", () => {
+  const doc = designDoc(live("stats", "stats", { username: "Old", theme: "dark", accent_color: "fff" }, {
+    x: 42, y: 19, rotation: 15, opacity: 0.8, sourceOrigin: "https://example.com", alt: "Original", displayWidth: "49%",
+    parts: { username: { dx: 8, color: "#fa3" } }, effect: { kind: "shadow", color: "#000", blur: 10, opacity: 0.4, dx: 3, dy: 5 },
+  }));
+  const source = `<div class='keep'>${designImage(doc, " alt='External' width='49%'")}</div>`;
+  assert.deepEqual(Model.scan(source).cards[0].design, doc);
+  const result = Model.batchUpdate(source, { fromAccount: "old", toAccount: "new", theme: "nord", font: "inter", resetColors: true });
+  assert.equal(result.changedCards, 1);
+  const next = Model.scan(result.source).cards[0];
+  assert.deepEqual(next.design, { ...doc, elements: [{ ...doc.elements[0], params: { username: "new", theme: "nord", font: "inter" } }] });
+  assert.equal(outsideTargets(source, Model.scan(source).cards), outsideTargets(result.source, Model.scan(result.source).cards));
+  assert.equal(next.alt, "External");
+  assert.equal(next.width, "49%");
+});
+
+test("composed designs update matching embedded accounts and styles while preserving unrelated content", () => {
+  const doc = designDoc(live("stats", "stats", { username: "old" }), live("langs", "languages", { username: "someone" }),
+    live("social", "social", { github: "old", twitter: "old" }), live("stack", "stack", { cards: "stats,hero", "stats.username": "old", "stats.theme": "dark" }),
+    Editor.createElement("text", { id: "caption", text: "old" }), Editor.createElement("rect", { id: "frame" }),
+    Editor.createElement("image", { id: "photo", src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAAFElEQVR4nGN8WObCwMDAxAAGUAoAH3IBoeysng8AAAAASUVORK5CYII=" }));
+  const source = designImage(doc);
+  const result = Model.batchUpdate(source, { fromAccount: "old", toAccount: "new", theme: "nord" });
+  const next = Model.scan(result.source).cards[0].design;
+  assert.equal(next.elements[0].params.username, "new");
+  assert.equal(next.elements[1].params.username, "someone");
+  assert.equal(next.elements[2].params.github, "new");
+  assert.equal(next.elements[2].params.twitter, "old");
+  assert.equal(next.elements[3].params["stats.username"], "new");
+  assert.equal(next.elements[3].params["stats.theme"], "nord");
+  assert.deepEqual(next.elements.slice(4), doc.elements.slice(4));
+});
+
+test("unchanged noncanonical design data and HTML dark/light source layout remain exact", () => {
+  const doc = designDoc(live("stats", "stats", { username: "old", theme: "dark" }));
+  const encoded = Buffer.from(JSON.stringify(doc, null, 2)).toString("base64url");
+  const source = `<picture>\n<source media='(prefers-color-scheme: dark)' srcset='${base}design?d=${encoded} 1x'>\n${designImage(doc, " alt='Stats' width='49%'")}\n</picture>`;
+  assert.equal(Model.batchUpdate(source, {}).source, source);
+  assert.equal(Model.batchUpdate(source, { fromAccount: "other", toAccount: "new", theme: "dark" }).source, source);
+  assert.equal(Model.applyUpdates(source, [{ id: "card-1", params: Model.scan(source).cards[0].params }]), source);
+  const next = Model.batchUpdate(source, { darkTheme: "nord", lightTheme: "light" });
+  assert.deepEqual(Model.scan(next.source).cards.map((card) => card.design.elements[0].params.theme), ["nord", "light"]);
+  assert.equal(outsideTargets(source, Model.scan(source).cards), outsideTargets(next.source, Model.scan(next.source).cards));
+});
+
+test("malformed, duplicate, unknown and oversized design parameters stay uneditable", () => {
+  const d = Design.encodeDocument(designDoc(live("stats", "stats", { username: "old" })));
+  for (const query of ["d=bad!", "d=", `d=${d}&d=${d}`, `d=${d}&extra=1`, `d=${"a".repeat(14001)}`, `d=${Buffer.from('{}').toString('base64url')}`]) {
+    const source = image("design", query);
+    assert.equal(Model.scan(source).cards.length, 0);
+    assert.equal(Model.scan(source).warnings.length, 1);
+    assert.equal(Model.batchUpdate(source, { theme: "nord" }).source, source);
+  }
+  const source = image("design", `d=${d}`);
+  assert.throws(() => Model.applyUpdates(source, [{ id: "card-1", params: { d, theme: "nord" } }]), /one/);
+});
+
+test("design repository replacement respects embedded and external link protection", () => {
+  const doc = designDoc(live("repo", "pin", { username: "old", repo: "project" }, { linkUrl: "https://github.com/old/project" }));
+  const source = `<a href='https://github.com/old/project'>${designImage(doc)}</a>`;
+  assert.equal(Model.batchUpdate(source, { toAccount: "new" }).source, source);
+  const result = Model.batchUpdate(source, { toAccount: "new", includeRepositories: true });
+  const card = Model.scan(result.source).cards[0];
+  assert.equal(card.linkUrl, "https://github.com/new/project");
+  assert.equal(card.design.elements[0].linkUrl, "https://github.com/new/project");
+  assert.equal(card.design.elements[0].params.username, "new");
+  const unrelated = source.replace("href='https://github.com/old/project'", "href='https://example.com/keep'");
+  assert.equal(Model.batchUpdate(unrelated, { toAccount: "new", includeRepositories: true }).source, unrelated);
+  const composed = designImage(designDoc(...doc.elements, Editor.createElement("text", { id: "text" })));
+  assert.equal(Model.scan(Model.batchUpdate(composed, { toAccount: "new", includeRepositories: true }).source).cards[0].design.elements[0].params.username, "new");
+});
+
+test("validated URL replacements close the ordinary-to-design roundtrip while preserving metadata", () => {
+  const doc = designDoc(live("stats", "stats", { username: "old" }));
+  const url = `${base}design?d=${Design.encodeDocument(doc)}`;
+  const source = `<a href='https://example.com/keep'>${image("stats", "username=old", " alt='Kept' width='49%'")}</a>`;
+  const next = Model.applyUpdates(source, [{ id: "card-1", url }]);
+  assert.deepEqual(Model.scan(next).cards[0].design, doc);
+  assert.equal(outsideTargets(next, Model.scan(next).cards), outsideTargets(source, Model.scan(source).cards));
+  assert.equal(Model.applyUpdates(next, [{ id: "card-1", url }]), next);
+  for (const hostile of ["javascript:alert(1)", "https://evil.test/api/stats", `${base}design?d=invalid`, `${base}health`]) {
+    assert.throws(() => Model.applyUpdates(source, [{ id: "card-1", url: hostile }]), /safe ProfileKit/);
+  }
+  assert.throws(() => Model.applyUpdates(source, [{ id: "card-1", url, params: {} }]), /cannot be combined/);
+  const shared = `![image][ref]\n[link][ref]\n\n[ref]: ${base}stats?username=old`;
+  assert.throws(() => Model.applyUpdates(shared, [{ id: "card-1", url }]), /shares reference/);
+});
+
+test("canonical URL no-ops preserve relative ordinary and design references exactly", () => {
+  const encoded = Design.encodeDocument(designDoc(live("stats", "stats", { username: "old" })));
+  for (const path of ["/api/hero?name=Hi", `/api/design?d=${encoded}`]) {
+    for (const source of [`![x](${path})`, `<img src='${path}' alt='x'>`]) {
+      const card = Model.scan(source).cards[0];
+      assert.equal(Model.applyUpdates(source, [{ id: card.id, url: card.url }]), source);
+    }
+  }
+});
+
+test("valid design data above ordinary parameter limits remains individually and batch editable", () => {
+  const doc = designDoc(live("stats", "stats", { username: "old" }),
+    ...Array.from({ length: 3 }, (_, index) => Editor.createElement("text", { id: `text-${index}`, text: "A".repeat(2000) })));
+  const encoded = Design.encodeDocument(doc);
+  assert.ok(encoded.length > Model.LIMITS.MAX_PARAM_LENGTH);
+  assert.ok(encoded.length < Design.MAX_DESIGN_URL_LENGTH - 100);
+  const source = designImage(doc);
+  const card = Model.scan(source).cards[0];
+  assert.equal(Model.applyUpdates(source, [{ id: card.id, params: card.params }]), source);
+  const editedDoc = { ...doc, name: "Edited" };
+  const edited = Model.applyUpdates(source, [{ id: card.id, params: { d: Design.encodeDocument(editedDoc) } }]);
+  assert.deepEqual(Model.scan(edited).cards[0].design, editedDoc);
+  const batch = Model.batchUpdate(source, { toAccount: "new", theme: "nord" });
+  const result = Model.scan(batch.source).cards[0].design;
+  assert.equal(result.elements[0].params.username, "new");
+  assert.equal(result.elements[0].params.theme, "nord");
+  assert.deepEqual(result.elements.slice(1), doc.elements.slice(1));
+});

@@ -4,10 +4,12 @@
   const Model = window.ProfileKitReadmeModel;
   const Preview = window.ProfileKitReadmePreview;
   const Schema = window.ProfileKitCards;
+  const Design = window.ProfileKitCardDesign;
   const $ = (id) => document.getElementById(id);
   const DRAFT_KEY = "profilekit.readme-document.v1";
   const MAX_BYTES = 1024 * 1024;
   let source = "", sourceViewValue = "", name = "README.md", parsed = { cards: [], warnings: [] };
+  let selectedElementId = null;
   let selectedId = null, checked = new Set(), past = [], future = [];
   let theme = "dark", device = "desktop", view = "preview", dirty = false;
   let savedDraft = null, storageConflict = false, persisted = true, saveTimer, previewTimer;
@@ -32,7 +34,13 @@
     if (typeof value !== "string" || new TextEncoder().encode(value).length > MAX_BYTES) throw new Error("README는 1MB 이하의 텍스트여야 합니다.");
     return value;
   }
-  function label(card) { return Schema.CARDS[card.endpoint]?.label || card.endpoint; }
+  function embeddedCards(card) { return card?.design?.elements.filter((element) => element.type === "card") || []; }
+  function label(card) { return card.endpoint === "design" ? card.design?.name || "합성 디자인" : Schema.CARDS[card.endpoint]?.label || card.endpoint; }
+  function editableCard(card) {
+    if (card?.endpoint !== "design") return card;
+    const cards = embeddedCards(card);
+    return cards.find((element) => element.id === selectedElementId) || cards[0];
+  }
   function branchLabel(card) { return ({ dark: "어두운 화면", light: "밝은 화면", default: "공통" })[card.variant] || "공통"; }
   function snapshot() {
     return { source, selectedId, checked: Array.from(checked), fromAccount: $("batch-from-account").value, toAccount: $("batch-account").value };
@@ -99,7 +107,7 @@
   }
   function inferAccount() {
     const counts = new Map();
-    for (const card of parsed.cards) {
+    for (const card of parsed.cards.flatMap((item) => item.endpoint === "design" ? embeddedCards(item) : [item])) {
       if (["stats", "languages", "reviews"].includes(card.endpoint) && card.params.username) counts.set(card.params.username, (counts.get(card.params.username) || 0) + 1);
       if (card.endpoint === "social" && card.params.github) counts.set(card.params.github, (counts.get(card.params.github) || 0) + 1);
     }
@@ -142,7 +150,7 @@
       const title = document.createElement("strong"); title.className = "readme-card-name"; title.textContent = label(card);
       const branch = document.createElement("span"); branch.className = "readme-card-branch"; branch.dataset.branch = card.variant; branch.textContent = branchLabel(card);
       const meta = document.createElement("span"); meta.className = "readme-card-meta";
-      meta.textContent = card.params.username || card.params.github || card.params.name || card.params.title || card.params.text || "/" + card.endpoint;
+      meta.textContent = card.endpoint === "design" ? "합성 디자인 · 포함 카드 " + embeddedCards(card).length + "개" : card.params.username || card.params.github || card.params.name || card.params.title || card.params.text || "/" + card.endpoint;
       const layout = document.createElement("span"); layout.className = "readme-card-meta";
       layout.textContent = [card.width ? "표시 너비 " + card.width : "", card.uses > 1 ? card.uses + "곳에서 사용" : "", card.groupId?.startsWith("picture") ? "테마별 이미지" : ""].filter(Boolean).join(" · ");
       button.append(title, branch, meta); if (layout.textContent) button.append(layout);
@@ -151,11 +159,30 @@
     $("select-all").disabled = !parsed.cards.length; $("select-none").disabled = !checked.size;
   }
   function renderInspector() {
-    const card = selected(), container = $("readme-params"); container.replaceChildren();
-    $("readme-card-title").textContent = card ? label(card) + " · " + branchLabel(card) : "카드를 선택하세요";
+    const outer = selected(), card = editableCard(outer), container = $("readme-params"); container.replaceChildren();
+    $("readme-card-title").textContent = outer ? label(outer) + " · " + branchLabel(outer) : "카드를 선택하세요";
     $("readme-card-apply").disabled = !card;
     $("readme-extra-params").disabled = !card;
     $("readme-extra-params").value = "";
+    $("readme-extra-settings").hidden = !card;
+    $("readme-open-editor").hidden = !outer;
+    const picker = $("readme-design-card"); picker.replaceChildren();
+    $("readme-design-settings").hidden = outer?.endpoint !== "design";
+    if (outer?.endpoint === "design") {
+      const cards = embeddedCards(outer);
+      $("readme-design-hint").textContent = "포함 카드 " + cards.length + "개 · 위치·크기·레이어와 장식은 유지됩니다. 일괄 변경은 포함된 카드에도 적용됩니다.";
+      for (const [index, element] of cards.entries()) {
+        const option = document.createElement("option"); option.value = element.id;
+        option.textContent = (index + 1) + ". " + label(element) + (element.params.title || element.params.username ? " · " + (element.params.title || element.params.username) : "");
+        picker.append(option);
+      }
+      selectedElementId = card?.id || null; picker.value = selectedElementId || "";
+      picker.disabled = !cards.length;
+      if (!cards.length) {
+        const hint = document.createElement("p"); hint.className = "field-hint";
+        hint.textContent = "이 디자인에는 포함된 카드가 없습니다. 제작기에서 글과 도형을 편집하세요."; container.append(hint);
+      }
+    }
     if (!card) return;
     const fields = Schema.CARDS[card.endpoint]?.params || [];
     for (const spec of fields) {
@@ -245,14 +272,26 @@
   });
   $("readme-card-list").addEventListener("click", (event) => {
     const button = event.target.closest("[data-card-id]"); if (!button || !flushSource()) return;
-    selectedId = button.dataset.cardId; renderCards(); renderInspector();
+    selectedId = button.dataset.cardId; selectedElementId = null; renderCards(); renderInspector();
     if ($("readme-card-details")) $("readme-card-details").open = true;
   });
   $("select-all").addEventListener("click", () => { checked = new Set(parsed.cards.map((card) => card.id)); renderCards(); $("batch-apply").disabled = !checked.size; });
   $("select-none").addEventListener("click", () => { checked.clear(); renderCards(); $("batch-apply").disabled = true; });
-  $("readme-card-apply").addEventListener("click", () => {
+  $("readme-open-editor").addEventListener("click", (event) => {
+    event.preventDefault();
     if (!flushSource()) return;
     const card = selected(); if (!card) return;
+    try {
+      const token = crypto.randomUUID();
+      saveDraft();
+      sessionStorage.setItem("profilekit.readme-handoff." + token, JSON.stringify({ version: 1, project: project(), cardId: card.id, originalUrl: card.url, resultUrl: null, savedDraft }));
+      window.location.href = "/editor.html#readme-edit=" + token;
+    } catch { status("제작기로 작업을 전달할 수 없습니다. 브라우저의 세션 저장소를 확인하세요.", true); }
+  });
+  $("readme-design-card").addEventListener("change", (event) => { selectedElementId = event.target.value; renderInspector(); });
+  $("readme-card-apply").addEventListener("click", () => {
+    if (!flushSource()) return;
+    const outer = selected(), card = editableCard(outer); if (!card) return;
     try {
       const params = { ...card.params };
       for (const field of $("readme-params").querySelectorAll("[data-param]")) {
@@ -270,7 +309,10 @@
           seen.add(key); params[key] = value;
         }
       }
-      const next = Model.applyUpdates(source, [{ id: card.id, params }], options());
+      const updatedParams = outer.endpoint === "design" ? { d: Design.encodeDocument({ ...outer.design,
+        elements: outer.design.elements.map((element) => element.id === card.id ? { ...element, params } : element),
+      }) } : params;
+      const next = Model.applyUpdates(source, [{ id: outer.id, params: updatedParams }], options());
       commit(next, label(card) + " 설정을 반영했습니다. 주변 글·링크·배치는 그대로 유지됩니다.");
     } catch (error) { status(error.message, true); }
   });
@@ -392,4 +434,32 @@
     if (savedDraft) { loadProject(JSON.parse(savedDraft)); past = []; future = []; dirty = false; }
   } catch { status("이전 초안을 열 수 없습니다. 파일을 불러오거나 README 원문을 붙여넣어 주세요.", true); }
   render();
+  function receiveDesign() {
+    const match = window.location?.hash.match(/^#design-return=([a-z0-9-]{1,80})$/i);
+    if (!match) return;
+    try {
+      const key = "profilekit.readme-handoff." + match[1];
+      const record = JSON.parse(sessionStorage.getItem(key));
+      if (record?.version !== 1 || typeof record.cardId !== "string" || typeof record.resultUrl !== "string" || typeof record.originalUrl !== "string") throw new Error("제작기에서 돌아온 작업을 찾을 수 없습니다.");
+      const original = parseProject(record.project);
+      const originalCard = Model.scan(original.source, { origin: original.origin }).cards.find((card) => card.id === record.cardId);
+      if (!originalCard || originalCard.url !== record.originalUrl) throw new Error("원래 README 카드와 제작기 작업이 일치하지 않습니다.");
+      const result = Model.applyUpdates(original.source, [{ id: record.cardId, url: record.resultUrl }], { origin: original.origin });
+      if (Object.hasOwn(record, "savedDraft") ? savedDraft !== record.savedDraft : savedDraft && JSON.parse(savedDraft).source !== original.source) {
+        const recover = $("readme-return-recover"); recover.hidden = false;
+        recover.addEventListener("click", () => {
+          download(JSON.stringify({ ...original, source: result }, null, 2), filename(original.name.replace(/\.md$/i, "")) + ".profilekit-readme.json", "application/json");
+          status("제작기 결과를 프로젝트로 저장했습니다. 현재 초안을 보관한 뒤 프로젝트 열기로 불러오세요.");
+        });
+        status("다른 탭에서 README 초안이 바뀌어 현재 초안을 유지했습니다. ‘제작기 결과 프로젝트 저장’으로 편집 결과를 보관하세요.", true);
+        return;
+      }
+      loadProject(original);
+      selectedId = record.cardId;
+      if (!commit(result, result === original.source ? "수정 없이 README로 돌아왔습니다." : "제작기 변경을 README에 반영했습니다. 주변 글과 링크는 유지됩니다.")) return;
+      sessionStorage.removeItem(key);
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    } catch (error) { status(error.message, true); }
+  }
+  receiveDesign();
 })();
