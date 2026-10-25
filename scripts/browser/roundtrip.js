@@ -16,6 +16,22 @@ const base=process.env.PROFILEKIT_TEST_ORIGIN;
  await page.goto(base+'/readme.html');
  await page.evaluate(()=>localStorage.setItem('profilekit.readme-studio.v2','{"sentinel":"existing creator draft"}'));
  await page.locator('.advanced-options > summary').click();await page.locator('#readme-origin').fill(base);await page.locator('#readme-origin').press('Tab');await page.locator('#readme-show-import').click();await page.locator('#readme-source').fill(original);await page.locator('#readme-import').click();
+ await open();
+ for (const width of [320, 390, 768]) {
+  await page.setViewportSize({width,height:844});
+  const buttons=page.locator('.document-actions button:visible');
+  for (const button of await buttons.all()) {
+   const box=await button.boundingBox();
+   assert.ok(box && box.x>=0 && box.x+box.width<=width+1, `header action outside ${width}px viewport: ${await button.textContent()}`);
+  }
+ }
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:process.env.PROFILEKIT_TEST_OUTPUT+'/editor-mobile-return.png'});
+ await page.locator('#readme-return-cancel').click();
+ await page.waitForURL(u=>u.pathname==='/readme.html');await page.waitForFunction(()=>!location.hash);
+ assert.equal(await source(),original);
+ console.log('PASS all return/save/export actions visible at 320/390/768px; mobile cancel preserves original README');
+ await page.setViewportSize({width:1512,height:1100});
  await open();await back('#readme-return');assert.equal(await source(),original);
  console.log('PASS unchanged ordinary card roundtrip byte-for-byte');
  await open();await page.locator('#edit-card-parts-tool').click();

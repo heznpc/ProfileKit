@@ -16,7 +16,7 @@ async function main() {
   const origin = `http://127.0.0.1:${server.address().port}`;
   console.log(`Browser artifacts: ${output}`);
   try {
-    for (const name of ["roundtrip", "large-assets-reload", "export-race"]) {
+    for (const name of ["roundtrip", "large-assets-reload", "export-race", "mobile-editor"]) {
       const child = spawn(process.execPath, [path.join(__dirname, "browser", `${name}.js`)], {
         env: { ...process.env, PROFILEKIT_TEST_ORIGIN: origin, PROFILEKIT_TEST_OUTPUT: output },
         stdio: "inherit",

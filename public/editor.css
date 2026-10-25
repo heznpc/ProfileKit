@@ -147,7 +147,7 @@ button svg { display: block; }
 #canvas-host > svg:first-child { overflow: hidden; }
 #canvas-host > .editor-overlay, #canvas-host > svg[data-overlay], #canvas-host > svg.overlay, #canvas-host > .selection-overlay { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .selection-overlay { pointer-events: none; }
-.selection-overlay [data-handle] { pointer-events: all; }
+.selection-overlay [data-handle], .selection-overlay [data-handle-hit] { pointer-events: all; }
 .selection-overlay [data-handle="resize"] { cursor: nwse-resize; }
 .selection-overlay [data-handle="part-scale"] { cursor: nwse-resize; }
 #canvas-host.is-editing-parts [data-cas-target], #canvas-host.is-editing-parts [data-cas-target] * { animation: none !important; transition: none !important; }
@@ -280,8 +280,8 @@ button svg { display: block; }
   .footer-edition { display: none; }
 }
 @media (max-width: 900px) {
-  .studio-header { grid-template-columns: 170px minmax(100px, 1fr) auto; gap: 10px; padding-inline: 14px; }
-  .document-actions { gap: 5px; }
+  .studio-header { grid-template-columns: 170px minmax(100px, 1fr); gap: 10px; padding: 12px 14px; }
+  .document-actions { grid-column: 1 / -1; flex-wrap: wrap; gap: 5px; }
   .document-actions .button { padding-inline: 9px; font-size: 11px; }
   .editor-workspace { grid-template-columns: 190px minmax(250px, 1fr) 234px; }
   .sidebar-section { padding-inline: 12px; }
@@ -305,8 +305,8 @@ button svg { display: block; }
   .document-title { padding-left: 12px; }
   .document-title input { font-size: 12px; }
   .document-actions { grid-column: 1 / -1; justify-content: flex-end; gap: 7px; }
-  .document-actions .button { min-height: 38px; padding-inline: 12px; font-size: 11px; }
-  .document-actions .button.quiet { margin-right: auto; }
+  .document-actions .button { flex: 1 0 auto; min-height: 38px; padding-inline: 12px; font-size: 11px; }
+  .document-actions .button.quiet { margin-right: 0; }
   .mobile-studio-nav { position: sticky; top: 0; z-index: 5; display: flex; border-bottom: 1px solid var(--rule); background: #ffffffed; backdrop-filter: blur(12px); }
   .mobile-studio-nav a { flex: 1; padding: 12px 8px; color: #7d8796; text-align: center; font-size: 11px; }
   .mobile-studio-nav a:hover { color: var(--accent); background: #f5f4ff; }
