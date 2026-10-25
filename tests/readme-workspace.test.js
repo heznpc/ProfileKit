@@ -32,7 +32,7 @@ class Element {
     this.listeners.get(type).push(listener);
   }
   dispatch(type, target = this) {
-    for (const listener of this.listeners.get(type) || []) listener({ type, target, preventDefault() {} });
+    return Promise.all((this.listeners.get(type) || []).map((listener) => listener({ type, target, preventDefault() {} })));
   }
   matches(selector) {
     const key = { "[data-param]": "param", "[data-card-id]": "cardId", "[data-check-id]": "checkId" }[selector];
@@ -61,6 +61,7 @@ function workspace(storage = new Map(), session = new Map(), hash = "") {
     crypto: { randomUUID: () => "test-handoff-token" },
     location: { href: "/readme.html" + hash, hash, pathname: "/readme.html", search: "" },
     history: { replaceState() {} },
+    ProfileKitProjectTransfer: { async get(key) { return session.has(key) ? vm.runInContext("JSON.parse(" + JSON.stringify(session.get(key)) + ")", sandbox) : null; }, async set(key, value) { session.set(key, JSON.stringify(value)); }, async remove(key) { session.delete(key); } },
     sessionStorage: { getItem: (key) => session.get(key) ?? null, setItem: (key, value) => session.set(key, value), removeItem: (key) => session.delete(key) },
     document: { getElementById: element, createElement: (tag) => new Element(tag) },
     localStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
@@ -78,7 +79,8 @@ function workspace(storage = new Map(), session = new Map(), hash = "") {
   const click = (id) => element(id).dispatch("click");
   const editSource = (source) => { element("readme-source").value = source; element("readme-source").dispatch("input"); };
   return {
-    element, click, editSource, storage, session, previews, location: sandbox.location,
+    element, click, editSource, storage, session, previews, transfer: sandbox.ProfileKitProjectTransfer, local: sandbox.localStorage, location: sandbox.location,
+    async ready() { for (let i = 0; i < 8; i++) await Promise.resolve(); },
     importSource(source) { editSource(source); click("readme-import"); },
     flushTimers() {
       for (let turns = 0; timers.size; turns++) {
@@ -103,7 +105,7 @@ function workspace(storage = new Map(), session = new Map(), hash = "") {
   };
 }
 
-test("changing deployment origin flushes pending README text before rescanning and saving", () => {
+test("changing deployment origin flushes pending README text before rescanning and saving", async () => {
   const app = workspace();
   app.importSource("# Saved README\n");
   app.flushTimers();
@@ -123,7 +125,7 @@ test("changing deployment origin flushes pending README text before rescanning a
   assert.equal(app.element("readme-source").value, edited);
 });
 
-test("clearing the README persists an empty draft and reopening cannot resurrect the previous document", () => {
+test("clearing the README persists an empty draft and reopening cannot resurrect the previous document", async () => {
   const app = workspace();
   app.importSource("# Previous document\n");
   app.flushTimers();
@@ -182,7 +184,7 @@ for (const reconcileOnBlur of [true, false]) {
   });
 }
 
-test("inserting a duplicate URL preserves distinct image selection and clears ambiguous duplicates", () => {
+test("inserting a duplicate URL preserves distinct image selection and clears ambiguous duplicates", async () => {
   const url = "https://profilekit.vercel.app/api/stats?username=alice&theme=dark";
   const original = `![Original](${url})`;
   const added = `![New](${url})`;
@@ -215,7 +217,7 @@ function designFixture() {
   ] });
 }
 
-test("design inspector edits a chosen embedded card while preserving geometry and sibling elements", () => {
+test("design inspector edits a chosen embedded card while preserving geometry and sibling elements", async () => {
   const doc = designFixture(), app = workspace();
   app.importSource(`![Profile](${CardDesign.designUrl(doc)})`);
   assert.equal(app.element("batch-from-account").value, "alice");
@@ -230,12 +232,12 @@ test("design inspector edits a chosen embedded card while preserving geometry an
   assert.deepEqual(actual, expected);
 });
 
-test("creator handoff flushes pending source and returns a validated URL with undo", () => {
+test("creator handoff flushes pending source and returns a validated URL with undo", async () => {
   const app = workspace();
   const url = "https://profilekit.vercel.app/api/stats?username=alice";
   app.importSource(`![Stats](${url})`);
   const pending = `# New introduction\n\n<a href="https://example.com"><img src="${url}" alt="Kept" width="450"></a>`;
-  app.editSource(pending); app.click("readme-open-editor");
+  app.editSource(pending); await app.click("readme-open-editor");
   assert.equal(app.location.href, "/editor.html#readme-edit=test-handoff-token");
   const record = JSON.parse(app.session.get(HANDOFF_KEY));
   assert.equal(record.project.source, pending);
@@ -243,7 +245,7 @@ test("creator handoff flushes pending source and returns a validated URL with un
   record.resultUrl = CardDesign.designUrl(designFixture());
   app.session.set(HANDOFF_KEY, JSON.stringify(record));
   app.session.set("profilekit.readme-studio.v2.test-handoff-token", "isolated creator draft");
-  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); await returned.ready();
   assert.equal(app.session.has("profilekit.readme-studio.v2.test-handoff-token"), false);
   assert.equal(returned.element("readme-source").value, pending.replace(url, record.resultUrl));
   assert.equal(app.session.has(HANDOFF_KEY), false);
@@ -251,16 +253,16 @@ test("creator handoff flushes pending source and returns a validated URL with un
   assert.equal(returned.element("readme-source").value, pending);
 });
 
-test("return conflict preserves the current draft and retains a recoverable creator result", () => {
+test("return conflict preserves the current draft and retains a recoverable creator result", async () => {
   const app = workspace();
   app.importSource("![Stats](https://profilekit.vercel.app/api/stats?username=alice)");
-  app.click("readme-open-editor");
+  await app.click("readme-open-editor");
   const record = JSON.parse(app.session.get(HANDOFF_KEY));
   record.resultUrl = CardDesign.designUrl(designFixture());
   app.session.set(HANDOFF_KEY, JSON.stringify(record));
   const changed = { ...app.draft(), source: "# Work from another tab" };
   app.storage.set(DRAFT_KEY, JSON.stringify(changed));
-  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); await returned.ready();
   assert.equal(returned.element("readme-source").value, changed.source);
   assert.equal(returned.element("readme-return-recover").hidden, false);
   assert.match(returned.element("readme-status").textContent, /현재 초안/);
@@ -269,19 +271,19 @@ test("return conflict preserves the current draft and retains a recoverable crea
   assert.equal(returned.draft().source, changed.source);
 });
 
-test("invalid returned URLs leave the README and handoff record intact", () => {
+test("invalid returned URLs leave the README and handoff record intact", async () => {
   const app = workspace();
   app.importSource("![Stats](https://profilekit.vercel.app/api/stats?username=alice)");
-  app.click("readme-open-editor");
+  await app.click("readme-open-editor");
   const record = JSON.parse(app.session.get(HANDOFF_KEY));
   record.resultUrl = "javascript:alert(1)";
   app.session.set(HANDOFF_KEY, JSON.stringify(record));
-  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); await returned.ready();
   assert.equal(returned.element("readme-source").value, record.project.source);
   assert.equal(app.session.has(HANDOFF_KEY), true);
 });
 
-test("decorative designs show no raw document field and still open in the creator", () => {
+test("decorative designs show no raw document field and still open in the creator", async () => {
   const doc = EditorModel.createDocument({ elements: [EditorModel.createElement("text", { text: "Hello" })] });
   const app = workspace();
   app.importSource(`![Design](${CardDesign.designUrl(doc)})`);
@@ -289,30 +291,30 @@ test("decorative designs show no raw document field and still open in the creato
   assert.equal(app.element("readme-extra-settings").hidden, true);
   assert.equal(app.element("readme-extra-params").value, "");
   assert.equal(app.element("readme-open-editor").hidden, false);
-  app.click("readme-open-editor");
+  await app.click("readme-open-editor");
   assert.ok(app.session.has(HANDOFF_KEY));
 });
 
-test("creator cancel keeps the README source byte for byte", () => {
+test("creator cancel keeps the README source byte for byte", async () => {
   const app = workspace();
   const source = '<picture>\r\n  <img src="https://profilekit.vercel.app/api/stats?username=alice&amp;theme=dark" alt="Stats" width="450">\r\n</picture>';
-  app.importSource(source); app.click("readme-open-editor");
+  app.importSource(source); await app.click("readme-open-editor");
   const record = JSON.parse(app.session.get(HANDOFF_KEY));
   record.resultUrl = record.originalUrl; app.session.set(HANDOFF_KEY, JSON.stringify(record));
-  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); await returned.ready();
   assert.equal(returned.element("readme-source").value, source);
   assert.equal(app.session.has(HANDOFF_KEY), false);
 });
 
-test("asset returns persist editable documents, disable misleading inline editing, and support undo and creator reopening", () => {
+test("asset returns persist editable documents, disable misleading inline editing, and support undo and creator reopening", async () => {
   const app = workspace();
   const url = "https://profilekit.vercel.app/api/stats?username=alice";
   const source = `<a href="https://example.com"><img src="${url}" width="450" alt="Profile"></a>`;
-  app.importSource(source); app.click("readme-open-editor");
+  app.importSource(source); await app.click("readme-open-editor");
   const record = JSON.parse(app.session.get(HANDOFF_KEY));
   record.resultAsset = { path: "assets/profile.svg", document: designFixture() };
   app.session.set(HANDOFF_KEY, JSON.stringify(record));
-  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); await returned.ready();
   returned.flushTimers();
   assert.equal(returned.draft().source, source.replace(url, "assets/profile.svg"));
   assert.deepEqual(returned.draft().assetDesigns["assets/profile.svg"], record.resultAsset.document);
@@ -324,54 +326,88 @@ test("asset returns persist editable documents, disable misleading inline editin
   assert.deepEqual(returned.draft().assetDesigns, {});
   returned.click("readme-redo"); returned.flushTimers();
   const reopened = workspace(app.storage, app.session);
-  reopened.click("readme-open-editor");
+  await reopened.click("readme-open-editor");
   const next = JSON.parse(app.session.get(HANDOFF_KEY));
   assert.equal(next.originalUrl, "assets/profile.svg");
   assert.equal(next.assetPath, "assets/profile.svg");
   assert.deepEqual(JSON.parse(next.assetDocument), record.resultAsset.document);
   next.resultUrl = next.originalUrl; app.session.set(HANDOFF_KEY, JSON.stringify(next));
-  const canceled = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  const canceled = workspace(app.storage, app.session, "#design-return=test-handoff-token"); await canceled.ready();
   assert.equal(canceled.element("readme-source").value, source.replace(url, "assets/profile.svg"));
 });
 
-test("replacing an asset at the same path changes its editable document and undo restores it", () => {
+test("replacing an asset at the same path changes its editable document and undo restores it", async () => {
   const app = workspace();
   const original = { kind: "profilekit-readme", version: 1, name: "README.md", source: "![Profile](assets/profile.svg)", repository: "", origin: "https://profilekit.vercel.app", theme: "dark", device: "desktop", assetDesigns: { "assets/profile.svg": designFixture() } };
   app.storage.set(DRAFT_KEY, JSON.stringify(original));
-  const opened = workspace(app.storage, app.session); opened.click("readme-open-editor");
+  const opened = workspace(app.storage, app.session); await opened.click("readme-open-editor");
   const record = JSON.parse(app.session.get(HANDOFF_KEY));
   record.resultAsset = { path: "assets/profile.svg", document: { ...designFixture(), name: "Revised asset" } };
   app.session.set(HANDOFF_KEY, JSON.stringify(record));
-  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); returned.flushTimers();
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); await returned.ready(); returned.flushTimers();
   assert.equal(returned.draft().source, original.source);
   assert.equal(returned.draft().assetDesigns["assets/profile.svg"].name, "Revised asset");
   returned.click("readme-undo"); returned.flushTimers();
   assert.deepEqual(returned.draft().assetDesigns, original.assetDesigns);
 });
 
-test("new asset registration cannot shift the return edit onto an earlier image", () => {
+test("new asset registration cannot shift the return edit onto an earlier image", async () => {
   const app = workspace();
   const url = "https://profilekit.vercel.app/api/stats?username=alice";
   const source = `![Existing file](assets/profile.svg)\n![Edit this](${url})`;
-  app.importSource(source); app.click("readme-open-editor");
+  app.importSource(source); await app.click("readme-open-editor");
   const record = JSON.parse(app.session.get(HANDOFF_KEY));
   record.resultAsset = { path: "assets/profile.svg", document: designFixture() };
   app.session.set(HANDOFF_KEY, JSON.stringify(record));
-  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); await returned.ready();
   assert.equal(returned.element("readme-source").value, source.replace(url, "assets/profile.svg"));
 });
 
-test("returning to another card's asset path rejects aliases without changing the saved project", () => {
+test("returning to another card's asset path rejects aliases without changing the saved project", async () => {
   const app = workspace();
   const original = { kind: "profilekit-readme", version: 1, name: "README.md", source: "![Owned](assets/profile.svg)\n![New](https://profilekit.vercel.app/api/stats?username=alice)", repository: "", origin: "https://profilekit.vercel.app", theme: "dark", device: "desktop", assetDesigns: { "assets/profile.svg": designFixture() } };
   app.storage.set(DRAFT_KEY, JSON.stringify(original));
-  const opened = workspace(app.storage, app.session); opened.selectOnly("card-2"); opened.click("readme-open-editor");
+  const opened = workspace(app.storage, app.session); opened.selectOnly("card-2"); await opened.click("readme-open-editor");
   const record = JSON.parse(app.session.get(HANDOFF_KEY));
   record.resultAsset = { path: "./assets/profile.svg", document: { ...designFixture(), name: "Overwrite attempt" } };
   app.session.set(HANDOFF_KEY, JSON.stringify(record));
-  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); returned.flushTimers();
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token"); await returned.ready(); returned.flushTimers();
   assert.deepEqual(returned.draft().assetDesigns, original.assetDesigns);
   assert.equal(returned.draft().source, original.source);
   assert.match(returned.element("readme-status").textContent, /다른 디자인/);
   assert.ok(app.session.has(HANDOFF_KEY));
+});
+
+
+test("edits during asynchronous creator handoff prevent navigation and preserve source", async () => {
+  const app = workspace();
+  app.importSource("![Stats](https://profilekit.vercel.app/api/stats?username=alice)");
+  const originalSet = app.transfer.set;
+  let release;
+  app.transfer.set = async (...args) => { await new Promise((resolve) => { release = resolve; }); await originalSet(...args); };
+  const pending = app.click("readme-open-editor");
+  const changed = "# Keep this edit\n\n![Stats](https://profilekit.vercel.app/api/stats?username=alice)";
+  app.editSource(changed);
+  release(); await pending;
+  assert.equal(app.location.href, "/readme.html");
+  assert.equal(app.element("readme-source").value, changed);
+  assert.equal(app.session.has(HANDOFF_KEY), false);
+});
+
+
+test("failed README persistence retains the returned design and recovery draft", async () => {
+  const app = workspace();
+  app.importSource("![Stats](https://profilekit.vercel.app/api/stats?username=alice)");
+  await app.click("readme-open-editor");
+  const record = JSON.parse(app.session.get(HANDOFF_KEY));
+  record.resultUrl = "https://profilekit.vercel.app/api/stats?username=bob";
+  app.session.set(HANDOFF_KEY, JSON.stringify(record));
+  const draftKey = "profilekit.readme-studio.v2.test-handoff-token";
+  app.session.set(draftKey, "recoverable draft");
+  const returned = workspace(app.storage, app.session, "#design-return=test-handoff-token");
+  returned.local.setItem = () => { throw new Error("QuotaExceededError"); };
+  await returned.ready();
+  assert.equal(app.session.has(HANDOFF_KEY), true);
+  assert.equal(app.session.has(draftKey), true);
+  assert.match(returned.element("readme-source").value, /username=bob/);
 });

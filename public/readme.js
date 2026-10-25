@@ -14,7 +14,7 @@
   let selectedId = null, checked = new Set(), past = [], future = [];
   let theme = "dark", device = "desktop", view = "preview", dirty = false;
   let savedDraft = null, storageConflict = false, persisted = true, saveTimer, previewTimer;
-  let lastSummary = "", previewGeneration = 0;
+  let lastSummary = "", previewGeneration = 0, handoffNavigation = false;
   const labels = {
     username: "GitHub 계정", github: "GitHub 계정", repo: "저장소", name: "이름",
     title: "제목", subtitle: "소개", text: "문구", theme: "테마", font: "글꼴",
@@ -289,16 +289,23 @@
   });
   $("select-all").addEventListener("click", () => { checked = new Set(parsed.cards.filter((card) => !card.assetPath).map((card) => card.id)); renderCards(); $("batch-apply").disabled = !checked.size; });
   $("select-none").addEventListener("click", () => { checked.clear(); renderCards(); $("batch-apply").disabled = true; });
-  $("readme-open-editor").addEventListener("click", (event) => {
+  $("readme-open-editor").addEventListener("click", async (event) => {
     event.preventDefault();
     if (!flushSource()) return;
     const card = selected(); if (!card) return;
     try {
       const token = crypto.randomUUID();
       saveDraft();
-      sessionStorage.setItem("profilekit.readme-handoff." + token, JSON.stringify({ version: 1, project: project(), cardId: card.id, originalUrl: card.url, resultUrl: null, assetPath: card.assetPath, assetDocument: card.assetPath ? window.ProfileKitEditorModel.serializeDocument(card.design) : null, savedDraft }));
+      const transferProject = project(), transferSource = $("readme-source").value;
+      const transferSnapshot = JSON.stringify(transferProject);
+      await window.ProfileKitProjectTransfer.set("profilekit.readme-handoff." + token, { version: 1, project: transferProject, cardId: card.id, originalUrl: card.url, resultUrl: null, assetPath: card.assetPath, assetDocument: card.assetPath ? window.ProfileKitEditorModel.serializeDocument(card.design) : null, savedDraft });
+      if (JSON.stringify(project()) !== transferSnapshot || $("readme-source").value !== transferSource) {
+        await window.ProfileKitProjectTransfer.remove("profilekit.readme-handoff." + token);
+        throw new Error("전달 중 README가 변경됐습니다. 다시 제작기를 열어 주세요.");
+      }
+      handoffNavigation = true;
       window.location.href = "/editor.html#readme-edit=" + token;
-    } catch { status("제작기로 작업을 전달할 수 없습니다. 브라우저의 세션 저장소를 확인하세요.", true); }
+    } catch (error) { status("제작기로 작업을 전달할 수 없습니다. " + error.message, true); }
   });
   $("readme-design-card").addEventListener("change", (event) => { selectedElementId = event.target.value; renderInspector(); });
   $("readme-card-apply").addEventListener("click", () => {
@@ -429,7 +436,7 @@
       if (storageConflict || localStorage.getItem(DRAFT_KEY) !== savedDraft) {
         storageConflict = true; status("다른 탭에서 초안이 바뀌었습니다. 이 탭의 작업은 프로젝트 파일로 저장하세요.", true); return;
       }
-      const value = JSON.stringify(project()); localStorage.setItem(DRAFT_KEY, value); savedDraft = value; persisted = true;
+      const value = JSON.stringify(project()); localStorage.setItem(DRAFT_KEY, value); savedDraft = value; persisted = true; return true;
     } catch { persisted = false; status("브라우저 저장 공간이 부족합니다. 프로젝트 파일로 작업을 보관하세요.", true); }
   }
   window.addEventListener("storage", (event) => {
@@ -438,6 +445,7 @@
     }
   });
   window.addEventListener("beforeunload", (event) => {
+    if (handoffNavigation) return;
     if ($("readme-source").value !== sourceViewValue || (dirty && (storageConflict || !persisted))) { event.preventDefault(); event.returnValue = ""; }
     else saveDraft();
   });
@@ -446,12 +454,13 @@
     if (savedDraft) { loadProject(JSON.parse(savedDraft)); past = []; future = []; dirty = false; }
   } catch { status("이전 초안을 열 수 없습니다. 파일을 불러오거나 README 원문을 붙여넣어 주세요.", true); }
   render();
-  function receiveDesign() {
+  async function receiveDesign() {
     const match = window.location?.hash.match(/^#design-return=([a-z0-9-]{1,80})$/i);
     if (!match) return;
     try {
       const key = "profilekit.readme-handoff." + match[1];
-      const record = JSON.parse(sessionStorage.getItem(key));
+      const sourceBeforeTransfer = source, assetsBeforeTransfer = assetDesigns;
+      const record = await window.ProfileKitProjectTransfer.get(key);
       if (record?.version !== 1 || typeof record.cardId !== "string" || (!record.resultAsset && typeof record.resultUrl !== "string") || typeof record.originalUrl !== "string") throw new Error("제작기에서 돌아온 작업을 찾을 수 없습니다.");
       const original = parseProject(record.project);
       const originalCard = Model.scan(original.source, { origin: original.origin, assetDesigns: original.assetDesigns }).cards.find((card) => card.id === record.cardId);
@@ -466,7 +475,7 @@
       if (!target) throw new Error("원래 카드 위치를 찾을 수 없습니다.");
       const update = record.resultAsset ? { id: target.id, assetPath: record.resultAsset.path } : { id: target.id, url: record.resultUrl };
       const result = Model.applyUpdates(original.source, [update], { origin: original.origin, assetDesigns: resultAssets });
-      if (Object.hasOwn(record, "savedDraft") ? savedDraft !== record.savedDraft : savedDraft && JSON.parse(savedDraft).source !== original.source) {
+      if (source !== sourceBeforeTransfer || assetDesigns !== assetsBeforeTransfer || $("readme-source").value !== sourceViewValue || (Object.hasOwn(record, "savedDraft") ? savedDraft !== record.savedDraft : savedDraft && JSON.parse(savedDraft).source !== original.source)) {
         const recover = $("readme-return-recover"); recover.hidden = false;
         recover.addEventListener("click", () => {
           download(JSON.stringify({ ...original, source: result, assetDesigns: resultAssets }, null, 2), filename(original.name.replace(/\.md$/i, "")) + ".profilekit-readme.json", "application/json");
@@ -478,8 +487,12 @@
       loadProject(original);
       selectedId = record.cardId;
       if (!commit(result, result === original.source && !record.resultAsset ? "수정 없이 README로 돌아왔습니다." : "제작기 변경을 README에 반영했습니다. 주변 글과 링크는 유지됩니다.", false, false, resultAssets)) return;
-      sessionStorage.removeItem(key);
-      sessionStorage.removeItem("profilekit.readme-studio.v2." + match[1]);
+      if (!saveDraft()) {
+        status("README에 반영했습니다. 자동 저장 용량을 넘어 복구 원본을 보관했습니다. 프로젝트 파일로 저장해 주세요. 이 주소를 새로 열면 전달된 디자인을 복구합니다.", true);
+        return;
+      }
+      await window.ProfileKitProjectTransfer.remove("profilekit.readme-studio.v2." + match[1]);
+      await window.ProfileKitProjectTransfer.remove(key);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } catch (error) { status(error.message, true); }
   }

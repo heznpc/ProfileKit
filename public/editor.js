@@ -1,5 +1,5 @@
 /* Card editor controller. Project files own their image bytes; no server writes. */
-(function () {
+(async function () {
   "use strict";
   // Keep previously shared root URLs opening the original card/README tools.
   function openLegacyLink() {
@@ -23,7 +23,17 @@
   const handoffToken = /^[a-z0-9-]{36}$/i.test(requestedHandoff || "") ? requestedHandoff : null;
   const handoffKey = handoffToken ? "profilekit.readme-handoff." + handoffToken : null;
   const DRAFT_KEY = "profilekit.readme-studio.v2" + (handoffToken ? "." + handoffToken : "");
-  const draftStorage = () => handoffToken ? sessionStorage : localStorage;
+  const Transfer = window.ProfileKitProjectTransfer;
+  async function readDraft() {
+    if (!handoffToken) return localStorage.getItem(DRAFT_KEY);
+    const value = await Transfer.get(DRAFT_KEY);
+    return value ? M.serializeDocument(value) : null;
+  }
+  async function writeDraft(serialized) {
+    if (handoffToken) await Transfer.set(DRAFT_KEY, JSON.parse(serialized));
+    else localStorage.setItem(DRAFT_KEY, serialized);
+  }
+  let savingDraft = false, leavingEditor = false;
   let readmeHandoff = null;
   let handoffReady = false;
   const SVG_NS = "http://www.w3.org/2000/svg";
@@ -102,24 +112,27 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveDraft, 400);
   }
-  function saveDraft() {
+  async function saveDraft() {
     clearTimeout(saveTimer);
-    if (gesture || nativeMeasurements.size) { saveTimer = setTimeout(saveDraft, 400); return; }
+    if (leavingEditor) return;
+    if (gesture || nativeMeasurements.size || savingDraft) { saveTimer = setTimeout(saveDraft, 400); return; }
+    savingDraft = true;
     try {
-      if (storageConflict || draftStorage().getItem(DRAFT_KEY) !== lastStoredDraft) {
+      if (storageConflict || await readDraft() !== lastStoredDraft) {
         storageConflict = true; persisted = false;
         status("다른 탭에서 초안이 변경됐습니다. 덮어쓰기를 멈췄으니 이 탭의 작업은 ‘프로젝트 저장’으로 보관하세요.", true);
         return;
       }
       const serialized = M.serializeDocument(doc);
-      draftStorage().setItem(DRAFT_KEY, serialized);
+      const savedRevision = revision;
+      await writeDraft(serialized);
       lastStoredDraft = serialized;
-      persisted = true;
+      persisted = revision === savedRevision;
       status("이 브라우저에 저장됨 · 다른 기기에서는 프로젝트 파일을 열어주세요.");
     } catch {
       persisted = false;
       status("브라우저에 저장하지 못했습니다. ‘프로젝트 저장’으로 파일을 보관하세요.", true);
-    }
+    } finally { savingDraft = false; }
   }
   function finishEdit() {
     if (!pendingEdit) return;
@@ -392,7 +405,7 @@
       if (importedDesign) {
         if (dirty && !confirmReplace()) return;
         replaceDocument(importedDesign); select(doc.elements[0]?.id || null);
-        rememberHandoffDocument();
+        await rememberHandoffDocument();
         handoffReady = true; $("readme-return").disabled = false;
         status("조합한 카드를 불러왔습니다. 카드와 요소를 다시 편집할 수 있습니다."); return;
       }
@@ -403,16 +416,16 @@
       const element = M.createElement("card", { ...card, ...size, x: 0, y: 0 });
       replaceDocument(M.createDocument({ name: `${cardLabel(card.endpoint)} · ${card.params.username || card.params.title || card.params.name || "My README"}`, width: size.width, height: size.height, background: "transparent", elements: [element] }));
       select(element.id);
-      rememberHandoffDocument();
+      await rememberHandoffDocument();
       handoffReady = true; $("readme-return").disabled = false;
       status("카드를 불러왔습니다. 기존 옵션은 그대로 유지됩니다. 오른쪽에서 편집하세요.");
     } catch (error) { status(error.message, true); }
     finally { button.disabled = false; }
   });
-  function rememberHandoffDocument() {
+  async function rememberHandoffDocument() {
     if (!readmeHandoff || readmeHandoff.originalDocument) return;
     readmeHandoff.originalDocument = M.serializeDocument(doc);
-    sessionStorage.setItem(handoffKey, JSON.stringify(readmeHandoff));
+    await Transfer.set(handoffKey, readmeHandoff);
   }
   async function returnToReadme(cancel) {
     if (!readmeHandoff || (!cancel && !handoffReady)) return;
@@ -421,8 +434,9 @@
     $("readme-return-cancel").disabled = true;
     try {
       if (!cancel) await waitForCardSizes();
-      const current = JSON.parse(sessionStorage.getItem(handoffKey));
+      const current = await Transfer.get(handoffKey);
       if (!current || current.originalUrl !== readmeHandoff.originalUrl || current.cardId !== readmeHandoff.cardId) throw new Error("원래 README 연결을 찾지 못했습니다. 프로젝트를 저장해 주세요.");
+      const transferRevision = revision;
       const original = new URL(current.originalUrl, current.project.origin || location.origin);
       const unchanged = M.serializeDocument(doc) === current.originalDocument;
       delete current.resultAsset;
@@ -432,9 +446,10 @@
         if (error.message.includes("design URL is too large")) { showAssetReturn(); return; }
         throw error;
       }
-      sessionStorage.setItem(handoffKey, JSON.stringify(current));
+      await Transfer.set(handoffKey, current);
+      if (revision !== transferRevision) throw new Error("전달 중 디자인이 변경됐습니다. 다시 반영해 주세요.");
       clearTimeout(saveTimer);
-      persisted = true;
+      leavingEditor = true; persisted = true;
       location.assign("/readme.html#design-return=" + handoffToken);
     } catch (error) {
       $("readme-return").disabled = !handoffReady;
@@ -458,18 +473,21 @@
       finishEdit(); await waitForCardSizes();
       const path = $("asset-path").value.trim();
       if (!/^(?:\.\/)?[A-Za-z0-9_-][A-Za-z0-9._-]*(?:\/[A-Za-z0-9_-][A-Za-z0-9._-]*)*\.svg$/.test(path) || path.split("/").includes("..")) throw new Error("SVG 상대 경로를 입력하세요. 예: assets/profilekit.svg");
+      const transferRevision = revision;
       const snapshot = M.normalizeDocument(doc);
       const svg = await standaloneSVG(snapshot);
-      const current = JSON.parse(sessionStorage.getItem(handoffKey));
+      const current = await Transfer.get(handoffKey);
       if (!current || current.originalUrl !== readmeHandoff.originalUrl || current.cardId !== readmeHandoff.cardId) throw new Error("README 연결을 찾지 못했습니다. 프로젝트를 저장해 주세요.");
       const canonicalPath = path.replace(/^\.\//, "");
       const originalPath = (current.assetPath || "").replace(/^\.\//, "");
       if (Object.keys(current.project.assetDesigns || {}).some((key) => key.replace(/^\.\//, "") === canonicalPath) && originalPath !== canonicalPath) throw new Error("이 SVG 경로는 다른 디자인에서 사용 중입니다. 다른 파일 이름을 선택하세요.");
       delete current.resultUrl;
       current.resultAsset = { path: canonicalPath, document: snapshot };
-      sessionStorage.setItem(handoffKey, JSON.stringify(current));
+      if (revision !== transferRevision || $("asset-path").value.trim() !== path) throw new Error("전달 중 디자인이나 경로가 변경됐습니다. 다시 반영해 주세요.");
+      await Transfer.set(handoffKey, current);
+      if (revision !== transferRevision || $("asset-path").value.trim() !== path) throw new Error("전달 중 디자인이나 경로가 변경됐습니다. 다시 반영해 주세요.");
       download(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }), path.split("/").pop());
-      clearTimeout(saveTimer); persisted = true;
+      clearTimeout(saveTimer); leavingEditor = true; persisted = true;
       location.assign("/readme.html#design-return=" + handoffToken);
     } catch (error) { $("embed-message").textContent = error.message; }
     finally { button.disabled = false; }
@@ -1126,7 +1144,9 @@
       status("이전 버전의 초안을 복원했습니다. 프로젝트로 저장해 계속 편집할 수 있습니다.");
     } catch (error) { status(error.message, true); }
   });
-  try { lastStoredDraft = draftStorage().getItem(DRAFT_KEY); if (lastStoredDraft) { doc = M.parseDocument(lastStoredDraft); dirty = true; selectedId = doc.elements[0]?.id || null; } }
+  document.body.inert = true;
+  try {
+  try { lastStoredDraft = await readDraft(); if (lastStoredDraft) { doc = M.parseDocument(lastStoredDraft); dirty = true; selectedId = doc.elements[0]?.id || null; } }
   catch { draftError = true; }
   render();
   if (handoffToken) {
@@ -1134,13 +1154,13 @@
     $("readme-return-cancel").hidden = false;
     $("readme-return").disabled = true;
     try {
-      const record = JSON.parse(sessionStorage.getItem(handoffKey));
+      const record = await Transfer.get(handoffKey);
       if (!record || record.version !== 1 || typeof record.originalUrl !== "string" || typeof record.cardId !== "string" || !record.project) throw new Error("README 연결이 만료됐습니다. README에서 카드를 다시 열어 주세요.");
       readmeHandoff = record;
       if (record.assetDocument) {
         const assetDoc = M.parseDocument(record.assetDocument);
         if (!lastStoredDraft || draftError) replaceDocument(assetDoc);
-        select(doc.elements[0]?.id || null); rememberHandoffDocument();
+        select(doc.elements[0]?.id || null); await rememberHandoffDocument();
         handoffReady = true; $("readme-return").disabled = false;
         status("저장한 SVG의 편집 원본을 열었습니다. 변경 후 SVG를 다시 저장해 README에 반영하세요.");
         return;
@@ -1160,4 +1180,5 @@
   }
   if (draftError) status("이전 임시 저장을 열지 못했습니다. 저장해 둔 원본 파일을 열어주세요.", true);
   else status("기존 카드 URL을 불러오거나 카드를 골라 편집한 뒤, README에 넣기를 누르세요.");
+  } finally { document.body.inert = false; }
 })();
