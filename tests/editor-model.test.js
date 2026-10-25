@@ -324,10 +324,10 @@ test("card input limits reject raw markup, prototype keys, secrets and excess en
   assert.throws(() => model.createElement("card", { markup: "<svg/>" }), /unsupported field/);
   assert.throws(() => documentWith(...Array.from({ length: 9 }, (_, i) => model.createElement("card", { id: `card-${i}` }))), /at most 8/);
   const stack = model.createElement("card", { endpoint: "stack", params: { cards: "hero,section,now" } });
-  assert.equal(model.cardCallCount(stack), 4);
+  assert.equal(model.cardCallCount(stack), 3);
   assert.doesNotThrow(() => documentWith(stack, ...Array.from({ length: 4 }, (_, i) => model.createElement("card", { id: `card-${i}` }))));
   assert.throws(() => model.createElement("card", { endpoint: "stack", params: { cards: "hero,stack" } }), /recursive/);
-  assert.throws(() => model.createElement("card", { endpoint: "stack", params: { cards: Array(8).fill("hero").join(",") } }), /at most 8/);
+  assert.throws(() => model.createElement("card", { endpoint: "stack", params: { cards: Array(9).fill("hero").join(",") } }), /at most 8/);
 });
 
 test("live card native dimensions and README metadata survive portable documents", () => {

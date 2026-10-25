@@ -50,7 +50,7 @@
   const cardPreviews = new Map();
   let partMode = false, partName = "", partOwner = null;
 
-  function partDefinitions(element = selected()) { return element?.type === "card" ? Decoration.PARTS[element.endpoint] || {} : {}; }
+  function partDefinitions(element = selected()) { return element?.type === "card" ? Decoration.partDefinitions(element) : {}; }
   function previewEntry(card) {
     const key = M.cardPath(card);
     let entry = cardPreviews.get(key);
@@ -304,6 +304,10 @@
             const card = next.elements.find((item) => item.id === selectedId);
             if (field.value === "" && ["select", "boolean", "number", "color"].includes(param.type)) delete card.params[param.name];
             else card.params[param.name] = field.value;
+            if (param.name === "cards" && card.parts) {
+              const definitions = partDefinitions(card);
+              card.parts = Object.fromEntries(Object.entries(card.parts).filter(([name]) => Object.hasOwn(definitions, name)));
+            }
             delete card.nativeWidth; delete card.nativeHeight;
           });
           if (changed) refreshNativeSize(previous);
@@ -333,7 +337,12 @@
         params[key] = value;
       }
       const previous = beforeCardChange(element);
-      if (transact((next) => { const card = next.elements.find((item) => item.id === selectedId); card.params = params; delete card.nativeWidth; delete card.nativeHeight; })) refreshNativeSize(previous);
+      if (transact((next) => { const card = next.elements.find((item) => item.id === selectedId); card.params = params;
+        if (card.parts) {
+          const definitions = partDefinitions(card);
+          card.parts = Object.fromEntries(Object.entries(card.parts).filter(([name]) => Object.hasOwn(definitions, name)));
+        }
+        delete card.nativeWidth; delete card.nativeHeight; })) refreshNativeSize(previous);
     } catch (error) { status(error.message, true); }
   });
   for (const [id, key] of [["card-meta-alt", "alt"], ["card-meta-width", "displayWidth"], ["card-meta-link", "linkUrl"]]) $(id).addEventListener("change", () => {
@@ -656,7 +665,8 @@
     const element = selected(); if (!element) return;
     const definitions = partDefinitions(element), names = Object.keys(definitions);
     $("card-parts-controls").hidden = !names.length;
-    if (partOwner !== element.id) {
+    if (partOwner !== element.id || $("card-part-select").dataset.definitions !== names.join(",")) {
+      $("card-part-select").dataset.definitions = names.join(",");
       partOwner = element.id; partMode = false; partName = names[0] || "";
       $("card-part-select").replaceChildren(...names.map((name) => {
         const option = document.createElement("option"); option.value = name;

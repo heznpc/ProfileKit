@@ -68,9 +68,17 @@
     if (raw.hidden) part.hidden = true;
     return part.dx || part.dy || part.scale !== 1 || part.color || part.hidden ? part : undefined;
   }
+  function partDefinitions(card) {
+    const endpoint = typeof card === "string" ? card : card?.endpoint;
+    if (endpoint !== "stack") return Object.hasOwn(PARTS, endpoint) ? PARTS[endpoint] : {};
+    const children = (card.params?.cards || "").split(",").map((name) => name.trim()).filter(Boolean);
+    return Object.fromEntries(children.flatMap((name, index) =>
+      Object.entries(Object.hasOwn(PARTS, name) ? PARTS[name] : {}).map(([part, definition]) =>
+        [`stack-${index}-${name}-${part}`, { ...definition, label: `${index + 1}. ${name} · ${definition.label}` }])));
+  }
   function normalizeParts(endpoint, raw) {
     record(raw, "Card parts");
-    const supported = Object.hasOwn(PARTS, endpoint) ? PARTS[endpoint] : {};
+    const supported = partDefinitions(endpoint);
     keys(raw, Object.keys(supported), "Card parts");
     const parts = {};
     // Registry order makes semantically identical decorations serialize identically.
@@ -142,7 +150,7 @@
         Object.defineProperty(attrs, match[1], { value: { value: match[3], start: valueStart, end: valueStart + match[3].length }, enumerable: true });
         attributeCursor += match[0].length;
       }
-      const node = { name: nameMatch[2], start, openEnd: cursor, insertAt: attributeEnd, attrs, end: selfClosing ? cursor : null };
+      const node = { parent: stack[stack.length - 1], name: nameMatch[2], start, openEnd: cursor, insertAt: attributeEnd, attrs, end: selfClosing ? cursor : null };
       nodes.push(node);
       if (selfClosing) continue;
       if (node.name === "style") {
@@ -188,7 +196,7 @@
     return output + svg.slice(cursor);
   }
   function partAnchor(node, nodes) {
-    if (node.attrs["data-cas-target"]?.value === "bg") return { x: 0, y: 0 };
+    if (/(?:^|-)bg$/.test(node.attrs["data-cas-target"]?.value || "")) return { x: 0, y: 0 };
     const translate = node.attrs.transform?.value.match(/^translate\(\s*([-+\d.eE]+)(?:[\s,]+([-+\d.eE]+))?\s*\)$/);
     if (translate && Number.isFinite(Number(translate[1])) && Number.isFinite(Number(translate[2] || 0))) {
       return { x: Number(translate[1]), y: Number(translate[2] || 0) };
@@ -200,13 +208,34 @@
     };
     return { x: coordinate("x"), y: coordinate("y") };
   }
-  function applyParts(svg, rawParts) {
+  // Rewrite only the renderer copy: endpoint URLs and original markup stay live.
+  function scopeStackTargets(svg, card) {
+    if (card?.endpoint !== "stack") return svg;
+    const nodes = scanElements(svg);
+    const root = nodes.find((node) => node.name === "svg" && !node.parent);
+    const slots = nodes.filter((node) => node.name === "svg" && node.parent === root);
+    const names = (card.params.cards || "").split(",").map((name) => name.trim()).filter(Boolean);
+    const edits = [];
+    slots.forEach((slot, index) => {
+      const registry = Object.hasOwn(PARTS, names[index]) ? PARTS[names[index]] : {};
+      for (const node of nodes) {
+        const target = node.attrs["data-cas-target"];
+        if (target && node.start >= slot.start && node.end <= slot.end && Object.hasOwn(registry, target.value)) {
+          edits.push({ start: target.start, end: target.end, value: `stack-${index}-${names[index]}-${target.value}` });
+        }
+      }
+    });
+    for (const edit of edits.sort((a, b) => b.start - a.start)) svg = svg.slice(0, edit.start) + edit.value + svg.slice(edit.end);
+    return svg;
+  }
+  function applyParts(svg, rawParts, card) {
+    svg = scopeStackTargets(svg, card);
     if (rawParts === undefined) return svg;
     record(rawParts, "Card parts");
     const parts = {};
     for (const [name, raw] of Object.entries(rawParts)) {
-      if (!TARGETS.has(name)) throw new Error("Card part target is not supported");
-      const part = normalizePart(raw, name !== "bg");
+      if (card ? !Object.hasOwn(partDefinitions(card), name) : !TARGETS.has(name)) throw new Error("Card part target is not supported");
+      const part = normalizePart(raw, card ? partDefinitions(card)[name].color : name !== "bg");
       if (part) parts[name] = part;
     }
     if (!Object.keys(parts).length) return svg;
@@ -223,5 +252,5 @@
     if (!nodes.length || svg.slice(0, nodes[0].start).trim() || svg.slice(nodes[0].end).trim()) throw new Error("Part markup must contain one complete element");
     return decorate(svg, nodes, [{ node: nodes[0], part }]);
   }
-  return { PARTS, normalizeParts, normalizeEffect, applyParts, partMarkup };
+  return { PARTS, partDefinitions, scopeStackTargets, normalizeParts, normalizeEffect, applyParts, partMarkup };
 });

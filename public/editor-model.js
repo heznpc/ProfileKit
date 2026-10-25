@@ -115,7 +115,7 @@
     const card = { endpoint, params };
     if (raw.parts !== undefined) {
       if (!decoration) fail("Card decoration module is required");
-      const parts = decoration.normalizeParts(endpoint, raw.parts);
+      const parts = decoration.normalizeParts(card, raw.parts);
       if (parts) card.parts = parts;
     }
     if (raw.sourceOrigin !== undefined) card.sourceOrigin = normalizeOrigin(raw.sourceOrigin);
@@ -191,7 +191,7 @@
     const children = (card.params.cards || "").split(",").map((item) => item.trim()).filter(Boolean);
     if (!children.length) fail("Stack requires at least one card");
     if (children.some((name) => !STACK_ENDPOINTS.includes(name))) fail("Stack contains an unsupported or recursive card endpoint");
-    const calls = 1 + children.length;
+    const calls = children.length;
     if (calls > LIMITS.MAX_CARD_CALLS) fail("A design can invoke at most 8 card endpoints, including stack children");
     return calls;
   }
@@ -611,7 +611,7 @@
       } else if (type === "card") {
         if (element.parts && (!cardMarkup || !Object.hasOwn(cardMarkup, id))) fail("Decorated cards require their rendered card markup");
         body = cardMarkup && Object.hasOwn(cardMarkup, id)
-          ? positionedCard(element.parts ? decoration.applyParts(cardMarkup[id], element.parts) : cardMarkup[id], element, `pk-card-${index}-${id}-`)
+          ? positionedCard(decoration.applyParts(cardMarkup[id], element.parts, element), element, `pk-card-${index}-${id}-`)
           : `<image ${box} href="${escape((element.sourceOrigin || "") + cardPath(element))}" preserveAspectRatio="none"/>`;
       } else {
         const appearance = `fill="${element.fill}" stroke="${element.stroke}" stroke-width="${element.strokeWidth}"`;

@@ -64,3 +64,27 @@ test("effects use a closed, bounded structure and canonicalize fully transparent
     assert.throws(() => Decoration.normalizeEffect({ ...effect, ...overrides }));
   }
 });
+
+test("stack targets distinguish duplicate children and shared part names without rewriting source markup", () => {
+  const card = { endpoint: "stack", params: { cards: "hero,hero,section" } };
+  const definitions = Decoration.partDefinitions(card);
+  assert.ok(definitions["stack-0-hero-name"]);
+  assert.ok(definitions["stack-1-hero-name"]);
+  assert.ok(definitions["stack-2-section-subtitle"]);
+  assert.throws(() => Decoration.normalizeParts(card, { "stack-2-hero-name": { dx: 4 } }));
+  assert.throws(() => Decoration.normalizeParts(card, { "stack-0-hero-bg": { color: "#fff" } }));
+  const child = '<svg><g data-cas-target="subtitle"><text>Intro</text></g></svg>';
+  const svg = '<svg><!-- <svg/> -->' + child.repeat(3) + '</svg>';
+  const parts = { "stack-1-hero-subtitle": { dx: 12, color: "#abc" }, "stack-2-section-subtitle": { hidden: true } };
+  const output = Decoration.applyParts(svg, parts, card);
+  assert.equal((output.match(/translate\(12 0\)/g) || []).length, 1);
+  assert.equal((output.match(/fill:#abc!important/g) || []).length, 1);
+  assert.match(output, /<g visibility="hidden"><g data-cas-target="stack-2-section-subtitle"/);
+  assert.ok(svg.includes('data-cas-target="subtitle"'));
+  assert.ok(!svg.includes('stack-'));
+  const changed = { ...card, params: { cards: "section,hero" } };
+  assert.equal(Decoration.partDefinitions(changed)["stack-0-hero-name"], undefined);
+  assert.throws(() => Decoration.normalizeParts(changed, { "stack-2-section-subtitle": { dx: 1 } }));
+  const scoped = Decoration.scopeStackTargets(svg, card);
+  assert.equal(Decoration.scopeStackTargets(scoped, card), scoped);
+});

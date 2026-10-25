@@ -252,7 +252,7 @@ test("designs count stack children before making calls and isolate repeated chil
   assert.match(result.svg, /pk-card-0-live-stack-0-heroIn/);
   assert.match(result.svg, /pk-card-0-live-stack-1-heroIn/);
   assert.doesNotMatch(result.svg, /<image/);
-  for (const children of ["hero,design", "hero,stack", Array(8).fill("stats").join(",")]) {
+  for (const children of ["hero,design", "hero,stack", Array(9).fill("stats").join(",")]) {
     const raw = { ...document(), elements: [{ ...stack, params: { cards: children, username: "ren" } }] };
     const response = await request("/api/design?d=" + Buffer.from(JSON.stringify(raw)).toString("base64url"));
     assert.equal(response.statusCode, 400);
@@ -394,4 +394,24 @@ test("invalid decoration documents fail before invoking live handlers", async (t
     assert.equal((await request(`/api/design?d=${Buffer.from(JSON.stringify(raw)).toString("base64url")}`)).statusCode, 400);
   }
   assert.equal(fetch.mock.callCount(), 0);
+});
+
+test("eight stack children stay one live card and scoped decorations round trip into design rendering", async () => {
+  const live = card({ endpoint: "stack", params: { cards: Array(8).fill("hero").join(","), name: "Live stack", subtitle: "Live subtitle" } });
+  assert.equal(Model.cardCallCount(live), 8);
+  const originalPath = Model.cardPath(live);
+  const plain = await request(requestUrl(document(live)));
+  assert.equal(plain.statusCode, 200);
+  live.parts = { "stack-1-hero-name": { dx: 13, color: "#abc" }, "stack-7-hero-subtitle": { hidden: true } };
+  const doc = document(live);
+  const roundtrip = Model.parseDocument(Model.serializeDocument(doc));
+  assert.equal(roundtrip.elements.length, 1);
+  assert.equal(Model.cardPath(roundtrip.elements[0]), originalPath);
+  assert.deepEqual(roundtrip, doc);
+  const result = await request(requestUrl(roundtrip));
+  assert.equal(result.statusCode, 200);
+  assert.equal((result.svg.match(/fill:#abc!important/g) || []).length, 1);
+  assert.match(result.svg, /<g transform="translate\(13 0\)"><text[^>]*data-cas-target="stack-1-hero-name"/);
+  assert.match(result.svg, /<g visibility="hidden"><text[^>]*data-cas-target="stack-7-hero-subtitle"/);
+  assert.throws(() => document(live, card({ id: "extra" })), /at most 8/);
 });
