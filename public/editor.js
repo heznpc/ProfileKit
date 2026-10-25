@@ -245,10 +245,20 @@
     const scale = doc.width / Math.max(1, host.getBoundingClientRect().width);
     const size = 10 * scale, rotationOffset = 28 * scale;
     const overlay = svgNode("svg", { class: "selection-overlay", viewBox: `0 0 ${doc.width} ${doc.height}`, "aria-hidden": "true" });
+    const touchHandle = (parent, action, x, y, outward = false) => {
+      if (!matchMedia("(any-pointer: coarse)").matches) return;
+      // Keep most of a resize target outside the selection so small text
+      // remains draggable. The visible handle stays at the actual corner.
+      const offset = (outward ? 8 : 22) * scale;
+      const hitX = Math.max(0, Math.min(x - offset, doc.width - 44 * scale));
+      parent.append(svgNode("rect", { x: hitX, y: y - offset, width: 44 * scale, height: 44 * scale,
+        fill: "transparent", "data-handle-hit": action }));
+    };
     if (partMode && element.type === "card") {
       const box = partBounds();
       if (!box) return;
       overlay.append(svgNode("rect", { ...box, fill: "none", stroke: "#a78bfa", "stroke-dasharray": "4 3", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
+      touchHandle(overlay, "part-scale", box.x + box.width, box.y + box.height, true);
       overlay.append(svgNode("rect", { x: box.x + box.width - size / 2, y: box.y + box.height - size / 2,
         width: size, height: size, fill: "#fff", stroke: "#a78bfa", "data-handle": "part-scale", "vector-effect": "non-scaling-stroke" }));
       host.append(overlay); return;
@@ -257,7 +267,9 @@
     const group = svgNode("g", { transform: `rotate(${element.rotation} ${cx} ${cy})` });
     group.append(svgNode("rect", { x: element.x, y: element.y, width: element.width, height: element.height, fill: "none", stroke: "#818cf8", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
     group.append(svgNode("line", { x1: cx, y1: element.y, x2: cx, y2: element.y - rotationOffset, stroke: "#818cf8", "vector-effect": "non-scaling-stroke" }));
+    touchHandle(group, "rotate", cx, element.y - rotationOffset);
     group.append(svgNode("circle", { cx, cy: element.y - rotationOffset, r: size / 2, fill: "#fff", stroke: "#818cf8", "data-handle": "rotate", "vector-effect": "non-scaling-stroke" }));
+    touchHandle(group, "resize", element.x + element.width, element.y + element.height, true);
     group.append(svgNode("rect", { x: element.x + element.width - size / 2, y: element.y + element.height - size / 2, width: size, height: size, rx: size / 6, fill: "#fff", stroke: "#818cf8", "data-handle": "resize", "vector-effect": "non-scaling-stroke" }));
     overlay.append(group); host.append(overlay);
   }
@@ -721,7 +733,10 @@
     finishGesture(); finishEdit(); partMode = !partMode;
     if (partMode && cardPreviews.get(M.cardPath(selected()))?.error) cardPreviews.delete(M.cardPath(selected()));
     renderCanvas(); renderDecorationInspector();
-    if (partMode) host.focus({ preventScroll: true });
+    if (partMode) {
+      host.focus({ preventScroll: true });
+      if (matchMedia("(max-width: 700px)").matches) host.scrollIntoView({ block: "center" });
+    }
   });
   $("edit-card-parts-tool").addEventListener("click", () => {
     $("card-parts-controls").open = true;
@@ -866,7 +881,8 @@
   const rotated = (x, y, radians) => ({ x: x * Math.cos(radians) - y * Math.sin(radians), y: x * Math.sin(radians) + y * Math.cos(radians) });
   host.addEventListener("pointerdown", (event) => {
     if (event.button !== 0 || !event.isPrimary) return;
-    const handle = event.target.closest("[data-handle]")?.dataset.handle;
+    const handleNode = event.target.closest("[data-handle], [data-handle-hit]");
+    const handle = handleNode?.dataset.handle || handleNode?.dataset.handleHit;
     const target = event.target.closest("[data-element-id]");
     if (!handle && !target) { select(null); return; }
     event.preventDefault(); host.focus({ preventScroll: true }); finishEdit();
@@ -922,7 +938,11 @@
       const angle = original.rotation * Math.PI / 180;
       const delta = rotated(dx, dy, -angle);
       let width = Math.max(12, original.width + delta.x), height = Math.max(12, original.height + delta.y);
-      if (event.shiftKey) height = width * original.height / original.width;
+      if (event.shiftKey || (event.pointerType === "touch" && ["card", "image"].includes(original.type))) {
+        const ratio = Math.max(1 / original.width, 1 / original.height,
+          Math.min((original.width + delta.x) / original.width, 4096 / original.width, 4096 / original.height));
+        width = original.width * ratio; height = original.height * ratio;
+      }
       width = Math.min(4096, width); height = Math.min(4096, height);
       const offset = rotated((width - original.width) / 2, (height - original.height) / 2, angle);
       element.x = Math.round(original.x + offset.x - (width - original.width) / 2);
