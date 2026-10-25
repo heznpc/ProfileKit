@@ -134,7 +134,7 @@
     return doc.background === "transparent" && doc.elements.length === 1 && card.type === "card"
       && card.x === 0 && card.y === 0 && card.width === doc.width && card.height === doc.height
       && card.rotation === 0 && card.opacity === 1
-      && !card.parts && !card.effect
+      && !card.parts && !card.effect && !card.overflow
       && card.nativeWidth !== undefined && card.nativeHeight !== undefined
       && Math.abs(card.width * card.nativeHeight - card.height * card.nativeWidth) <= Math.max(card.nativeWidth, card.nativeHeight) * 0.001
       ? card : null;
@@ -174,7 +174,7 @@
   }
   function readmeCards(document, origin) {
     const doc = Model.normalizeDocument(document);
-    if (!doc.elements.length || doc.elements.some((element) => element.type !== "card" || element.rotation !== 0 || element.opacity !== 1 || element.parts || element.effect)) {
+    if (!doc.elements.length || doc.elements.some((element) => element.type !== "card" || element.rotation !== 0 || element.opacity !== 1 || element.parts || element.effect || element.overflow)) {
       throw new Error("Separate card embeds require only unrotated, fully opaque live cards without part edits or layer effects. Use the composed design for this document.");
     }
     return doc.elements.map((card) => linkedImage(`<img src="${escape(cardUrl(card, origin))}" alt="${escape(card.alt ?? (doc.name || "Profile card"))}" width="${escape(card.displayWidth ?? card.width)}" />`, card)).join("\n");

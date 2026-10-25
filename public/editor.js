@@ -74,7 +74,7 @@
     const node = visiblePartNode();
     if (!node || selected().parts?.[partName]?.hidden) return null;
     const box = node.getBoundingClientRect(), canvas = host.getBoundingClientRect();
-    const card = node.closest("[data-element-id]").getBoundingClientRect();
+    const card = selected().overflow === "visible" ? canvas : node.closest("[data-element-id]").getBoundingClientRect();
     const minX = Math.max(canvas.left, card.left), maxX = Math.min(canvas.right, card.right);
     const minY = Math.max(canvas.top, card.top), maxY = Math.min(canvas.bottom, card.bottom);
     const left = Math.max(minX, box.left - (box.width < 6 ? 3 : 0));
@@ -209,7 +209,7 @@
     const focusedId = document.activeElement?.closest("#canvas-host [data-element-id]")?.dataset.elementId;
     const cardMarkup = Object.create(null);
     for (const element of doc.elements) {
-      if (element.type !== "card" || (!element.parts && !(partMode && element.id === selectedId))) continue;
+      if (element.type !== "card" || (!element.parts && !element.overflow && !(partMode && element.id === selectedId))) continue;
       const entry = previewEntry(element);
       cardMarkup[element.id] = entry.svg || `<svg xmlns="${SVG_NS}" width="${element.nativeWidth || element.width}" height="${element.nativeHeight || element.height}"><rect width="100%" height="100%" fill="#171b27"/><text x="20" y="36" fill="#c4b5fd" font-size="16">${entry.error ? "미리보기를 불러오지 못했습니다" : "꾸미기 미리보기를 불러오는 중…"}</text></svg>`;
     }
@@ -566,7 +566,7 @@
   let verifiedDesignUrl = null;
   function canExportCards() {
     return doc.elements.length > 1 && doc.elements.every((element) => element.type === "card" && element.rotation === 0 && element.opacity === 1
-      && !element.parts && !element.effect && element.nativeWidth && element.nativeHeight && Math.abs(element.width / element.height - element.nativeWidth / element.nativeHeight) < 0.001);
+      && !element.parts && !element.effect && !element.overflow && element.nativeWidth && element.nativeHeight && Math.abs(element.width / element.height - element.nativeWidth / element.nativeHeight) < 0.001);
   }
   function refreshEmbed() {
     $("embed-code").value = ""; $("embed-url").value = "";
@@ -613,7 +613,7 @@
       try { $("deployment-origin").value = canSplit ? (doc.elements[0].sourceOrigin || location.origin) : new URL(Design.designUrl(doc)).origin; }
       catch { $("deployment-origin").value = location.origin; }
       // New multi-element designs need this deployment's newly implemented route.
-      if (!canSplit && (doc.elements.length !== 1 || doc.elements[0].type !== "card" || doc.elements[0].parts || doc.elements[0].effect)) $("deployment-origin").value = location.origin;
+      if (!canSplit && (doc.elements.length !== 1 || doc.elements[0].type !== "card" || doc.elements[0].parts || doc.elements[0].effect || doc.elements[0].overflow)) $("deployment-origin").value = location.origin;
     }
     refreshEmbed(); $("embed-dialog").showModal();
   });
@@ -663,6 +663,7 @@
   }
   function renderDecorationInspector() {
     const element = selected(); if (!element) return;
+    $("card-overflow").checked = element.overflow === "visible";
     const definitions = partDefinitions(element), names = Object.keys(definitions);
     $("card-parts-controls").hidden = !names.length;
     if (partOwner !== element.id || $("card-part-select").dataset.definitions !== names.join(",")) {
@@ -734,6 +735,13 @@
   for (const key of ["dx", "dy", "scale", "color", "fill", "stroke"]) $("part-" + key).addEventListener("change", () => {
     const value = $("part-" + key).value;
     changePart((part) => { if (["color", "fill", "stroke"].includes(key)) { if (value.trim()) part[key] = value.trim(); else delete part[key]; } else part[key] = Number(value); });
+  });
+  $("card-overflow").addEventListener("change", () => {
+    const visible = $("card-overflow").checked;
+    transact((next) => {
+      const card = next.elements.find((element) => element.id === selectedId);
+      if (visible) card.overflow = "visible"; else delete card.overflow;
+    });
   });
   $("part-hidden").addEventListener("change", () => changePart((part) => { part.hidden = $("part-hidden").checked; }));
   $("part-reset").addEventListener("click", () => {

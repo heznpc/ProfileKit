@@ -230,6 +230,11 @@
     const slots = nodes.filter((node) => node.name === "svg" && node.parent === root);
     const names = (card.params.cards || "").split(",").map((name) => name.trim()).filter(Boolean);
     const edits = [];
+    if (card.overflow === "visible") for (const slot of slots) {
+      const overflow = slot.attrs.overflow;
+      if (overflow) edits.push({ start: overflow.start, end: overflow.end, value: "visible" });
+      else edits.push({ start: slot.insertAt, end: slot.insertAt, value: ' overflow="visible"' });
+    }
     slots.forEach((slot, index) => {
       const registry = Object.hasOwn(PARTS, names[index]) ? PARTS[names[index]] : {};
       for (const node of nodes) {

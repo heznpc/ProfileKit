@@ -33,7 +33,7 @@
     image: ["src", "fit"],
     rect: ["fill", "stroke", "strokeWidth", "radius"],
     ellipse: ["fill", "stroke", "strokeWidth", "radius"],
-    card: ["endpoint", "params", "sourceOrigin", "nativeWidth", "nativeHeight", "linkUrl", "alt", "displayWidth", "parts"],
+    card: ["endpoint", "params", "sourceOrigin", "nativeWidth", "nativeHeight", "linkUrl", "alt", "displayWidth", "parts", "overflow"],
   };
   const CARD_ENDPOINTS = Object.freeze([...Object.keys(schema?.CARDS || {}), "stack"]);
   const STACK_ENDPOINTS = Object.freeze(["hero", "section", "divider", "now", "timeline", "tags", "toc", "stats", "languages"]);
@@ -113,6 +113,10 @@
     }
     if (jsonBytes(params) > LIMITS.MAX_CARD_PARAM_BYTES) fail("Card parameters are too large");
     const card = { endpoint, params };
+    if (raw.overflow !== undefined) {
+      const overflow = choice(raw.overflow, ["hidden", "visible"], "Card overflow");
+      if (overflow === "visible") card.overflow = overflow;
+    }
     if (raw.parts !== undefined) {
       if (!decoration) fail("Card decoration module is required");
       const parts = decoration.normalizeParts(card, raw.parts);
@@ -588,7 +592,7 @@
       attrs += ` viewBox="0 0 ${w[1]} ${h[1]}"`;
     }
     attrs = attrs.replace(/\s+(?:x|y|width|height|preserveAspectRatio|overflow)="[^"]*"/g, "");
-    const placed = svg.replace(tag[0], `<svg x="${element.x}" y="${element.y}" width="${element.width}" height="${element.height}" preserveAspectRatio="none" overflow="hidden"${attrs}>`);
+    const placed = svg.replace(tag[0], `<svg x="${element.x}" y="${element.y}" width="${element.width}" height="${element.height}" preserveAspectRatio="none" overflow="${element.overflow || "hidden"}"${attrs}>`);
     return isolateSVG(placed, prefix);
   }
 
@@ -609,7 +613,7 @@
       } else if (type === "image") {
         body = `${clip}<image ${box} href="${element.src}" preserveAspectRatio="xMidYMid ${element.fit === "cover" ? "slice" : "meet"}" clip-path="url(#${clipId})"/>`;
       } else if (type === "card") {
-        if (element.parts && (!cardMarkup || !Object.hasOwn(cardMarkup, id))) fail("Decorated cards require their rendered card markup");
+        if ((element.parts || element.overflow) && (!cardMarkup || !Object.hasOwn(cardMarkup, id))) fail("Decorated cards require their rendered card markup");
         body = cardMarkup && Object.hasOwn(cardMarkup, id)
           ? positionedCard(decoration.applyParts(cardMarkup[id], element.parts, element), element, `pk-card-${index}-${id}-`)
           : `<image ${box} href="${escape((element.sourceOrigin || "") + cardPath(element))}" preserveAspectRatio="none"/>`;
@@ -628,7 +632,20 @@
         const padding = strokePadding + effect.blur * 3 + Math.max(Math.abs(effect.dx), Math.abs(effect.dy)) + 1;
         const dx = effect.dx;
         const dy = effect.dy;
-        const filter = `<defs><filter id="${filterId}" filterUnits="userSpaceOnUse" x="${svgNumber(x - padding)}" y="${svgNumber(y - padding)}" width="${svgNumber(width + padding * 2)}" height="${svgNumber(height + padding * 2)}" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceAlpha" stdDeviation="${effect.blur}"/><feOffset dx="${dx}" dy="${dy}" result="${filterId}-offset"/><feFlood flood-color="${effect.color}" flood-opacity="${effect.opacity}"/><feComposite in2="${filterId}-offset" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+        let bounds = { x, y, width, height };
+        if (type === "card" && element.overflow === "visible") {
+          // The filter lives before the layer rotation. Include the canvas in
+          // that coordinate space so moved parts and their glow remain visible.
+          const angle = -rotation * Math.PI / 180, cx = x + width / 2, cy = y + height / 2;
+          const corners = [[0, 0], [doc.width, 0], [0, doc.height], [doc.width, doc.height]].map(([px, py]) => ({
+            x: cx + (px - cx) * Math.cos(angle) - (py - cy) * Math.sin(angle),
+            y: cy + (px - cx) * Math.sin(angle) + (py - cy) * Math.cos(angle),
+          }));
+          const left = Math.min(x, ...corners.map((p) => p.x)), top = Math.min(y, ...corners.map((p) => p.y));
+          bounds = { x: left, y: top, width: Math.max(x + width, ...corners.map((p) => p.x)) - left,
+            height: Math.max(y + height, ...corners.map((p) => p.y)) - top };
+        }
+        const filter = `<defs><filter id="${filterId}" filterUnits="userSpaceOnUse" x="${svgNumber(bounds.x - padding)}" y="${svgNumber(bounds.y - padding)}" width="${svgNumber(bounds.width + padding * 2)}" height="${svgNumber(bounds.height + padding * 2)}" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceAlpha" stdDeviation="${effect.blur}"/><feOffset dx="${dx}" dy="${dy}" result="${filterId}-offset"/><feFlood flood-color="${effect.color}" flood-opacity="${effect.opacity}"/><feComposite in2="${filterId}-offset" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
         body = `${filter}<g filter="url(#${filterId})">${body}</g>`;
       }
       return `<g${interactive ? ` data-element-id="${id}"` : ""} transform="rotate(${rotation} ${svgNumber(x + width / 2)} ${svgNumber(y + height / 2)})" opacity="${opacity}">${hitArea}${body}</g>`;
