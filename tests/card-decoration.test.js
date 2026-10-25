@@ -2,6 +2,32 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const Decoration = require("../public/card-decoration");
 
+test("heartbeat referenced geometry inherits original paint and supports per-instance overrides", () => {
+  const { renderHeartbeatCard } = require("../src/cards/heartbeat");
+  const svg = renderHeartbeatCard({ colors: require("../src/common/themes").getTheme("dark"), width: 700, height: 220, bpm: 72 });
+  const path = svg.match(/<path id="hb-path"[^>]*>/)[0];
+  assert.doesNotMatch(path, /\s(?:fill|stroke)=/);
+  assert.equal((svg.match(/<use href="#hb-path" fill="none" stroke="#[a-fA-F0-9]+"/g) || []).length, 2);
+  const painted = Decoration.applyParts(svg, { waveform: { fill: "#1234fa", stroke: "#12ab34" } }, { endpoint: "heartbeat" });
+  assert.equal((painted.match(/style="fill:#1234fa!important;stroke:#12ab34!important"/g) || []).length, 2);
+  assert.ok(painted.includes(path));
+});
+
+test("shape paint is opt-in, rejects CSS injection and leaves clipping resources and text alone", () => {
+  const card = { endpoint: "equalizer" };
+  const svg = '<svg><g data-cas-target="bars"><defs><clipPath id="clip"><rect width="10"/></clipPath></defs><rect style="animation:pulse 1s" fill="#123"/><path fill="none"/><text>Keep</text></g><rect fill="#456"/></svg>';
+  assert.equal(Decoration.applyParts(svg, undefined, card), svg);
+  const output = Decoration.applyParts(svg, { bars: { fill: "#ABC", stroke: "none" } }, card);
+  assert.ok(output.includes('<clipPath id="clip"><rect width="10"/></clipPath>'));
+  assert.ok(output.includes('style="animation:pulse 1s;fill:#abc!important;stroke:none!important"'));
+  assert.ok(output.includes('<text>Keep</text>'));
+  assert.ok(output.endsWith('<rect fill="#456"/></svg>'));
+  for (const fill of ['url(https://bad.test)', '#fff;opacity:0', 'red', 123]) {
+    assert.throws(() => Decoration.normalizeParts(card, { bars: { fill } }));
+  }
+  assert.throws(() => Decoration.normalizeParts("hero", { name: { fill: "#fff" } }));
+});
+
 test("part registry, strict values and no-op normalization bound the decoration surface", () => {
   assert.deepEqual(Object.keys(Decoration.PARTS.hero), ["name", "subtitle", "bg", "accent"]);
   assert.equal(Decoration.PARTS.hero.bg.color, false);

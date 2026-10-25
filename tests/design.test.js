@@ -14,6 +14,23 @@ const ORIGIN = "http://localhost:3000";
 function card(overrides = {}) { return Model.createElement("card", { id: "live", x: 0, y: 0, width: 600, height: 280, ...overrides }); }
 function document(...elements) { return Model.createDocument({ width: 600, height: 280, background: "transparent", elements }); }
 function requestUrl(doc) { return `/api/design?d=${Design.encodeDocument(doc)}`; }
+
+test("vector paint survives editable projects and README design URLs with animations intact", async () => {
+  for (const [endpointName, target, paint] of [
+    ["equalizer", "bars", { fill: "#fa1234" }],
+    ["heartbeat", "waveform", { stroke: "#12ab34" }],
+  ]) {
+    const doc = document(card({ endpoint: endpointName, params: {}, parts: { [target]: paint } }));
+    const reopened = Model.parseDocument(JSON.stringify(doc));
+    const decoded = Design.decodeDocument(Design.encodeDocument(reopened));
+    assert.deepEqual(decoded.elements[0].parts, reopened.elements[0].parts);
+    assert.match(Design.readme(reopened, ORIGIN), /\/api\/design\?d=/);
+    const response = await request(requestUrl(reopened));
+    assert.equal(response.statusCode, 200);
+    assert.ok(response.svg.includes(`${Object.keys(paint)[0]}:${Object.values(paint)[0]}!important`));
+    assert.match(response.svg, /<animate/);
+  }
+});
 async function request(url) {
   const result = { headers: {}, statusCode: 200 };
   await endpoint({ url }, {

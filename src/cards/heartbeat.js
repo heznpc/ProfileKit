@@ -67,13 +67,13 @@ function renderHeartbeatCard({
     <filter id="hb-glow">
       <feGaussianBlur stdDeviation="1.5"/>
     </filter>
-    <path id="hb-path" d="${path}" fill="none" stroke="${accent}" stroke-linecap="round" stroke-linejoin="round"/>
+    <path id="hb-path" d="${path}" stroke-linecap="round" stroke-linejoin="round"/>
   </defs>
   <g clip-path="url(#hb-clip)">
     <rect data-cas-target="bg" x="0" y="0" width="${w}" height="${h}" fill="${bg}"/>
     <g data-cas-target="waveform">
-      <use href="#hb-path" stroke-width="2.5" filter="url(#hb-glow)" opacity="0.5"/>
-      <use href="#hb-path" stroke-width="2"/>
+      <use href="#hb-path" fill="none" stroke="${accent}" stroke-width="2.5" filter="url(#hb-glow)" opacity="0.5"/>
+      <use href="#hb-path" fill="none" stroke="${accent}" stroke-width="2"/>
       <animateTransform attributeName="transform" type="translate" from="0 0" to="${-cycleW} 0" dur="${cycleDur.toFixed(2)}s" repeatCount="indefinite"/>
     </g>
     <rect x="0" y="0" width="${w}" height="${h}" fill="url(#hb-fade)" pointer-events="none"/>
