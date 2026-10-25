@@ -68,7 +68,7 @@ function workspace(storage = new Map()) {
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
-  for (const name of ["card-schema", "editor-model", "readme-model", "readme"]) {
+  for (const name of ["card-schema", "card-decoration", "editor-model", "readme-model", "readme"]) {
     vm.runInContext(publicSource(name), sandbox, { filename: `public/${name}.js` });
   }
   const click = (id) => element(id).dispatch("click");

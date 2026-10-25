@@ -377,3 +377,91 @@ test("thin live cards retain their actual canvas height", () => {
     elements: [model.createElement("card", { endpoint: "divider", x: 0, y: 0, width: 800, height: 1, params: { height: "1" } })] });
   assert.equal(model.parseDocument(model.serializeDocument(doc)).height, 1);
 });
+
+test("unadorned document JSON and both SVG paths remain byte-identical to the legacy fixture", () => {
+  const { createHash } = require("node:crypto");
+  const digest = (value) => createHash("sha256").update(value).digest("hex");
+  const doc = model.createDocument({ width: 600, height: 280, background: "transparent", name: "Legacy & layout", elements: [
+    model.createElement("card", { id: "live", x: 0, y: 0, width: 600, height: 280, nativeWidth: 600, nativeHeight: 280, params: { name: "Ren", subtitle: "", hide_border: "false" } }),
+    model.createElement("text", { id: "copy", text: "Legacy & text", rotation: 12 }),
+    model.createElement("rect", { id: "box", opacity: 0.5 }),
+  ] });
+  assert.equal(digest(model.serializeDocument(doc)), "4f9cce484308bb4c3e8878ee2a751e71706c894b8ee054a6f4a0e313237429cf");
+  assert.equal(digest(model.renderSVG(doc)), "8db903bf35fc7f99d5a3e614db67daa40635ad2948eb69219f6f86b60cba3f7e");
+  assert.equal(digest(model.renderSVG(doc, { cardMarkup: { live: '<svg width="600" height="280"><text x="20" y="30" data-cas-target="name">Ren</text></svg>' } })), "04c59bb6f4acf1031be88b10fc00a03ba5f7e82c42bf9103e7a6e5b87ddb1b43");
+});
+
+test("parts and layer effects survive files with strict validation and no-op removal", () => {
+  const effect = { kind: "glow", color: "#ABC", blur: 12, opacity: 0.6, dx: 4, dy: -3 };
+  const doc = documentWith(model.createElement("card", { id: "live", parts: { name: { dx: 12, scale: 1.5, color: "#ABC" } }, effect }),
+    model.createElement("text", { id: "copy", effect }));
+  assert.deepEqual(model.parseDocument(model.serializeDocument(doc)), doc);
+  assert.deepEqual(doc.elements[0].parts.name, { dx: 12, dy: 0, scale: 1.5, color: "#abc" });
+  assert.equal(doc.elements[1].effect.color, "#abc");
+  const plain = model.createElement("card", { id: "same" });
+  assert.deepEqual(model.createElement("card", { id: "same", parts: { name: { dx: 0, dy: 0, scale: 1, hidden: false } }, effect: { ...effect, opacity: 0 } }), plain);
+  for (const part of [{ dx: NaN }, { color: '" onload="bad' }, { scale: Infinity }, { css: "bad" }]) {
+    assert.throws(() => model.createElement("card", { parts: { name: part } }));
+  }
+  assert.throws(() => model.createElement("card", { endpoint: "stats", parts: { name: { dx: 1 } } }));
+  assert.throws(() => model.createElement("text", { parts: { name: { dx: 1 } } }));
+  assert.throws(() => model.renderSVG(doc), /rendered card markup/);
+});
+
+test("layer effects have unique bounded filters and work with every existing layer type", () => {
+  const effect = { kind: "shadow", color: "#123456", blur: 8, opacity: 0.7, dx: 6, dy: -4 };
+  const elements = ["text", "rect", "ellipse", "image", "card"].map((type, index) => model.createElement(type, { id: `layer-${index}`, effect: index === 0 ? { ...effect, kind: "glow" } : effect, ...(type === "image" ? { src: PNG } : {}) }));
+  const output = model.renderSVG(documentWith(...elements));
+  const ids = Array.from(output.matchAll(/<filter id="([^"]+)"/g), (match) => match[1]);
+  assert.equal(ids.length, elements.length);
+  assert.equal(new Set(ids).size, elements.length);
+  for (const id of ids) {
+    assert.ok(output.includes(`filter="url(#${id})"`));
+    assert.ok(output.includes(`in2="${id}-offset"`));
+    assert.ok(output.includes(`<feOffset dx="6" dy="-4" result="${id}-offset"/>`));
+  }
+  assert.match(output, /filterUnits="userSpaceOnUse" x="49" y="49"/);
+  assert.equal(model.renderSVG(documentWith(...elements)), output);
+});
+
+test("effect bounds preserve the complete shape stroke before expanding blur and offsets", () => {
+  for (const type of ["rect", "ellipse"]) {
+    for (const [blur, dx, dy, padding] of [[0, 0, 0, 33], [4, 6, -3, 51]]) {
+      const shape = model.createElement(type, { id: "shape", x: 100, y: 120, width: 240, height: 160,
+        stroke: "#123456", strokeWidth: 64,
+        effect: { kind: "shadow", color: "#000", blur, opacity: 1, dx, dy } });
+      const output = model.renderSVG(documentWith(shape));
+      assert.ok(output.includes(`filterUnits="userSpaceOnUse" x="${100 - padding}" y="${120 - padding}" width="${240 + padding * 2}" height="${160 + padding * 2}"`));
+      assert.ok(output.includes('stroke="#123456" stroke-width="64"'));
+      assert.ok(output.includes('<feMergeNode in="SourceGraphic"/>'));
+      assert.ok(output.includes(type === "rect" ? '<rect x="100" y="120" width="240" height="160"' : '<ellipse cx="220" cy="200" rx="120" ry="80"'));
+    }
+  }
+});
+
+test("decorated card preview and export retain trusted markup and wrap animations outside their target", () => {
+  const card = model.createElement("card", { id: "live", parts: { name: { dx: 10, scale: 2, color: "#abc" } } });
+  const markup = '<svg width="600" height="280"><style>.name {fill:#000;animation:in 1s} @keyframes in {from {transform:translateY(8px)} to {transform:translateY(0)}}</style><text x="20" y="30" class="name" data-cas-target="name">Live value</text></svg>';
+  const doc = documentWith(card);
+  const exported = model.renderSVG(doc, { cardMarkup: { live: markup } });
+  const preview = model.renderSVG(doc, { cardMarkup: { live: markup }, interactive: true });
+  assert.ok(exported.includes('<g transform="translate(10 0) translate(20 30) scale(2) translate(-20 -30)"><text'));
+  assert.match(exported, /style="fill:#abc!important">Live value<\/text><\/g>/);
+  assert.match(exported, /animation:pk-card-0-live-in 1s/);
+  assert.ok(preview.includes('<g transform="translate(10 0) translate(20 30) scale(2) translate(-20 -30)"><text'));
+});
+
+test("decorated browser documents and SVG output match Node without runtime dependencies", () => {
+  const card = model.createElement("card", { id: "live", parts: { name: { scale: 1.5, color: "#abc" } },
+    effect: { kind: "glow", color: "#123456", blur: 4, opacity: 0.6, dx: 2, dy: 3 } });
+  const markup = '<svg width="600" height="280"><text x="20" y="30" data-cas-target="name">Same value</text></svg>';
+  const doc = documentWith(card);
+  const sandbox = { URL, TextEncoder, TextDecoder, atob, btoa, json: model.serializeDocument(doc), markup };
+  vm.createContext(sandbox);
+  for (const source of ["card-schema", "card-decoration", "editor-model"]) {
+    vm.runInContext(fs.readFileSync(require.resolve(`../public/${source}`), "utf8"), sandbox);
+  }
+  const browserSVG = vm.runInContext("ProfileKitEditorModel.renderSVG(ProfileKitEditorModel.parseDocument(json), {cardMarkup: {live: markup}})", sandbox);
+  assert.equal(browserSVG, model.renderSVG(doc, { cardMarkup: { live: markup } }));
+  assert.equal(vm.runInContext("ProfileKitEditorModel.serializeDocument(ProfileKitEditorModel.parseDocument(json))", sandbox), model.serializeDocument(doc));
+});

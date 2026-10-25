@@ -111,7 +111,7 @@ test("/index.html preserves the original card library and README composer", asyn
 });
 
 test("shared editor modules are served as JavaScript", async () => {
-  for (const file of ["card-schema.js", "composition.js", "editor-model.js", "card-design.js", "editor-presets.js", "editor.js", "readme-model.js", "readme-preview.js", "readme.js", "vendor/marked.umd.js", "vendor/purify.min.js"]) {
+  for (const file of ["card-schema.js", "composition.js", "card-decoration.js", "editor-model.js", "card-design.js", "editor-presets.js", "editor.js", "readme-model.js", "readme-preview.js", "readme.js", "vendor/marked.umd.js", "vendor/purify.min.js"]) {
     const res = await fetch(`${baseUrl}/${file}`);
     assert.equal(res.status, 200);
     assert.match(res.headers.get("content-type"), /text\/javascript/);

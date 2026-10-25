@@ -134,6 +134,7 @@
     return doc.background === "transparent" && doc.elements.length === 1 && card.type === "card"
       && card.x === 0 && card.y === 0 && card.width === doc.width && card.height === doc.height
       && card.rotation === 0 && card.opacity === 1
+      && !card.parts && !card.effect
       && card.nativeWidth !== undefined && card.nativeHeight !== undefined
       && Math.abs(card.width * card.nativeHeight - card.height * card.nativeWidth) <= Math.max(card.nativeWidth, card.nativeHeight) * 0.001
       ? card : null;
@@ -154,14 +155,17 @@
   }
   function readme(document, origin) {
     const doc = Model.normalizeDocument(document);
-    const card = directCard(doc);
+    // Opt-in decoration keeps a lone card's embed metadata when it switches to
+    // the composed endpoint. Undecorated documents retain their existing output.
+    const only = doc.elements.length === 1 && doc.elements[0].type === "card" ? doc.elements[0] : null;
+    const card = directCard(doc) || (only?.parts || only?.effect ? only : null);
     const img = `<img src="${escape(designUrl(doc, origin))}" alt="${escape(card?.alt ?? (doc.name || "Profile card"))}" width="${escape(card?.displayWidth ?? doc.width)}" />`;
     return linkedImage(img, card);
   }
   function readmeCards(document, origin) {
     const doc = Model.normalizeDocument(document);
-    if (!doc.elements.length || doc.elements.some((element) => element.type !== "card" || element.rotation !== 0 || element.opacity !== 1)) {
-      throw new Error("Separate card embeds require only unrotated, fully opaque live cards. Use the composed design for this document.");
+    if (!doc.elements.length || doc.elements.some((element) => element.type !== "card" || element.rotation !== 0 || element.opacity !== 1 || element.parts || element.effect)) {
+      throw new Error("Separate card embeds require only unrotated, fully opaque live cards without part edits or layer effects. Use the composed design for this document.");
     }
     return doc.elements.map((card) => linkedImage(`<img src="${escape(cardUrl(card, origin))}" alt="${escape(card.alt ?? (doc.name || "Profile card"))}" width="${escape(card.displayWidth ?? card.width)}" />`, card)).join("\n");
   }

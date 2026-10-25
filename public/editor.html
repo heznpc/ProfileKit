@@ -76,6 +76,7 @@
           <button id="redo" class="icon-button" type="button" aria-label="다시 실행" title="다시 실행" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6 5 5-5 5M20 11H10a6 6 0 0 0-6 6" /></svg></button>
         </div>
         <div class="creation-tools" role="group" aria-label="요소 추가">
+          <button id="edit-card-parts-tool" class="tool-button" type="button" aria-pressed="false" hidden><span aria-hidden="true">↗</span><span>카드 안 꾸미기</span></button>
           <button id="add-text" class="tool-button" type="button"><span class="type-icon" aria-hidden="true">T</span><span>텍스트</span></button>
           <button id="add-image" class="tool-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="9" r="1.5" /><path d="m4 18 5-5 3 3 4-6 5 7" /></svg><span>이미지</span></button>
           <button id="add-rect" class="tool-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2" /></svg><span>사각형</span></button>
@@ -124,6 +125,28 @@
           <button id="fit-card-canvas" class="small-button full-width fit-card" type="button">캔버스를 이 카드 크기에 맞추기</button>
         </section>
 
+        <details id="card-parts-controls" class="inspector-section inspector-disclosure" hidden>
+          <summary><span>카드 안의 요소</span><span class="disclosure-caption">위치 · 색상</span></summary>
+          <div class="disclosure-content">
+            <p class="field-hint">지원되는 제목·문구·배경을 따로 꾸밉니다. 카드 데이터는 계속 갱신됩니다.</p>
+            <button id="card-part-edit" class="small-button full-width part-edit-button" type="button" aria-pressed="false" aria-describedby="card-part-hint">캔버스에서 요소 편집</button>
+            <button id="card-part-retry" class="small-button full-width" type="button" hidden>미리보기 다시 불러오기</button>
+            <p id="card-part-hint" class="field-hint part-edit-hint" role="status" aria-live="polite">편집 모드를 켜고 카드 안의 요소를 눌러 움직이세요.</p>
+            <label class="field" for="card-part-select"><span>편집할 요소</span><select id="card-part-select" aria-describedby="card-part-hint"></select></label>
+            <div class="field-grid two-columns">
+              <label class="field" for="part-dx"><span>가로 이동</span><input id="part-dx" type="number" min="-2048" max="2048" step="1" value="0" /></label>
+              <label class="field" for="part-dy"><span>세로 이동</span><input id="part-dy" type="number" min="-2048" max="2048" step="1" value="0" /></label>
+              <label class="field" for="part-scale"><span>크기 배율</span><input id="part-scale" type="number" min="0.25" max="4" step="0.05" value="1" /></label>
+              <label class="field" for="part-color"><span>색상</span><input id="part-color" type="text" spellcheck="false" placeholder="원래 색상" aria-describedby="part-color-hint" /></label>
+            </div>
+            <p id="part-color-hint" class="field-hint">색상은 #7aa2f7처럼 입력하세요. 비우면 원래 색상을 사용합니다.</p>
+            <div class="part-actions">
+              <label class="checkbox-field" for="part-hidden"><input id="part-hidden" type="checkbox" /><span>이 요소 숨기기</span></label>
+              <button id="part-reset" class="small-button" type="button">요소 초기화</button>
+            </div>
+          </div>
+        </details>
+
         <section class="inspector-section selection-settings" aria-labelledby="selection-heading">
           <div class="section-heading"><h2 id="selection-heading">배치</h2><span id="selection-type" class="selection-type">카드</span></div>
           <div class="field-grid two-columns">
@@ -160,6 +183,25 @@
           <p class="field-hint">업로드한 이미지는 프로젝트에 함께 저장됩니다.</p>
         </section>
 
+        <details id="decoration-controls" class="inspector-section inspector-disclosure">
+          <summary><span>레이어 효과</span><span class="disclosure-caption">그림자 · 빛</span></summary>
+          <div class="disclosure-content">
+            <label class="field" for="element-effect-kind"><span>효과</span><select id="element-effect-kind"><option value="none">없음</option><option value="shadow">그림자</option><option value="glow">빛 번짐</option></select></label>
+            <div id="effect-fields" hidden>
+              <label class="field" for="element-effect-color"><span>효과 색상</span><input id="element-effect-color" type="text" spellcheck="false" placeholder="#6366f1" /></label>
+              <div class="field-grid two-columns">
+                <label class="field" for="element-effect-blur"><span>퍼짐</span><input id="element-effect-blur" type="number" min="0" max="40" step="1" value="12" /></label>
+                <label class="field" for="element-effect-opacity"><span>불투명도</span><input id="element-effect-opacity" type="number" min="0" max="1" step="0.05" value="0.5" /></label>
+                <label class="field" for="element-effect-dx"><span>가로 이동</span><input id="element-effect-dx" type="number" min="-80" max="80" step="1" value="0" /></label>
+                <label class="field" for="element-effect-dy"><span>세로 이동</span><input id="element-effect-dy" type="number" min="-80" max="80" step="1" value="6" /></label>
+              </div>
+              <p class="field-hint">선택한 레이어 전체에 적용됩니다. 캔버스 바깥의 효과는 잘립니다.</p>
+              <button id="effect-add-space" class="small-button full-width" type="button">효과가 보이도록 캔버스 여백 추가</button>
+              <button id="effect-reset" class="small-button full-width effect-reset" type="button">효과 지우기</button>
+            </div>
+          </div>
+        </details>
+
         <section class="inspector-section element-actions" aria-label="요소 관리">
           <div class="field-grid two-columns"><button id="bring-forward" class="small-button" type="button">앞으로 한 칸</button><button id="send-backward" class="small-button" type="button">뒤로 한 칸</button></div>
           <div class="field-grid two-columns"><button id="duplicate-element" class="small-button" type="button">복제</button><button id="delete-element" class="small-button danger" type="button">삭제</button></div>
@@ -185,6 +227,7 @@
     </div>
   </dialog>
   <script src="/card-schema.js"></script>
+  <script src="/card-decoration.js"></script>
   <script src="/editor-model.js"></script>
   <script src="/card-design.js"></script>
   <script src="/editor-presets.js"></script>

@@ -14,13 +14,18 @@
   window.addEventListener("hashchange", openLegacyLink);
   const M = window.ProfileKitEditorModel;
   const Design = window.ProfileKitCardDesign;
+  const Decoration = window.ProfileKitCardDecoration;
   const catalog = window.ProfileKitCards.CARDS;
   const presets = window.ProfileKitEditorPresets;
   const $ = (id) => document.getElementById(id);
   const host = $("canvas-host");
   const DRAFT_KEY = "profilekit.readme-studio.v2";
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const clone = (value) => ({ ...value, elements: value.elements.map((element) => ({ ...element, ...(element.params ? { params: { ...element.params } } : {}) })) });
+  const clone = (value) => ({ ...value, elements: value.elements.map((element) => ({ ...element,
+    ...(element.params ? { params: { ...element.params } } : {}),
+    ...(element.parts ? { parts: Object.fromEntries(Object.entries(element.parts).map(([key, part]) => [key, { ...part }])) } : {}),
+    ...(element.effect ? { effect: { ...element.effect } } : {}),
+  })) });
   let doc = presets.header.make();
   let selectedId = doc.elements[0]?.id || null;
   let past = [], future = [], pendingEdit = null, gesture = null;
@@ -28,6 +33,37 @@
   let draftError = false, imageTargetId = null;
   let lastStoredDraft = null, storageConflict = false;
   const nativeMeasurements = new Map();
+  const cardPreviews = new Map();
+  let partMode = false, partName = "", partOwner = null;
+
+  function partDefinitions(element = selected()) { return element?.type === "card" ? Decoration.PARTS[element.endpoint] || {} : {}; }
+  function previewEntry(card) {
+    const key = M.cardPath(card);
+    let entry = cardPreviews.get(key);
+    if (!entry) {
+      entry = { svg: null, error: null };
+      cardPreviews.set(key, entry);
+      entry.promise = fetchCardSVG(card).then((svg) => { entry.svg = svg; }).catch((error) => { entry.error = error.message; }).finally(() => {
+        if (doc.elements.some((element) => element.type === "card" && M.cardPath(element) === key)) {
+          renderCanvas(); renderDecorationInspector();
+        }
+      });
+      if (cardPreviews.size > 24) cardPreviews.delete(cardPreviews.keys().next().value);
+    }
+    return entry;
+  }
+  function visiblePartNode() {
+    if (!partMode || !selected() || !partName) return null;
+    return host.querySelector(`[data-element-id="${selectedId}"] [data-cas-target="${partName}"]`);
+  }
+  function partBounds() {
+    const node = visiblePartNode();
+    if (!node || selected().parts?.[partName]?.hidden) return null;
+    const box = node.getBoundingClientRect(), canvas = host.getBoundingClientRect();
+    if (!box.width || !box.height) return null;
+    return { x: (box.left - canvas.left) * doc.width / canvas.width, y: (box.top - canvas.top) * doc.height / canvas.height,
+      width: box.width * doc.width / canvas.width, height: box.height * doc.height / canvas.height };
+  }
 
   function status(message, error = false) {
     $("status-message").textContent = message;
@@ -143,7 +179,14 @@
   }
   function renderCanvas() {
     const focusedId = document.activeElement?.closest("#canvas-host [data-element-id]")?.dataset.elementId;
-    host.innerHTML = M.renderSVG(doc, { interactive: true });
+    const cardMarkup = Object.create(null);
+    for (const element of doc.elements) {
+      if (element.type !== "card" || (!element.parts && !(partMode && element.id === selectedId))) continue;
+      const entry = previewEntry(element);
+      cardMarkup[element.id] = entry.svg || `<svg xmlns="${SVG_NS}" width="${element.nativeWidth || element.width}" height="${element.nativeHeight || element.height}"><rect width="100%" height="100%" fill="#171b27"/><text x="20" y="36" fill="#c4b5fd" font-size="16">${entry.error ? "미리보기를 불러오지 못했습니다" : "꾸미기 미리보기를 불러오는 중…"}</text></svg>`;
+    }
+    host.innerHTML = M.renderSVG(doc, { interactive: true, cardMarkup });
+    host.classList.toggle("is-editing-parts", partMode);
     host.style.aspectRatio = `${doc.width} / ${doc.height}`;
     host.parentElement.style.setProperty("--card-ratio", doc.width / doc.height);
     const svg = host.firstElementChild;
@@ -155,6 +198,11 @@
       node.setAttribute("aria-label", `${elementLabel(element)} 선택`);
       node.style.cursor = "move";
     });
+    if (partMode) {
+      for (const node of svg.querySelectorAll(`[data-element-id="${selectedId}"] [data-cas-target]`)) {
+        if (Object.hasOwn(partDefinitions(), node.getAttribute("data-cas-target"))) node.style.cursor = "move";
+      }
+    }
     renderSelection();
     if (focusedId) host.querySelector(`[data-element-id="${focusedId}"]`)?.focus({ preventScroll: true });
   }
@@ -169,6 +217,14 @@
     const scale = doc.width / Math.max(1, host.getBoundingClientRect().width);
     const size = 10 * scale, rotationOffset = 28 * scale;
     const overlay = svgNode("svg", { class: "selection-overlay", viewBox: `0 0 ${doc.width} ${doc.height}`, "aria-hidden": "true" });
+    if (partMode && element.type === "card") {
+      const box = partBounds();
+      if (!box) return;
+      overlay.append(svgNode("rect", { ...box, fill: "none", stroke: "#a78bfa", "stroke-dasharray": "4 3", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
+      overlay.append(svgNode("rect", { x: box.x + box.width - size / 2, y: box.y + box.height - size / 2,
+        width: size, height: size, fill: "#fff", stroke: "#a78bfa", "data-handle": "part-scale", "vector-effect": "non-scaling-stroke" }));
+      host.append(overlay); return;
+    }
     const cx = element.x + element.width / 2, cy = element.y + element.height / 2;
     const group = svgNode("g", { transform: `rotate(${element.rotation} ${cx} ${cy})` });
     group.append(svgNode("rect", { x: element.x, y: element.y, width: element.width, height: element.height, fill: "none", stroke: "#818cf8", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
@@ -396,7 +452,7 @@
   let verifiedDesignUrl = null;
   function canExportCards() {
     return doc.elements.length > 1 && doc.elements.every((element) => element.type === "card" && element.rotation === 0 && element.opacity === 1
-      && element.nativeWidth && element.nativeHeight && Math.abs(element.width / element.height - element.nativeWidth / element.nativeHeight) < 0.001);
+      && !element.parts && !element.effect && element.nativeWidth && element.nativeHeight && Math.abs(element.width / element.height - element.nativeWidth / element.nativeHeight) < 0.001);
   }
   function refreshEmbed() {
     $("embed-code").value = ""; $("embed-url").value = "";
@@ -443,7 +499,7 @@
       try { $("deployment-origin").value = canSplit ? (doc.elements[0].sourceOrigin || location.origin) : new URL(Design.designUrl(doc)).origin; }
       catch { $("deployment-origin").value = location.origin; }
       // New multi-element designs need this deployment's newly implemented route.
-      if (!canSplit && (doc.elements.length !== 1 || doc.elements[0].type !== "card")) $("deployment-origin").value = location.origin;
+      if (!canSplit && (doc.elements.length !== 1 || doc.elements[0].type !== "card" || doc.elements[0].parts || doc.elements[0].effect)) $("deployment-origin").value = location.origin;
     }
     refreshEmbed(); $("embed-dialog").showModal();
   });
@@ -462,7 +518,8 @@
   function renderInspector() {
     const element = selected();
     $("selection-empty").hidden = !!element; $("selection-panel").hidden = !element;
-    if (!element) return;
+    $("edit-card-parts-tool").hidden = !Object.keys(partDefinitions(element)).length;
+    if (!element) { partMode = false; return; }
     $("selection-type").textContent = ({ card: "ProfileKit 카드", text: "텍스트", image: "이미지", rect: "사각형", ellipse: "타원" })[element.type];
     $("card-controls").hidden = element.type !== "card";
     if (element.type === "card") renderCardInspector(element);
@@ -488,9 +545,123 @@
     const index = doc.elements.indexOf(element);
     $("bring-forward").disabled = index === doc.elements.length - 1;
     $("send-backward").disabled = index === 0;
+    renderDecorationInspector();
   }
-  function render() { renderMeta(); renderCanvas(); renderLayers(); renderInspector(); }
-  function select(id) { finishEdit(); selectedId = id; renderSelection(); renderLayers(); renderInspector(); }
+  function renderDecorationInspector() {
+    const element = selected(); if (!element) return;
+    const definitions = partDefinitions(element), names = Object.keys(definitions);
+    $("card-parts-controls").hidden = !names.length;
+    if (partOwner !== element.id) {
+      partOwner = element.id; partMode = false; partName = names[0] || "";
+      $("card-part-select").replaceChildren(...names.map((name) => {
+        const option = document.createElement("option"); option.value = name;
+        option.textContent = ({ name: "이름", subtitle: "소개 문구", bg: "배경 효과", username: "카드 제목", repo: "저장소 이름", description: "저장소 설명" })[name] || definitions[name].label;
+        return option;
+      }));
+    }
+    if (!Object.hasOwn(definitions, partName)) { partName = names[0] || ""; partMode = false; }
+    $("card-part-select").value = partName;
+    $("card-part-edit").setAttribute("aria-pressed", String(partMode));
+    $("edit-card-parts-tool").setAttribute("aria-pressed", String(partMode));
+    $("card-part-edit").textContent = partMode ? "내부 편집 마치기" : "캔버스에서 직접 편집";
+    if (partName) {
+      const part = element.parts?.[partName] || { dx: 0, dy: 0, scale: 1 };
+      for (const [id, key] of [["part-dx", "dx"], ["part-dy", "dy"], ["part-scale", "scale"], ["part-color", "color"]]) {
+        if (document.activeElement !== $(id)) $(id).value = part[key] ?? (key === "scale" ? 1 : key === "color" ? "" : 0);
+      }
+      $("part-hidden").checked = !!part.hidden;
+      $("part-color").disabled = !definitions[partName].color;
+      const entry = cardPreviews.get(M.cardPath(element));
+      $("card-part-retry").hidden = !entry?.error;
+      $("card-part-hint").textContent = entry?.error ? "미리보기를 불러오지 못했습니다. " + entry.error
+        : partMode && !entry?.svg ? "카드 내부 요소를 불러오는 중…"
+        : partMode && !visiblePartNode() ? "현재 카드에 이 요소가 없습니다. 카드 설정에서 내용을 넣거나 다른 요소를 선택하세요."
+        : part.hidden ? "이 요소를 숨겼습니다. 체크를 해제하면 다시 표시됩니다."
+        : partMode ? "이름·제목·설명을 직접 끌어 이동하세요. 모서리 핸들로 크기를 조절할 수 있습니다."
+        : "카드 안의 요소를 꾸며도 계정 정보와 애니메이션은 유지됩니다.";
+    }
+    const effect = element.effect || { kind: "none", color: "#8b5cf6", blur: 12, opacity: .6, dx: 0, dy: 8 };
+    $("element-effect-kind").value = effect.kind;
+    $("effect-fields").hidden = effect.kind === "none";
+    for (const key of ["color", "blur", "opacity", "dx", "dy"]) {
+      const field = $("element-effect-" + key);
+      if (document.activeElement !== field) field.value = effect[key];
+    }
+  }
+  function changePart(change) {
+    if (!selected() || !partName) return;
+    transact((next) => {
+      const card = next.elements.find((element) => element.id === selectedId);
+      card.parts = { ...card.parts };
+      const part = { dx: 0, dy: 0, scale: 1, ...card.parts[partName] };
+      change(part); card.parts[partName] = part;
+    });
+  }
+  $("card-part-select").addEventListener("change", () => { finishGesture(); partName = $("card-part-select").value; renderSelection(); renderDecorationInspector(); });
+  $("card-part-edit").addEventListener("click", () => {
+    finishGesture(); finishEdit(); partMode = !partMode;
+    if (partMode && cardPreviews.get(M.cardPath(selected()))?.error) cardPreviews.delete(M.cardPath(selected()));
+    renderCanvas(); renderDecorationInspector();
+    if (partMode) host.focus({ preventScroll: true });
+  });
+  $("edit-card-parts-tool").addEventListener("click", () => {
+    $("card-parts-controls").open = true;
+    $("card-part-edit").click();
+  });
+  $("card-part-retry").addEventListener("click", () => {
+    if (selected()?.type !== "card") return;
+    cardPreviews.delete(M.cardPath(selected())); partMode = true;
+    renderCanvas(); renderDecorationInspector();
+  });
+  for (const key of ["dx", "dy", "scale", "color"]) $("part-" + key).addEventListener("change", () => {
+    const value = $("part-" + key).value;
+    changePart((part) => { if (key === "color" && !value.trim()) delete part.color; else part[key] = key === "color" ? value.trim() : Number(value); });
+  });
+  $("part-hidden").addEventListener("change", () => changePart((part) => { part.hidden = $("part-hidden").checked; }));
+  $("part-reset").addEventListener("click", () => {
+    if (!selected() || !partName) return;
+    transact((next) => { const card = next.elements.find((element) => element.id === selectedId); if (card.parts) delete card.parts[partName]; });
+  });
+  $("element-effect-kind").addEventListener("change", () => {
+    if (!selected()) return;
+    const kind = $("element-effect-kind").value;
+    transact((next) => {
+      const element = next.elements.find((item) => item.id === selectedId);
+      if (kind === "none") delete element.effect;
+      else element.effect = { kind, color: kind === "glow" ? "#8b5cf6" : "#000000", blur: 12, opacity: kind === "glow" ? .7 : .35, dx: 0, dy: kind === "glow" ? 0 : 8 };
+    });
+  });
+  for (const key of ["color", "blur", "opacity", "dx", "dy"]) $("element-effect-" + key).addEventListener("change", () => {
+    if (!selected()?.effect) return;
+    const value = $("element-effect-" + key).value;
+    transact((next) => { next.elements.find((item) => item.id === selectedId).effect[key] = key === "color" ? value.trim() : Number(value); });
+  });
+  $("effect-reset").addEventListener("click", () => {
+    if (selected()?.effect) transact((next) => { delete next.elements.find((item) => item.id === selectedId).effect; });
+  });
+  $("effect-add-space").addEventListener("click", () => {
+    const element = selected(); if (!element?.effect) return;
+    const effect = element.effect;
+    const padding = Math.max(16, Math.ceil(effect.blur * 3 + Math.max(Math.abs(effect.dx), Math.abs(effect.dy)) + (element.strokeWidth || 0) / 2 + 2));
+    if (doc.width + padding * 2 > M.LIMITS.MAX_CANVAS || doc.height + padding * 2 > M.LIMITS.MAX_CANVAS) {
+      status("캔버스 최대 크기를 넘습니다. 카드나 효과 크기를 줄인 뒤 여백을 추가하세요.", true); return;
+    }
+    if (transact((next) => {
+      next.width += padding * 2; next.height += padding * 2;
+      for (const item of next.elements) { item.x += padding; item.y += padding; }
+    })) status("기존 배치를 유지하며 사방에 " + padding + "px 여백을 추가했습니다. 실행 취소로 되돌릴 수 있습니다.");
+  });
+  function render() {
+    if (selectedId !== partOwner || !Object.keys(partDefinitions()).length) partMode = false;
+    renderMeta(); renderCanvas(); renderLayers(); renderInspector();
+  }
+  function select(id) {
+    finishEdit(); const wasEditing = partMode;
+    if (selectedId !== id) partMode = false;
+    selectedId = id;
+    if (wasEditing && !partMode) renderCanvas(); else renderSelection();
+    renderLayers(); renderInspector();
+  }
 
   function bindField(id, key, documentField = false) {
     const field = $(id);
@@ -575,7 +746,17 @@
     event.preventDefault(); host.focus({ preventScroll: true }); finishEdit();
     if (target) select(target.dataset.elementId);
     const element = selected(); if (!element) return;
-    gesture = { pointerId: event.pointerId, before: clone(doc), original: { ...element }, origin: point(event), action: handle || "move" };
+    let action = handle || "move";
+    if (partMode && element.type === "card") {
+      const partTarget = event.target.closest("[data-cas-target]")?.getAttribute("data-cas-target");
+      if (partTarget && Object.hasOwn(partDefinitions(element), partTarget)) partName = partTarget;
+      else if (handle !== "part-scale") return;
+      if (element.parts?.[partName]?.hidden) return;
+      action = handle === "part-scale" ? handle : "part-move";
+      renderSelection(); renderDecorationInspector();
+    }
+    gesture = { pointerId: event.pointerId, before: clone(doc), original: clone({ elements: [element] }).elements[0], origin: point(event), action,
+      part: partName, bounds: partBounds(), native: { width: element.nativeWidth || element.width, height: element.nativeHeight || element.height } };
     clearTimeout(saveTimer);
     host.setPointerCapture(event.pointerId);
   });
@@ -584,7 +765,22 @@
     const current = point(event), { original: original, origin, action } = gesture;
     const element = selected(); if (!element) return;
     const dx = current.x - origin.x, dy = current.y - origin.y;
-    if (action === "move") {
+    if (action === "part-move" || action === "part-scale") {
+      const part = { dx: 0, dy: 0, scale: 1, ...original.parts?.[gesture.part] };
+      const delta = rotated(dx, dy, -original.rotation * Math.PI / 180);
+      if (action === "part-move") {
+        part.dx = Math.max(-2048, Math.min(2048, part.dx + delta.x * gesture.native.width / original.width));
+        part.dy = Math.max(-2048, Math.min(2048, part.dy + delta.y * gesture.native.height / original.height));
+        if (event.shiftKey) {
+          if (Math.abs(delta.x) >= Math.abs(delta.y)) part.dy = original.parts?.[gesture.part]?.dy || 0;
+          else part.dx = original.parts?.[gesture.part]?.dx || 0;
+        }
+      } else {
+        const extent = Math.max(24, gesture.bounds?.width || 100, gesture.bounds?.height || 30);
+        part.scale = Math.max(.25, Math.min(4, part.scale * (1 + (dx + dy) / extent)));
+      }
+      element.parts = { ...element.parts, [gesture.part]: part };
+    } else if (action === "move") {
       element.x = Math.round(original.x + dx); element.y = Math.round(original.y + dy);
       if (event.shiftKey) { if (Math.abs(dx) >= Math.abs(dy)) element.y = original.y; else element.x = original.x; }
     } else if (action === "resize") {
@@ -629,6 +825,7 @@
     const target = event.target.closest("[data-element-id]");
     if (target) select(target.dataset.elementId);
     if (selected()?.type === "text") { $("element-text").focus(); $("element-text").select(); }
+    else if (Object.keys(partDefinitions()).length && !partMode) { $("card-parts-controls").open = true; $("card-part-edit").click(); }
   });
   host.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -637,6 +834,7 @@
     }
   });
   new ResizeObserver(() => renderSelection()).observe(host);
+  document.fonts?.addEventListener("loadingdone", () => { if (partMode) renderSelection(); });
 
   async function readImage(file) {
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error("PNG, JPG, WebP 이미지를 선택하세요.");
@@ -762,14 +960,34 @@
     const mod = event.metaKey || event.ctrlKey;
     const editing = event.target.closest("input,textarea,select,[contenteditable]");
     if (mod && event.key.toLowerCase() === "s") { event.preventDefault(); saveProject(); return; }
-    if (event.key === "Escape") { if (gesture) finishGesture(true); else { document.activeElement.blur(); select(null); } return; }
+    if (event.key === "Escape") {
+      if (gesture) finishGesture(true);
+      else if (partMode) { partMode = false; renderCanvas(); renderDecorationInspector(); }
+      else { document.activeElement.blur(); select(null); }
+      return;
+    }
     if (editing) return;
     if (mod && event.key.toLowerCase() === "z") { event.preventDefault(); travel(!event.shiftKey); }
     else if (mod && event.key.toLowerCase() === "y") { event.preventDefault(); travel(false); }
-    else if (mod && event.key.toLowerCase() === "d") { event.preventDefault(); duplicateSelected(); }
-    else if (["Delete", "Backspace"].includes(event.key) && selected()) { event.preventDefault(); removeSelected(); }
+    else if (mod && event.key.toLowerCase() === "d") {
+      event.preventDefault();
+      if (partMode) status("내부 편집을 마친 뒤 카드를 복제할 수 있습니다."); else duplicateSelected();
+    }
+    else if (["Delete", "Backspace"].includes(event.key) && selected()) {
+      event.preventDefault();
+      if (partMode) changePart((part) => { part.hidden = true; }); else removeSelected();
+    }
     else if (event.key.startsWith("Arrow") && selected()) {
       event.preventDefault(); const amount = event.shiftKey ? 10 : 1;
+      if (partMode) {
+        changePart((part) => {
+          if (event.key === "ArrowLeft") part.dx -= amount;
+          if (event.key === "ArrowRight") part.dx += amount;
+          if (event.key === "ArrowUp") part.dy -= amount;
+          if (event.key === "ArrowDown") part.dy += amount;
+        });
+        return;
+      }
       transact((next) => {
         const element = next.elements.find((item) => item.id === selectedId);
         if (event.key === "ArrowLeft") element.x -= amount;
