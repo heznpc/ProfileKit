@@ -302,7 +302,7 @@
     const definitions = new Map();
     const imageRanges = [];
     const definitionRanges = [];
-    for (const match of markdown.matchAll(/^ {0,3}\[([^\]\n]+)\]:/gm)) {
+    for (const match of markdown.matchAll(/^(?: {0,3}> ?)* {0,3}\[([^\]\n]+)\]:/gm)) {
       const label = referenceLabel(match[1]);
       const ref = destination(source, match.index + match[0].length, false);
       if (ref) {
@@ -341,6 +341,15 @@
       if (markdown[image.index - 1] === "[" && !escaped(source, image.index - 1) && markdown.slice(after, after + 2) === "](") {
         const wrapper = destination(source, after + 2, true);
         if (wrapper) link = { ...wrapper, value: decode(source.slice(wrapper.start, wrapper.end), "markdown").value };
+      }
+      if (!link && markdown[image.index - 1] === "[" && !escaped(source, image.index - 1) && markdown[after] === "]") {
+        let label = source.slice(image.index, after);
+        if (markdown[after + 1] === "[") {
+          const end = bracketEnd(markdown, after + 1);
+          if (end >= 0) label = source.slice(after + 2, end) || label;
+        }
+        const wrapper = definitions.get(referenceLabel(label));
+        if (wrapper) link = { ...wrapper, definition: wrapper, value: decode(source.slice(wrapper.start, wrapper.end), "markdown").value };
       }
       const candidate = { start: ref.start, end: ref.end, syntax: "markdown", attribute: definition ? "reference" : "destination", variant: "default", groupId: definition ? `reference:${definition.label}` : null, altSpan, link };
       if (definition) {
@@ -394,7 +403,7 @@
         let candidateAsset;
         try { candidateAsset = assetPath(decoded.value); } catch { /* Only validated paths can refer to saved assets. */ }
         savedAsset = candidateAsset && has(assets, candidateAsset) ? candidateAsset : null;
-        if (!savedAsset && !/^(?:https?:\/\/|\/api\/)/i.test(decoded.value)) continue;
+        if (!savedAsset && !/^(?:https?:\/\/|\/\/|\/api\/)/i.test(decoded.value)) continue;
         url = new URL(decoded.value, origin);
       } catch { continue; }
       if (![DEFAULT_ORIGIN, origin].includes(url.origin) || url.username || url.password || !/^https?:$/.test(url.protocol)) continue;
@@ -425,6 +434,10 @@
       if (savedAsset) card.assetPath = savedAsset;
       if (candidate.link) card.linkUrl = candidate.link.value;
       let urlEditWarning;
+      if (candidate.link?.definition && (candidate.link.definition.linkUses > 1 || candidate.link.definition.uses.length)) {
+        candidate.link.sharedReference = true;
+        warnings.push(`${card.id} has a shared link reference; link edits are blocked to preserve other uses. Give the wrapper its own reference label first.`);
+      }
       if (candidate.definition) {
         card.uses = candidate.definition.uses.length;
         if (candidate.definition.linkUses) {
@@ -577,6 +590,7 @@
       }
       if (has(update, "linkUrl") && update.linkUrl !== card.linkUrl) {
         if (!internal.link || update.linkUrl === null || update.linkUrl === "") error("Add or remove image link wrappers in the source editor");
+        if (internal.link.sharedReference) error("Cannot edit a shared link reference; give the image wrapper its own reference label");
         const link = safeLink(update.linkUrl);
         const oldRaw = source.slice(internal.link.start, internal.link.end);
         const old = decode(oldRaw, card.syntax);
@@ -635,11 +649,11 @@
         if (nestedOperation.theme === undefined) delete nestedOperation.theme;
         // Reuse ordinary account/style and paired-repository rules on each live
         // element. Copy only changed params/links back into the normalized design.
+        const only = doc.elements.filter((item) => item.type === "card").length === 1;
         const elements = doc.elements.map((element) => {
           if (element.type !== "card") return element;
-          const only = doc.elements.length === 1;
           const pairedLink = element.linkUrl || (only ? card.linkUrl : undefined);
-          const outerConflict = card.linkUrl && (!only || (element.linkUrl && element.linkUrl !== card.linkUrl) || sharedOuter || (card.uses || 1) !== 1);
+          const outerConflict = card.linkUrl && (internal.link?.sharedReference || !only || (element.linkUrl && element.linkUrl !== card.linkUrl) || sharedOuter || (card.uses || 1) !== 1);
           const localOperation = outerConflict ? { ...nestedOperation, includeRepositories: false } : nestedOperation;
           const query = new URLSearchParams(element.params).toString();
           const img = `<img src="${html(`${DEFAULT_ORIGIN}/api/${element.endpoint}?${query}`)}">`;
@@ -680,7 +694,7 @@
             const otherLink = parsed.internals.get(other.id).link;
             return otherLink && otherLink.start === internal.link.start && otherLink.end === internal.link.end;
           });
-          const safeGroup = sharedLink && sharedLink.every((other) => (!selected || selected.has(other.id)) && other.endpoint === "pin"
+          const safeGroup = !internal.link?.sharedReference && sharedLink && sharedLink.every((other) => (!selected || selected.has(other.id)) && other.endpoint === "pin"
             && other.params.username?.toLowerCase() === params.username.toLowerCase() && other.params.repo?.toLowerCase() === params.repo?.toLowerCase()
             && (other.uses || 1) === 1);
           if (operation.includeRepositories && exactPair && safeGroup && (card.uses || 1) === 1) {
