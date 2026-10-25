@@ -158,7 +158,7 @@
     const only = cards.length === 1 ? cards[0] : null;
     // A single card owns the embed metadata even when other layers decorate it.
     // Multiple cards have no unambiguous destination or display metadata.
-    const card = directCard(doc) || (only && (doc.elements.length > 1 || only.parts || only.effect) ? only : null);
+    const card = only;
     const img = `<img src="${escape(src)}" alt="${escape(card?.alt ?? (doc.name || "Profile card"))}" width="${escape(card?.displayWidth ?? doc.width)}" />`;
     return linkedImage(img, card);
   }
