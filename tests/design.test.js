@@ -300,3 +300,83 @@ test("theme errors remain observable and cache aggregation keeps the shortest ch
   assert.equal(endpoint.aggregateCache([cacheHeaders(), "private, max-age=999"]), "no-store, max-age=0");
   assert.equal(endpoint.aggregateCache(["public, max-age=43200, s-maxage=43200"]), "public, max-age=43200, s-maxage=43200, stale-while-revalidate=0");
 });
+
+test("part edits and effects round trip in composed URLs without losing legacy direct-card behavior", () => {
+  const plain = document(card({ nativeWidth: 600, nativeHeight: 280, params: { name: "Ren", subtitle: "", hide_border: "false" } }));
+  assert.equal(Design.designUrl(plain), "https://profilekit.vercel.app/api/hero?name=Ren&subtitle=&hide_border=false");
+  for (const change of [
+    { parts: { name: { dx: 12, dy: -4, scale: 1.5, color: "#abc" } } },
+    { effect: { kind: "shadow", color: "#000", blur: 10, opacity: 0.4, dx: 3, dy: 5 } },
+  ]) {
+    const doc = document({ ...plain.elements[0], ...change });
+    const url = Design.designUrl(doc, ORIGIN);
+    assert.equal(new URL(url).pathname, "/api/design");
+    assert.deepEqual(Design.parseDesignInput(url, ORIGIN), doc);
+    assert.match(Design.readme(doc, ORIGIN), /\/api\/design\?d=/);
+    assert.throws(() => Design.readmeCards(doc), /composed design/);
+  }
+  assert.equal(Design.designUrl(document({ ...plain.elements[0], parts: { name: { dx: 0, dy: 0, scale: 1, hidden: false } } })), Design.designUrl(plain));
+});
+
+test("single-card README metadata survives composed part edits and layer effects", () => {
+  const imported = Design.parseCardInput('<a href="https://github.com/example"><img src="/api/hero?name=Ren" alt="My profile card" width="300" /></a>', ORIGIN);
+  const plain = card({ ...imported, nativeWidth: 600, nativeHeight: 280 });
+  for (const change of [
+    {},
+    { parts: { name: { dx: 1 } } },
+    { effect: { kind: "shadow", color: "#000", blur: 10, opacity: 0.4, dx: 3, dy: 5 } },
+  ]) {
+    const doc = document({ ...plain, ...change });
+    const snippet = Design.readme(doc, ORIGIN);
+    assert.match(snippet, /^<a href="https:\/\/github\.com\/example"><img /);
+    assert.match(snippet, /alt="My profile card" width="300" \/><\/a>$/);
+    assert.equal(new URL(Design.designUrl(doc, ORIGIN)).pathname, Object.keys(change).length ? "/api/design" : "/api/hero");
+    assert.ok(snippet.includes(Object.keys(change).length ? '/api/design?d=' : '/api/hero?name=Ren'));
+  }
+  for (const extra of [card({ id: "second" }), Model.createElement("text", { id: "caption" })]) {
+    const snippet = Design.readme(document(plain, extra), ORIGIN);
+    assert.doesNotMatch(snippet, /<a |My profile card|width="300"/);
+    assert.match(snippet, /alt="Untitled card" width="600"/);
+  }
+  const legacyRotated = Design.readme(document({ ...plain, rotation: 15 }), ORIGIN);
+  assert.doesNotMatch(legacyRotated, /<a |My profile card|width="300"/);
+  assert.match(legacyRotated, /alt="Untitled card" width="600"/);
+});
+
+test("composed decorations preserve new live child values, existing animation and authored text", async (t) => {
+  tokens(t, "test-token");
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => ({ ok: true, json: async () => ({ data: { user: {
+    name: `Live decorated ${++calls}`, login: "actual-user",
+    contributionsCollection: { totalCommitContributions: calls, restrictedContributionsCount: 0 },
+    repositoriesContributedTo: { totalCount: 1 }, pullRequests: { totalCount: 2 }, openIssues: { totalCount: 1 }, closedIssues: { totalCount: 2 },
+    repositories: { totalCount: 1, nodes: [{ stargazerCount: 10 }], pageInfo: { hasNextPage: false } },
+  } } }) }));
+  const effect = { kind: "glow", color: "#88aaff", blur: 8, opacity: 0.6, dx: 2, dy: -1 };
+  const doc = document(
+    card({ endpoint: "stats", params: { username: "actual-user" }, parts: { username: { dx: 8, dy: 4, scale: 1.2, color: "#fa3" } }, effect }),
+    card({ id: "hero", params: { name: "Hero" }, parts: { name: { hidden: true }, bg: { scale: 0.8 } } }),
+    Model.createElement("text", { id: "caption", text: "Authored & intact", fontSize: 24, effect }),
+  );
+  const first = await request(requestUrl(doc));
+  assert.equal(first.statusCode, 200);
+  assert.match(first.svg, /Live decorated 1/);
+  assert.match(first.svg, /style="fill:#fa3!important"/);
+  assert.ok(first.svg.includes('translate(8 4) translate(25 35) scale(1.2) translate(-25 -35)'));
+  assert.match(first.svg, /visibility="hidden"><text[^>]*data-cas-target="name"[^>]*>Hero/);
+  assert.match(first.svg, /@keyframes pk-card-1-hero-heroIn/);
+  assert.match(first.svg, /Authored &amp; intact/);
+  assert.equal((first.svg.match(/<filter /g) || []).length, 2);
+  assert.doesNotMatch(first.svg, /<image/);
+  assert.match((await request(requestUrl(doc))).svg, /Live decorated 2/);
+  assert.equal(calls, 2);
+});
+
+test("invalid decoration documents fail before invoking live handlers", async (t) => {
+  const fetch = t.mock.method(globalThis, "fetch", async () => { throw new Error("Unexpected network request"); });
+  for (const parts of [{ username: { color: "url(https://bad.example)" } }, JSON.parse('{"__proto__":{}}'), { username: { hidden: 1 } }]) {
+    const raw = { ...document(), elements: [{ ...card({ endpoint: "stats", params: { username: "ren" } }), parts }] };
+    assert.equal((await request(`/api/design?d=${Buffer.from(JSON.stringify(raw)).toString("base64url")}`)).statusCode, 400);
+  }
+  assert.equal(fetch.mock.callCount(), 0);
+});

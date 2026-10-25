@@ -149,6 +149,8 @@ button svg { display: block; }
 .selection-overlay { pointer-events: none; }
 .selection-overlay [data-handle] { pointer-events: all; }
 .selection-overlay [data-handle="resize"] { cursor: nwse-resize; }
+.selection-overlay [data-handle="part-scale"] { cursor: nwse-resize; }
+#canvas-host.is-editing-parts [data-cas-target], #canvas-host.is-editing-parts [data-cas-target] * { animation: none !important; transition: none !important; }
 .selection-overlay [data-handle="rotate"] { cursor: grab; }
 .selection-overlay [data-handle="rotate"]:active { cursor: grabbing; }
 #canvas-host:focus-visible { outline: 2px solid #8b83e8; outline-offset: 6px; }
@@ -202,6 +204,21 @@ button svg { display: block; }
 .control-heading { margin: 0 0 14px; font-size: 12px; font-weight: 650; }
 .inspector-section > .field:last-child { margin-bottom: 0; }
 .inspector-section .color-field + .field { margin-top: 12px; }
+.inspector-disclosure > summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; color: var(--ink); font-size: 12px; font-weight: 600; }
+.inspector-disclosure > summary::-webkit-details-marker { display: none; }
+.inspector-disclosure > summary::after { content: ""; width: 6px; height: 6px; margin-left: auto; border-right: 1.5px solid #8993a1; border-bottom: 1.5px solid #8993a1; transform: rotate(45deg); }
+.inspector-disclosure[open] > summary::after { transform: rotate(225deg); }
+.inspector-disclosure > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 2px; }
+.disclosure-caption { color: #8993a1; font-size: 10px; font-weight: 400; }
+.disclosure-content { margin-top: 16px; }
+.disclosure-content > .field:last-child { margin-bottom: 0; }
+.part-edit-button { margin-top: 12px; color: var(--accent); border-color: #d7d3fb; background: #faf9ff; }
+.part-edit-button[aria-pressed="true"] { color: white; border-color: var(--accent); background: var(--accent); }
+.part-edit-hint { margin: 8px 0 14px !important; }
+.part-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.checkbox-field { display: flex; align-items: center; gap: 7px; min-height: 34px; cursor: pointer; font-size: 11px; color: #606b7b; }
+.checkbox-field input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
+.effect-reset { margin-top: 12px; }
 .field-hint { margin: 0; color: #8993a1; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
 .shape-color-row { display: flex; align-items: center; gap: 7px; }
 .shape-color-row > input[type="color"] { flex: 0 0 34px; width: 34px; padding: 3px; cursor: pointer; }

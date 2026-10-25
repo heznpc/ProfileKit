@@ -1,8 +1,8 @@
 /* Portable editor documents and their shared preview/export SVG renderer. */
 (function (root, factory) {
-  if (typeof module === "object" && module.exports) module.exports = factory(require("./card-schema"));
-  else root.ProfileKitEditorModel = factory(root.ProfileKitCards);
-})(typeof globalThis !== "undefined" ? globalThis : this, (schema) => {
+  if (typeof module === "object" && module.exports) module.exports = factory(require("./card-schema"), require("./card-decoration"));
+  else root.ProfileKitEditorModel = factory(root.ProfileKitCards, root.ProfileKitCardDecoration);
+})(typeof globalThis !== "undefined" ? globalThis : this, (schema, decoration) => {
   "use strict";
 
   const LIMITS = Object.freeze({
@@ -27,13 +27,13 @@
     serif: "Georgia, 'Times New Roman', serif",
     mono: "'Courier New', Courier, monospace",
   });
-  const COMMON_KEYS = ["id", "type", "x", "y", "width", "height", "rotation", "opacity"];
+  const COMMON_KEYS = ["id", "type", "x", "y", "width", "height", "rotation", "opacity", "effect"];
   const TYPE_KEYS = {
     text: ["text", "fontFamily", "fontSize", "fontWeight", "color", "align"],
     image: ["src", "fit"],
     rect: ["fill", "stroke", "strokeWidth", "radius"],
     ellipse: ["fill", "stroke", "strokeWidth", "radius"],
-    card: ["endpoint", "params", "sourceOrigin", "nativeWidth", "nativeHeight", "linkUrl", "alt", "displayWidth"],
+    card: ["endpoint", "params", "sourceOrigin", "nativeWidth", "nativeHeight", "linkUrl", "alt", "displayWidth", "parts"],
   };
   const CARD_ENDPOINTS = Object.freeze([...Object.keys(schema?.CARDS || {}), "stack"]);
   const STACK_ENDPOINTS = Object.freeze(["hero", "section", "divider", "now", "timeline", "tags", "toc", "stats", "languages"]);
@@ -113,6 +113,11 @@
     }
     if (jsonBytes(params) > LIMITS.MAX_CARD_PARAM_BYTES) fail("Card parameters are too large");
     const card = { endpoint, params };
+    if (raw.parts !== undefined) {
+      if (!decoration) fail("Card decoration module is required");
+      const parts = decoration.normalizeParts(endpoint, raw.parts);
+      if (parts) card.parts = parts;
+    }
     if (raw.sourceOrigin !== undefined) card.sourceOrigin = normalizeOrigin(raw.sourceOrigin);
     if (raw.nativeWidth !== undefined || raw.nativeHeight !== undefined) {
       for (const key of ["nativeWidth", "nativeHeight"]) {
@@ -325,6 +330,11 @@
       rotation: number(raw.rotation, -360, 360, "Element rotation"),
       opacity: number(raw.opacity, 0, 1, "Element opacity"),
     };
+    if (raw.effect !== undefined) {
+      if (!decoration) fail("Card decoration module is required");
+      const effect = decoration.normalizeEffect(raw.effect);
+      if (effect) normalized.effect = effect;
+    }
     if (type === "text") Object.assign(normalized, {
       text: string(raw.text, LIMITS.MAX_TEXT_LENGTH, "Text").replace(/\r\n?/g, "\n"),
       fontFamily: choice(raw.fontFamily, Object.keys(FONT_FAMILIES), "Font family"),
@@ -599,8 +609,9 @@
       } else if (type === "image") {
         body = `${clip}<image ${box} href="${element.src}" preserveAspectRatio="xMidYMid ${element.fit === "cover" ? "slice" : "meet"}" clip-path="url(#${clipId})"/>`;
       } else if (type === "card") {
+        if (element.parts && (!cardMarkup || !Object.hasOwn(cardMarkup, id))) fail("Decorated cards require their rendered card markup");
         body = cardMarkup && Object.hasOwn(cardMarkup, id)
-          ? positionedCard(cardMarkup[id], element, `pk-card-${index}-${id}-`)
+          ? positionedCard(element.parts ? decoration.applyParts(cardMarkup[id], element.parts) : cardMarkup[id], element, `pk-card-${index}-${id}-`)
           : `<image ${box} href="${escape((element.sourceOrigin || "") + cardPath(element))}" preserveAspectRatio="none"/>`;
       } else {
         const appearance = `fill="${element.fill}" stroke="${element.stroke}" stroke-width="${element.strokeWidth}"`;
@@ -608,11 +619,23 @@
           : `<ellipse cx="${svgNumber(x + width / 2)}" cy="${svgNumber(y + height / 2)}" rx="${svgNumber(width / 2)}" ry="${svgNumber(height / 2)}" ${appearance}/>`;
       }
       const hitArea = interactive ? `<rect ${box} fill="transparent" pointer-events="all"/>` : "";
+      if (element.effect) {
+        const effect = element.effect;
+        const filterId = `pk-effect-${index}-${id}`;
+        // Explicit user-space bounds include the painted stroke before adding
+        // blur/offset space. The final canvas remains the document's crop.
+        const strokePadding = ["rect", "ellipse"].includes(type) && element.stroke !== "none" ? element.strokeWidth / 2 : 0;
+        const padding = strokePadding + effect.blur * 3 + Math.max(Math.abs(effect.dx), Math.abs(effect.dy)) + 1;
+        const dx = effect.dx;
+        const dy = effect.dy;
+        const filter = `<defs><filter id="${filterId}" filterUnits="userSpaceOnUse" x="${svgNumber(x - padding)}" y="${svgNumber(y - padding)}" width="${svgNumber(width + padding * 2)}" height="${svgNumber(height + padding * 2)}" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceAlpha" stdDeviation="${effect.blur}"/><feOffset dx="${dx}" dy="${dy}" result="${filterId}-offset"/><feFlood flood-color="${effect.color}" flood-opacity="${effect.opacity}"/><feComposite in2="${filterId}-offset" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+        body = `${filter}<g filter="url(#${filterId})">${body}</g>`;
+      }
       return `<g${interactive ? ` data-element-id="${id}"` : ""} transform="rotate(${rotation} ${svgNumber(x + width / 2)} ${svgNumber(y + height / 2)})" opacity="${opacity}">${hitArea}${body}</g>`;
     }).join("\n");
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${doc.width}" height="${doc.height}" viewBox="0 0 ${doc.width} ${doc.height}" overflow="hidden" role="img" aria-label="${escape(doc.name || "Profile card")}"><title>${escape(doc.name || "Profile card")}</title><rect width="${doc.width}" height="${doc.height}" fill="${doc.background}"/>\n${elements}\n</svg>`;
   }
 
-  return { LIMITS, FONT_FAMILIES, CARD_ENDPOINTS, STACK_ENDPOINTS, createDocument, createElement, normalizeDocument, normalizeCard,
+  return { LIMITS, FONT_FAMILIES, CARD_ENDPOINTS, STACK_ENDPOINTS, PARTS: decoration?.PARTS || Object.freeze({}), createDocument, createElement, normalizeDocument, normalizeCard,
     normalizeOrigin, cardCallCount, cardPath, parseDocument, serializeDocument, renderSVG, textLayout, imageInfo, isolateSVG };
 });
