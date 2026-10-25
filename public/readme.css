@@ -341,3 +341,8 @@ summary { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+
+.readme-open-editor { margin-bottom: 12px; text-align: center; text-decoration: none; }
+.readme-design-settings { padding-top: 12px; }
+.readme-design-settings .field-hint { margin: 0 0 12px; line-height: 1.6; }
+.readme-open-editor[hidden], .readme-design-settings[hidden] { display: none; }

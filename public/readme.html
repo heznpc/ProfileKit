@@ -114,10 +114,16 @@
       <section class="inspector-section selected-card-section" aria-labelledby="readme-card-title">
         <div class="section-heading"><span class="section-step">01</span><h3 id="readme-card-title">카드를 선택하세요</h3></div>
         <p class="section-description">왼쪽 목록에서 카드를 누르면 내용을 바꿀 수 있어요.</p>
+        <button id="readme-return-recover" class="button outline full-width" type="button" hidden>제작기 결과 프로젝트 저장</button>
+        <button id="readme-open-editor" class="button outline full-width readme-open-editor" type="button" hidden>제작기로 열기</button>
         <details id="readme-card-details" class="card-settings-disclosure">
           <summary>선택한 카드 내용 편집</summary>
+          <div id="readme-design-settings" class="readme-design-settings" hidden>
+            <p id="readme-design-hint" class="field-hint"></p>
+            <label class="field" for="readme-design-card"><span>편집할 포함 카드</span><select id="readme-design-card"></select></label>
+          </div>
           <div id="readme-params" class="readme-params"><p class="params-empty">선택한 카드의 설정이 여기에 표시돼요.</p></div>
-          <details class="extra-params"><summary>추가 설정</summary><label class="field" for="readme-extra-params"><span>카드 주소에 추가할 값</span><textarea id="readme-extra-params" rows="3" spellcheck="false" placeholder="label=Hello&amp;border=false"></textarea><small>표시되지 않은 설정은 이곳에서 수정할 수 있어요.</small></label></details>
+          <details id="readme-extra-settings" class="extra-params"><summary>추가 설정</summary><label class="field" for="readme-extra-params"><span>카드 주소에 추가할 값</span><textarea id="readme-extra-params" rows="3" spellcheck="false" placeholder="label=Hello&amp;border=false"></textarea><small>표시되지 않은 설정은 이곳에서 수정할 수 있어요.</small></label></details>
           <button id="readme-card-apply" class="button outline full-width" type="button">이 카드에 적용</button>
         </details>
       </section>

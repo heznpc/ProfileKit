@@ -19,7 +19,13 @@
   const presets = window.ProfileKitEditorPresets;
   const $ = (id) => document.getElementById(id);
   const host = $("canvas-host");
-  const DRAFT_KEY = "profilekit.readme-studio.v2";
+  const requestedHandoff = new URLSearchParams(location.hash.slice(1)).get("readme-edit");
+  const handoffToken = /^[a-z0-9-]{36}$/i.test(requestedHandoff || "") ? requestedHandoff : null;
+  const handoffKey = handoffToken ? "profilekit.readme-handoff." + handoffToken : null;
+  const DRAFT_KEY = "profilekit.readme-studio.v2" + (handoffToken ? "." + handoffToken : "");
+  const draftStorage = () => handoffToken ? sessionStorage : localStorage;
+  let readmeHandoff = null;
+  let handoffReady = false;
   const SVG_NS = "http://www.w3.org/2000/svg";
   const clone = (value) => ({ ...value, elements: value.elements.map((element) => ({ ...element,
     ...(element.params ? { params: { ...element.params } } : {}),
@@ -93,13 +99,13 @@
     clearTimeout(saveTimer);
     if (gesture || nativeMeasurements.size) { saveTimer = setTimeout(saveDraft, 400); return; }
     try {
-      if (storageConflict || localStorage.getItem(DRAFT_KEY) !== lastStoredDraft) {
+      if (storageConflict || draftStorage().getItem(DRAFT_KEY) !== lastStoredDraft) {
         storageConflict = true; persisted = false;
         status("다른 탭에서 초안이 변경됐습니다. 덮어쓰기를 멈췄으니 이 탭의 작업은 ‘프로젝트 저장’으로 보관하세요.", true);
         return;
       }
       const serialized = M.serializeDocument(doc);
-      localStorage.setItem(DRAFT_KEY, serialized);
+      draftStorage().setItem(DRAFT_KEY, serialized);
       lastStoredDraft = serialized;
       persisted = true;
       status("이 브라우저에 저장됨 · 다른 기기에서는 프로젝트 파일을 열어주세요.");
@@ -374,23 +380,57 @@
     const button = $("import-card-button"); button.disabled = true;
     const startRevision = revision;
     try {
-      const importedDesign = Design.parseDesignInput($("import-card-input").value, location.origin);
+      const importOrigin = readmeHandoff ? new URL(readmeHandoff.originalUrl).origin : location.origin;
+      const importedDesign = Design.parseDesignInput($("import-card-input").value, importOrigin);
       if (importedDesign) {
         if (dirty && !confirmReplace()) return;
         replaceDocument(importedDesign); select(doc.elements[0]?.id || null);
-        status("조합한 README를 불러왔습니다. 카드와 요소를 다시 편집할 수 있습니다."); return;
+        rememberHandoffDocument();
+        handoffReady = true; $("readme-return").disabled = false;
+        status("조합한 카드를 불러왔습니다. 카드와 요소를 다시 편집할 수 있습니다."); return;
       }
-      const card = Design.parseCardInput($("import-card-input").value, location.origin);
+      const card = Design.parseCardInput($("import-card-input").value, importOrigin);
       status("기존 카드와 크기를 불러오는 중…");
       const size = await measureCard(card);
       if ((dirty || revision !== startRevision) && !confirmReplace()) return;
       const element = M.createElement("card", { ...card, ...size, x: 0, y: 0 });
       replaceDocument(M.createDocument({ name: `${cardLabel(card.endpoint)} · ${card.params.username || card.params.title || card.params.name || "My README"}`, width: size.width, height: size.height, background: "transparent", elements: [element] }));
       select(element.id);
+      rememberHandoffDocument();
+      handoffReady = true; $("readme-return").disabled = false;
       status("카드를 불러왔습니다. 기존 옵션은 그대로 유지됩니다. 오른쪽에서 편집하세요.");
     } catch (error) { status(error.message, true); }
     finally { button.disabled = false; }
   });
+  function rememberHandoffDocument() {
+    if (!readmeHandoff || readmeHandoff.originalDocument) return;
+    readmeHandoff.originalDocument = M.serializeDocument(doc);
+    sessionStorage.setItem(handoffKey, JSON.stringify(readmeHandoff));
+  }
+  async function returnToReadme(cancel) {
+    if (!readmeHandoff || (!cancel && !handoffReady)) return;
+    finishEdit();
+    $("readme-return").disabled = true;
+    $("readme-return-cancel").disabled = true;
+    try {
+      if (!cancel) await waitForCardSizes();
+      const current = JSON.parse(sessionStorage.getItem(handoffKey));
+      if (!current || current.originalUrl !== readmeHandoff.originalUrl || current.cardId !== readmeHandoff.cardId) throw new Error("원래 README 연결을 찾지 못했습니다. 프로젝트를 저장해 주세요.");
+      const original = new URL(current.originalUrl);
+      const unchanged = M.serializeDocument(doc) === current.originalDocument;
+      current.resultUrl = cancel || unchanged ? current.originalUrl : Design.designUrl(doc, original.origin) + original.hash;
+      sessionStorage.setItem(handoffKey, JSON.stringify(current));
+      clearTimeout(saveTimer);
+      persisted = true;
+      location.assign("/readme.html#design-return=" + handoffToken);
+    } catch (error) {
+      $("readme-return").disabled = !handoffReady;
+      $("readme-return-cancel").disabled = false;
+      status(error.message, true);
+    }
+  }
+  $("readme-return").addEventListener("click", () => returnToReadme(false));
+  $("readme-return-cancel").addEventListener("click", () => returnToReadme(true));
   function newCardParams(endpoint) {
     const params = {};
     for (const field of cardFields(endpoint)) if (field.default !== undefined) params[field.name] = String(field.default);
@@ -1017,9 +1057,29 @@
       status("이전 버전의 초안을 복원했습니다. 프로젝트로 저장해 계속 편집할 수 있습니다.");
     } catch (error) { status(error.message, true); }
   });
-  try { lastStoredDraft = localStorage.getItem(DRAFT_KEY); if (lastStoredDraft) { doc = M.parseDocument(lastStoredDraft); dirty = true; selectedId = doc.elements[0]?.id || null; } }
+  try { lastStoredDraft = draftStorage().getItem(DRAFT_KEY); if (lastStoredDraft) { doc = M.parseDocument(lastStoredDraft); dirty = true; selectedId = doc.elements[0]?.id || null; } }
   catch { draftError = true; }
   render();
+  if (handoffToken) {
+    $("readme-return").hidden = false;
+    $("readme-return-cancel").hidden = false;
+    $("readme-return").disabled = true;
+    try {
+      const record = JSON.parse(sessionStorage.getItem(handoffKey));
+      if (!record || record.version !== 1 || typeof record.originalUrl !== "string" || typeof record.cardId !== "string" || !record.project) throw new Error("README 연결이 만료됐습니다. README에서 카드를 다시 열어 주세요.");
+      const url = new URL(record.originalUrl);
+      const importUrl = new URL(url); importUrl.hash = "";
+      const imported = Design.parseDesignInput(importUrl.href, url.origin);
+      if (!imported) Design.parseCardInput(importUrl.href, url.origin);
+      readmeHandoff = record;
+      $("import-card-input").value = importUrl.href;
+      if (lastStoredDraft && !draftError) {
+        handoffReady = true; $("readme-return").disabled = false;
+        status("README에서 꾸미던 카드를 복원했습니다. 반영하면 원래 자리의 카드만 바뀝니다.");
+      } else $("import-card-button").click();
+    } catch (error) { status(error.message, true); }
+    return;
+  }
   if (draftError) status("이전 임시 저장을 열지 못했습니다. 저장해 둔 원본 파일을 열어주세요.", true);
   else status("기존 카드 URL을 불러오거나 카드를 골라 편집한 뒤, README에 넣기를 누르세요.");
 })();
