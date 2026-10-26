@@ -4,7 +4,7 @@
   const DATABASE = 'profilekit-project-transfer', STORE = 'records';
   let opening;
   function keyName(key) {
-    if (typeof key !== 'string' || !/^profilekit\.readme-(?:document\.v1|studio\.v2|(?:handoff\.|studio\.v2\.)[a-z0-9-]{1,80})$/i.test(key)) throw new Error('Invalid project transfer key');
+    if (typeof key !== 'string' || !(key === 'profilekit.gallery.publish' || /^profilekit\.readme-(?:document\.v1|studio\.v2|(?:handoff\.|studio\.v2\.)[a-z0-9-]{1,80})$/i.test(key))) throw new Error('Invalid project transfer key');
     return key;
   }
   function legacyStorage(key) {

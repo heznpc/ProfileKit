@@ -1,4 +1,4 @@
-/* Card editor controller. Project files own their image bytes; no server writes. */
+/* Card editor controller. Project files own their image bytes. Publishing is explicit. */
 (async function () {
   "use strict";
   // Keep previously shared root URLs opening the original card/README tools.
@@ -15,14 +15,19 @@
   const M = window.ProfileKitEditorModel;
   const Design = window.ProfileKitCardDesign;
   const Decoration = window.ProfileKitCardDecoration;
+  const I = window.ProfileKitStudioI18n;
+  const t = (text) => I?.t(text) || text;
   const catalog = window.ProfileKitCards.CARDS;
   const presets = window.ProfileKitEditorPresets;
   const $ = (id) => document.getElementById(id);
   const host = $("canvas-host");
   const requestedHandoff = new URLSearchParams(location.hash.slice(1)).get("readme-edit");
+  const galleryParams = new URLSearchParams(location.hash.slice(1));
+  const galleryId = /^[a-f0-9]{32}$/.test(galleryParams.get("gallery") || "") ? galleryParams.get("gallery") : null;
+  const galleryVersion = /^[1-9][0-9]{0,6}$/.test(galleryParams.get("version") || "") ? Number(galleryParams.get("version")) : null;
   const handoffToken = /^[a-z0-9-]{36}$/i.test(requestedHandoff || "") ? requestedHandoff : null;
   const handoffKey = handoffToken ? "profilekit.readme-handoff." + handoffToken : null;
-  const DRAFT_KEY = "profilekit.readme-studio.v2" + (handoffToken ? "." + handoffToken : "");
+  const DRAFT_KEY = "profilekit.readme-studio.v2" + (handoffToken ? "." + handoffToken : galleryId && galleryVersion ? ".gallery-" + galleryId + "-" + galleryVersion : "");
   const Transfer = window.ProfileKitProjectTransfer;
   async function readDraft() {
     const value = await Transfer.get(DRAFT_KEY);
@@ -49,6 +54,7 @@
   const nativeMeasurements = new Map();
   const cardPreviews = new Map();
   let partMode = false, partName = "", partOwner = null;
+  let gallerySource = galleryId && galleryVersion ? { id: galleryId, version: galleryVersion } : null;
 
   function partDefinitions(element = selected()) { return element?.type === "card" ? Decoration.partDefinitions(element) : {}; }
   function previewEntry(card) {
@@ -157,6 +163,15 @@
       return true;
     } catch (error) { status(error.message, true); return false; }
   }
+  function previewChange(change) {
+    const candidate = clone(doc);
+    try {
+      change(candidate);
+      const next = M.normalizeDocument(candidate);
+      if (!pendingEdit) pendingEdit = clone(doc);
+      doc = next; markChanged(); renderCanvas(); renderLayers(); renderMeta(); renderInspector();
+    } catch (error) { status(error.message, true); }
+  }
   function updateHistory() {
     $("undo").disabled = !past.length && !pendingEdit;
     $("redo").disabled = !future.length;
@@ -181,7 +196,7 @@
   }
   function elementLabel(element) {
     if (element.type === "card") return `${cardLabel(element.endpoint)} · ${element.params.username || element.params.name || element.params.title || element.endpoint}`;
-    return element.type === "text" ? element.text.split("\n")[0] || "빈 텍스트" : ({ image: "이미지", rect: "사각형", ellipse: "타원" })[element.type];
+    return element.type === "text" ? element.text.split("\n")[0] || t("빈 텍스트") : t(({ image: "이미지", rect: "사각형", ellipse: "타원" })[element.type]);
   }
   function renderLayers() {
     const list = $("layer-list");
@@ -209,7 +224,7 @@
     const focusedId = document.activeElement?.closest("#canvas-host [data-element-id]")?.dataset.elementId;
     const cardMarkup = Object.create(null);
     for (const element of doc.elements) {
-      if (element.type !== "card" || (!element.parts && !element.overflow && !(partMode && element.id === selectedId))) continue;
+      if (element.type !== "card") continue;
       const entry = previewEntry(element);
       cardMarkup[element.id] = entry.svg || `<svg xmlns="${SVG_NS}" width="${element.nativeWidth || element.width}" height="${element.nativeHeight || element.height}"><rect width="100%" height="100%" fill="#171b27"/><text x="20" y="36" fill="#c4b5fd" font-size="16">${entry.error ? "미리보기를 불러오지 못했습니다" : "꾸미기 미리보기를 불러오는 중…"}</text></svg>`;
     }
@@ -281,7 +296,7 @@
     "element-stroke-width": "strokeWidth", "element-radius": "radius", "element-fit": "fit",
   };
   const numeric = new Set(["x", "y", "width", "height", "rotation", "opacity", "fontSize", "fontWeight", "strokeWidth", "radius"]);
-  const cardLabel = (endpoint) => catalog[endpoint]?.label || (endpoint === "stack" ? "Stack" : endpoint);
+  const cardLabel = (endpoint) => I?.card(endpoint) || catalog[endpoint]?.label || (endpoint === "stack" ? "Stack" : endpoint);
   const paramLabels = { bg: "배경 효과", align: "정렬", density: "밀도", style: "스타일", username: "사용자명", name: "이름", title: "제목", subtitle: "소개", text: "문구", theme: "테마", font: "글꼴", color: "색상", accent_color: "강조색", bg_color: "배경색", text_color: "글자색", width: "카드 너비", height: "카드 높이", layout: "레이아웃", repo: "저장소", description: "설명", speed: "속도", border_radius: "모서리", hide_border: "테두리 숨김", hide_bar: "상단 바 숨김", lines: "줄 내용", items: "항목", tags: "태그", animate: "애니메이션" };
   let cardInspectorKey = "";
   function cardFields(endpoint) { return catalog[endpoint]?.params || []; }
@@ -531,15 +546,20 @@
   function renderCatalog() {
     const query = $("card-search").value.trim().toLowerCase(), container = $("card-catalog"); container.replaceChildren();
     for (const [endpoint, entry] of Object.entries(catalog)) {
-      if (!`${endpoint} ${entry.label} ${entry.group} ${entry.desc}`.toLowerCase().includes(query)) continue;
+      if (!`${endpoint} ${entry.label} ${entry.group} ${entry.desc} ${I?.cardSearchText?.(endpoint) || cardLabel(endpoint)}`.toLowerCase().includes(query)) continue;
       const button = document.createElement("button"); button.type = "button"; button.className = "catalog-card"; button.dataset.endpoint = endpoint; button.dataset.card = endpoint;
       const label = document.createElement("strong"); label.className = "catalog-card-name"; label.textContent = entry.label;
       const group = document.createElement("span"); group.className = "catalog-card-detail"; group.textContent = entry.group;
-      button.append(label, group); button.title = entry.desc; container.append(button);
+      const preview = document.createElement("img"); preview.className = "catalog-preview"; preview.alt = "";
+      preview.loading = "lazy"; preview.decoding = "async"; preview.referrerPolicy = "no-referrer";
+      preview.src = M.cardPath({ endpoint, params: newCardParams(endpoint) });
+      button.append(preview, label, group); button.title = entry.desc; container.append(button);
     }
     if (!container.children.length) { const hint = document.createElement("p"); hint.className = "field-hint"; hint.textContent = "일치하는 카드가 없습니다."; container.append(hint); }
   }
   $("card-search").addEventListener("input", renderCatalog);
+  window.addEventListener("profilekit:localechange", () => { renderCatalog(); renderLayers(); });
+  $("profile-username").addEventListener("change", renderCatalog);
   $("card-catalog").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-endpoint]"); if (!button) return;
     button.disabled = true;
@@ -577,7 +597,7 @@
   }
   let verifiedDesignUrl = null;
   function canExportCards() {
-    return doc.elements.length > 1 && doc.elements.every((element) => element.type === "card" && element.rotation === 0 && element.opacity === 1
+    return !doc.provenance && doc.elements.length > 1 && doc.elements.every((element) => element.type === "card" && element.rotation === 0 && element.opacity === 1
       && !element.parts && !element.effect && !element.overflow && element.nativeWidth && element.nativeHeight && Math.abs(element.width / element.height - element.nativeWidth / element.nativeHeight) < 0.001);
   }
   function refreshEmbed() {
@@ -672,6 +692,7 @@
     $("bring-forward").disabled = index === doc.elements.length - 1;
     $("send-backward").disabled = index === 0;
     renderDecorationInspector();
+    window.dispatchEvent(new Event("profilekit:controls-render"));
   }
   function renderDecorationInspector() {
     const element = selected(); if (!element) return;
@@ -711,13 +732,15 @@
         : partMode ? "선택한 요소를 직접 끌어 이동하세요. 모서리 핸들로 크기를 조절할 수 있습니다."
         : "카드 안의 요소를 꾸며도 계정 정보와 애니메이션은 유지됩니다.";
     }
-    const effect = element.effect || { kind: "none", color: "#8b5cf6", blur: 12, opacity: .6, dx: 0, dy: 8 };
+    const previousEffect = pendingEdit?.elements.find((item) => item.id === element.id)?.effect;
+    const effect = element.effect || (previousEffect ? { ...previousEffect, opacity: 0 } : { kind: "none", color: "#8b5cf6", blur: 12, opacity: .6, dx: 0, dy: 8 });
     $("element-effect-kind").value = effect.kind;
     $("effect-fields").hidden = effect.kind === "none";
     for (const key of ["color", "blur", "opacity", "dx", "dy"]) {
       const field = $("element-effect-" + key);
       if (document.activeElement !== field) field.value = effect[key];
     }
+    window.dispatchEvent(new Event("profilekit:controls-render"));
   }
   function changePart(change) {
     if (!selected() || !partName) return;
@@ -751,6 +774,14 @@
     const value = $("part-" + key).value;
     changePart((part) => { if (["color", "fill", "stroke"].includes(key)) { if (value.trim()) part[key] = value.trim(); else delete part[key]; } else part[key] = Number(value); });
   });
+  for (const key of ["dx", "dy", "scale"]) $("part-" + key).addEventListener("input", () => {
+    if (!selected() || !partName || $("part-" + key).value === "") return;
+    const value = Number($("part-" + key).value);
+    previewChange((next) => {
+      const card = next.elements.find((item) => item.id === selectedId);
+      card.parts = { ...card.parts, [partName]: { dx: 0, dy: 0, scale: 1, ...card.parts?.[partName], [key]: value } };
+    });
+  });
   $("card-overflow").addEventListener("change", () => {
     const visible = $("card-overflow").checked;
     transact((next) => {
@@ -773,9 +804,16 @@
     });
   });
   for (const key of ["color", "blur", "opacity", "dx", "dy"]) $("element-effect-" + key).addEventListener("change", () => {
-    if (!selected()?.effect) return;
+    finishEdit();
+    if (!selected()?.effect) { renderDecorationInspector(); return; }
     const value = $("element-effect-" + key).value;
     transact((next) => { next.elements.find((item) => item.id === selectedId).effect[key] = key === "color" ? value.trim() : Number(value); });
+  });
+  for (const key of ["blur", "opacity", "dx", "dy"]) $("element-effect-" + key).addEventListener("input", () => {
+    const effect = selected()?.effect || pendingEdit?.elements.find((item) => item.id === selectedId)?.effect;
+    if (!effect || $("element-effect-" + key).value === "") return;
+    const value = Number($("element-effect-" + key).value);
+    previewChange((next) => { const item = next.elements.find((item) => item.id === selectedId); item.effect = { ...effect, [key]: value }; });
   });
   $("effect-reset").addEventListener("click", () => {
     if (selected()?.effect) transact((next) => { delete next.elements.find((item) => item.id === selectedId).effect; });
@@ -1140,7 +1178,7 @@
       else { document.activeElement.blur(); select(null); }
       return;
     }
-    if (editing) return;
+    if (editing && !(event.target.matches('input[type="range"]') && mod && ["z", "y"].includes(event.key.toLowerCase()))) return;
     if (mod && event.key.toLowerCase() === "z") { event.preventDefault(); travel(!event.shiftKey); }
     else if (mod && event.key.toLowerCase() === "y") { event.preventDefault(); travel(false); }
     else if (mod && event.key.toLowerCase() === "d") {
@@ -1191,11 +1229,37 @@
       status("이전 버전의 초안을 복원했습니다. 프로젝트로 저장해 계속 편집할 수 있습니다.");
     } catch (error) { status(error.message, true); }
   });
+  window.ProfileKitEditor = Object.freeze({
+    async snapshot() {
+      finishGesture(); finishEdit(); await waitForCardSizes();
+      return M.parseDocument(M.serializeDocument(doc));
+    },
+    source() { return doc.provenance ? { id: doc.provenance.id, version: doc.provenance.version } : null; },
+    selectedIds() { return selectedId ? [selectedId] : []; },
+    apply(next, expected) {
+      finishGesture(); finishEdit();
+      if (M.serializeDocument(doc) !== expected) throw new Error("The project changed. Review a fresh proposal before applying it.");
+      replaceDocument(next); select(doc.elements[0]?.id || null);
+    },
+    preview: standaloneSVG,
+    status,
+  });
   document.body.inert = true;
   try {
   try { lastStoredDraft = await readDraft(); if (lastStoredDraft) { doc = M.parseDocument(lastStoredDraft); dirty = true; selectedId = doc.elements[0]?.id || null; } }
   catch { draftError = true; }
   render();
+  if (gallerySource && !handoffToken) {
+    try {
+      const response = await fetch(`/api/gallery?id=${galleryId}&version=${galleryVersion}`);
+      const record = await response.json();
+      if (!response.ok) throw new Error(record.error?.message || record.error || "Gallery card could not be opened.");
+      if (!lastStoredDraft || draftError) replaceDocument(M.withGallerySource(record.document, record, location.origin));
+      select(doc.elements[0]?.id || null);
+      status("갤러리 카드의 독립적인 사본을 열었습니다. 원본은 바뀌지 않습니다.");
+    } catch (error) { status(error.message, true); }
+    return;
+  }
   if (handoffToken) {
     $("readme-return").hidden = false;
     $("readme-return-cancel").hidden = false;
@@ -1227,5 +1291,5 @@
   }
   if (draftError) status("이전 임시 저장을 열지 못했습니다. 저장해 둔 원본 파일을 열어주세요.", true);
   else status("기존 카드 URL을 불러오거나 카드를 골라 편집한 뒤, README에 넣기를 누르세요.");
-  } finally { document.body.inert = false; }
+  } finally { document.body.inert = false; window.dispatchEvent(new Event("profilekit:editor-ready")); }
 })();

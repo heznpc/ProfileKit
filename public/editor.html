@@ -7,6 +7,7 @@
   <title>README Studio · ProfileKit</title>
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="/editor.css" />
+  <link rel="stylesheet" href="/studio-tools.css" />
 </head>
 <body>
   <a class="skip-link" href="#canvas-host">미리보기로 이동</a>
@@ -20,6 +21,7 @@
       <input id="doc-name" type="text" value="My README header" maxlength="120" autocomplete="off" />
     </div>
     <div class="document-actions" aria-label="프로젝트와 내보내기">
+      <label class="studio-locale" for="studio-locale"><span class="sr-only">언어</span><select id="studio-locale" aria-label="언어"><option value="en" lang="en">English</option><option value="ko" lang="ko">한국어</option></select></label>
       <button id="readme-return-cancel" class="button quiet" type="button" hidden>수정 없이 돌아가기</button>
       <button id="readme-return" class="button primary" type="button" hidden disabled>README에 반영</button>
       <button id="legacy-recover" class="button quiet" type="button" hidden>이전 초안 복원</button>
@@ -236,11 +238,15 @@
     </div>
   </dialog>
   <script src="/card-schema.js"></script>
+  <script src="/studio-i18n.js"></script>
   <script src="/card-decoration.js"></script>
   <script src="/editor-model.js"></script>
   <script src="/card-design.js"></script>
   <script src="/editor-presets.js"></script>
   <script src="/project-transfer.js"></script>
   <script src="/editor.js"></script>
+  <script src="/ai-design.js"></script>
+  <script src="/editor-ai.js"></script>
+  <script src="/editor-controls.js"></script>
 </body>
 </html>

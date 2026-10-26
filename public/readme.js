@@ -5,6 +5,7 @@
   const Preview = window.ProfileKitReadmePreview;
   const Schema = window.ProfileKitCards;
   const Design = window.ProfileKitCardDesign;
+  const I18n = window.ProfileKitStudioI18n;
   const $ = (id) => document.getElementById(id);
   const DRAFT_KEY = "profilekit.readme-document.v1";
   const MAX_BYTES = 1024 * 1024;
@@ -38,14 +39,14 @@
     return value;
   }
   function embeddedCards(card) { return card?.design?.elements.filter((element) => element.type === "card") || []; }
-  function label(card) { return card.endpoint === "design" ? card.design?.name || "합성 디자인" : Schema.CARDS[card.endpoint]?.label || card.endpoint; }
+  function label(card) { return card.endpoint === "design" ? card.design?.name || I18n.t("합성 디자인") : I18n.card(card.endpoint); }
   function editableCard(card) {
     if (card?.assetPath) return null;
     if (card?.endpoint !== "design") return card;
     const cards = embeddedCards(card);
     return cards.find((element) => element.id === selectedElementId) || cards[0];
   }
-  function branchLabel(card) { return ({ dark: "어두운 화면", light: "밝은 화면", default: "공통" })[card.variant] || "공통"; }
+  function branchLabel(card) { return I18n.t(({ dark: "어두운 화면", light: "밝은 화면", default: "공통" })[card.variant] || "공통"); }
   function snapshot() {
     return { source, assetDesigns, selectedId, checked: Array.from(checked), fromAccount: $("batch-from-account").value, toAccount: $("batch-account").value };
   }
@@ -149,15 +150,22 @@
       item.classList.toggle("is-selected", card.id === selectedId);
       const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.className = "readme-card-select";
       checkbox.checked = checked.has(card.id); checkbox.disabled = !!card.assetPath; checkbox.dataset.checkId = card.id;
-      checkbox.setAttribute("aria-label", label(card) + " " + branchLabel(card) + " 일괄 변경 선택");
+      I18n.attribute(checkbox, "aria-label", "{name} 일괄 변경 선택", () => ({ name: label(card) + " " + branchLabel(card) }));
       const button = document.createElement("button"); button.type = "button"; button.className = "readme-card-button"; button.dataset.cardId = card.id;
       button.setAttribute("aria-pressed", String(card.id === selectedId));
-      const title = document.createElement("strong"); title.className = "readme-card-name"; title.textContent = label(card);
-      const branch = document.createElement("span"); branch.className = "readme-card-branch"; branch.dataset.branch = card.variant; branch.textContent = branchLabel(card);
+      const title = document.createElement("strong"); title.className = "readme-card-name";
+      I18n.text(title, "{name}", () => ({ name: label(card) }));
+      const branch = document.createElement("span"); branch.className = "readme-card-branch"; branch.dataset.branch = card.variant;
+      I18n.text(branch, "{branch}", () => ({ branch: branchLabel(card) }));
       const meta = document.createElement("span"); meta.className = "readme-card-meta";
-      meta.textContent = card.endpoint === "design" ? "합성 디자인 · 포함 카드 " + embeddedCards(card).length + "개" : card.params.username || card.params.github || card.params.name || card.params.title || card.params.text || "/" + card.endpoint;
+      if (card.endpoint === "design") I18n.text(meta, "합성 디자인 · 포함 카드 {count}개", { count: embeddedCards(card).length });
+      else meta.textContent = card.params.username || card.params.github || card.params.name || card.params.title || card.params.text || "/" + card.endpoint;
       const layout = document.createElement("span"); layout.className = "readme-card-meta";
-      layout.textContent = [card.width ? "표시 너비 " + card.width : "", card.uses > 1 ? card.uses + "곳에서 사용" : "", card.groupId?.startsWith("picture") ? "테마별 이미지" : ""].filter(Boolean).join(" · ");
+      I18n.text(layout, "{details}", () => ({ details: [
+        card.width ? I18n.t("표시 너비 {width}", { width: card.width }) : "",
+        card.uses > 1 ? I18n.t("{count}곳에서 사용", { count: card.uses }) : "",
+        card.groupId?.startsWith("picture") ? I18n.t("테마별 이미지") : "",
+      ].filter(Boolean).join(" · ") }));
       button.append(title, branch, meta); if (layout.textContent) button.append(layout);
       item.append(checkbox, button); groupContainer.append(item);
     }
@@ -165,7 +173,8 @@
   }
   function renderInspector() {
     const outer = selected(), card = editableCard(outer), container = $("readme-params"); container.replaceChildren();
-    $("readme-card-title").textContent = outer ? label(outer) + " · " + branchLabel(outer) : "카드를 선택하세요";
+    if (outer) I18n.text($("readme-card-title"), "{name} · {branch}", () => ({ name: label(outer), branch: branchLabel(outer) }));
+    else I18n.text($("readme-card-title"), "카드를 선택하세요");
     $("readme-card-apply").disabled = !card;
     $("readme-extra-params").disabled = !card;
     $("readme-extra-params").value = "";
@@ -178,7 +187,7 @@
       $("readme-design-hint").textContent = "포함 카드 " + cards.length + "개 · 위치·크기·레이어와 장식은 유지됩니다. 일괄 변경은 포함된 카드에도 적용됩니다.";
       for (const [index, element] of cards.entries()) {
         const option = document.createElement("option"); option.value = element.id;
-        option.textContent = (index + 1) + ". " + label(element) + (element.params.title || element.params.username ? " · " + (element.params.title || element.params.username) : "");
+        I18n.text(option, "{index}. {name}{detail}", () => ({ index: index + 1, name: label(element), detail: element.params.title || element.params.username ? " · " + (element.params.title || element.params.username) : "" }));
         picker.append(option);
       }
       if (outer.assetPath) $("readme-design-hint").textContent = outer.assetPath + " · 저장된 SVG입니다. 제작기에서 수정한 뒤 교체할 SVG를 내려받으세요. 내용 편집과 일괄 변경은 파일에 자동 반영되지 않습니다.";
