@@ -37,7 +37,7 @@
   };
   const CARD_ENDPOINTS = Object.freeze([...Object.keys(schema?.CARDS || {}), "stack"]);
   const STACK_ENDPOINTS = Object.freeze(["hero", "section", "divider", "now", "timeline", "tags", "toc", "stats", "languages"]);
-  const DOCUMENT_KEYS = ["kind", "version", "name", "width", "height", "background", "elements"];
+  const DOCUMENT_KEYS = ["kind", "version", "name", "width", "height", "background", "elements", "provenance"];
   const IMAGE_PREFIX = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/;
   const imageCache = new Map();
   let imageCacheBytes = 0;
@@ -372,6 +372,28 @@
     return 2 + Math.max(0, entries.length - 1) + entries.reduce((sum, [key, item]) => sum + jsonBytes(key) + 1 + jsonBytes(item), 0);
   }
 
+  function normalizeProvenance(raw) {
+    record(raw, "Design provenance");
+    keys(raw, ["origin", "id", "version", "credits"], "Design provenance");
+    const identity = (value) => {
+      if (!/^[a-f0-9]{32}$/.test(value.id || "") || !Number.isInteger(value.version) || value.version < 1 || value.version > 100) fail("Invalid gallery source version");
+      return { id: value.id, version: value.version };
+    };
+    if (!Array.isArray(raw.credits) || !raw.credits.length || raw.credits.length > 33) fail("Invalid design credits");
+    const credits = raw.credits.map((credit) => {
+      record(credit, "Design credit"); keys(credit, ["id", "version", "title", "author", "license"], "Design credit");
+      if (!["CC0-1.0", "CC-BY-4.0"].includes(credit.license)) fail("Unsupported design license");
+      return { ...identity(credit), title: string(credit.title, 120, "Credit title"), author: string(credit.author, 80, "Credit author"), license: credit.license };
+    });
+    const source = identity(raw);
+    if (!credits.some((credit) => credit.id === source.id && credit.version === source.version)) fail("Gallery source must be included in design credits");
+    return { origin: normalizeOrigin(raw.origin), ...source, credits };
+  }
+  function withGallerySource(document, entry, origin) {
+    const credit = ({ id, version, title, author, license }) => ({ id, version, title, author, license });
+    return normalizeDocument({ ...document, provenance: { origin, id: entry.id, version: entry.version,
+      credits: [...(entry.attributions || []).map(credit), credit(entry)] } });
+  }
   function normalizeDocument(raw) {
     record(raw, "Document");
     keys(raw, DOCUMENT_KEYS, "Document");
@@ -385,6 +407,7 @@
       background: color(raw.background, "Background", ["transparent"]),
       elements: raw.elements.map(normalizeElement),
     };
+    if (raw.provenance !== undefined) normalized.provenance = normalizeProvenance(raw.provenance);
     const ids = new Set();
     let cardCalls = 0;
     for (const element of normalized.elements) {
@@ -654,5 +677,5 @@
   }
 
   return { LIMITS, FONT_FAMILIES, CARD_ENDPOINTS, STACK_ENDPOINTS, PARTS: decoration?.PARTS || Object.freeze({}), createDocument, createElement, normalizeDocument, normalizeCard,
-    normalizeOrigin, cardCallCount, cardPath, parseDocument, serializeDocument, renderSVG, textLayout, imageInfo, isolateSVG };
+    normalizeOrigin, withGallerySource, cardCallCount, cardPath, parseDocument, serializeDocument, renderSVG, textLayout, imageInfo, isolateSVG };
 });

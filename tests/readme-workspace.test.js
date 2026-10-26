@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
+const { translate } = require("../public/studio-i18n");
 
 const DRAFT_KEY = "profilekit.readme-document.v1";
 const publicSource = (name) => fs.readFileSync(require.resolve(`../public/${name}.js`), "utf8");
@@ -70,6 +71,14 @@ function workspace(storage = new Map(), session = new Map(), hash = "") {
     requestAnimationFrame: (callback) => callback(),
     addEventListener() {},
     ProfileKitReadmePreview: { render: (source) => { previews.push(source); return "<!doctype html>"; } },
+    // Display bindings use the real translator; this DOM harness does not run
+    // the runtime's MutationObserver or locale selector.
+    ProfileKitStudioI18n: {
+      t(source, values) { return translate(source, "ko", values); },
+      card(endpoint) { return sandbox.ProfileKitCards.CARDS[endpoint]?.label || endpoint; },
+      text(node, source, values) { node.textContent = this.t(source, typeof values === "function" ? values() : values); },
+      attribute(node, name, source, values) { node.setAttribute(name, this.t(source, typeof values === "function" ? values() : values)); },
+    },
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);

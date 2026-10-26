@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Discover community-made ProfileKit cards. Download editable projects, make them your own, and share your design." />
+  <title>Gallery · ProfileKit</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/gallery.css" />
+</head>
+<body>
+  <a class="skip-link" href="#gallery-results" data-i18n="skip">Skip to designs</a>
+  <header class="site-header">
+    <a class="brand" href="/index.html" aria-label="ProfileKit"><span class="brand-mark" aria-hidden="true">pk.</span>ProfileKit</a>
+    <nav aria-label="Main navigation" data-i18n-aria="navigation">
+      <a href="/gallery.html" aria-current="page" data-i18n="gallery">Gallery</a>
+      <a href="/index.html" data-i18n="cards">Cards</a>
+      <a href="/editor.html" data-i18n="studio">Studio <span aria-hidden="true">↗</span></a>
+    </nav>
+    <div class="header-actions">
+      <label class="sr-only" for="gallery-locale" data-i18n="language">Language</label>
+      <select id="gallery-locale"><option value="en">EN</option><option value="ko">한국어</option></select>
+      <button class="button primary" id="publish-open" type="button" disabled data-i18n="share">Share a design</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="gallery-heading">
+      <div class="intro-copy"><p class="eyebrow"><span class="status-dot" aria-hidden="true"></span><span data-i18n="eyebrow">THE COMMUNITY COLLECTION</span></p>
+        <h1 id="gallery-heading" data-i18n="headline">A little you.<br>A whole lot of possibility.</h1>
+        <p class="intro-description" data-i18n="description">Discover a design. Open every layer. Make your profile feel like yours.</p>
+      </div>
+      <div class="intro-note"><span class="note-icon" aria-hidden="true">↗</span><p data-i18n="openSourceNote">Every design comes<br>with its editable source.</p><a href="/editor.html" data-i18n="startBlank">Start with a blank canvas →</a></div>
+    </section>
+
+    <section id="service-state" class="service-state" hidden aria-live="polite">
+      <div><h2 id="service-heading"></h2><p id="service-description"></p></div>
+      <button id="service-retry" type="button" class="button outline" data-i18n="retry">Try again</button>
+    </section>
+
+    <section class="collection" aria-labelledby="collection-heading">
+      <div class="collection-toolbar">
+        <div class="collection-heading"><h2 id="collection-heading" data-i18n="collection">Explore the collection</h2><span id="result-count" class="count" aria-live="polite"></span></div>
+        <form id="search-form" role="search" class="search-form"><label class="sr-only" for="gallery-search" data-i18n="search">Search designs, creators, or tags</label><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="gallery-search" type="search" maxlength="120" placeholder="Search designs, creators, or tags" data-i18n-placeholder="search" autocomplete="off" /><button type="submit" aria-label="Search" data-i18n-aria="searchAction">↵</button></form>
+      </div>
+      <div class="filter-row"><div id="tag-filters" class="tag-filters" aria-label="Filter by tag" data-i18n-aria="filterTags"></div><p class="sort-note" data-i18n="sort">Recently shared</p></div>
+      <div id="gallery-results" class="gallery-grid" aria-busy="true"></div>
+      <div id="empty-state" class="empty-state" hidden><span aria-hidden="true">✳</span><h3 id="empty-heading"></h3><p id="empty-description"></p><a href="/editor.html" class="button outline" data-i18n="createDesign">Create a design →</a></div>
+      <div class="more-row"><button id="load-more" type="button" class="button outline" hidden data-i18n="loadMore">Load more designs</button></div>
+      <p id="page-status" class="status-message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <footer><p>ProfileKit <span aria-hidden="true">/</span> <span data-i18n="footer">Built to be made your own.</span></p><button class="text-button" id="recover-open" type="button" data-i18n="recover">Restore publishing key</button></footer>
+  <input id="recover-file" type="file" accept="application/json,.json" hidden />
+
+  <dialog id="detail-dialog" class="detail-dialog" aria-labelledby="detail-title">
+    <button type="button" class="close-button" data-close="detail-dialog" aria-label="Close" data-i18n-aria="close">×</button>
+    <div class="detail-layout"><div class="detail-visual"><div id="detail-image-host" class="detail-image-host"></div><div class="preview-caption"><span data-i18n="livePreview">LIVE CARD PREVIEW</span><span id="detail-dimensions"></span></div></div>
+      <section class="detail-information"><p class="eyebrow" id="detail-edition"></p><h2 id="detail-title"></h2><p id="detail-author" class="byline"></p><p class="identity-note" data-i18n="unverified">Creator names are self-declared.</p><p id="detail-description" class="detail-description"></p><div id="detail-tags" class="tag-list"></div>
+        <a id="detail-edit" class="button primary full-width" href="/editor.html" data-i18n="editDesign">Make it yours in Studio ↗</a>
+        <div class="download-actions"><button id="download-project" class="button outline" type="button" data-i18n="downloadSource">Editable source ↓</button><button id="download-svg" class="button outline" type="button" data-i18n="downloadSVG">SVG image ↓</button></div>
+        <dl class="design-facts"><div><dt data-i18n="license">License</dt><dd><a id="detail-license" target="_blank" rel="noopener noreferrer"></a></dd></div><div><dt data-i18n="published">Published</dt><dd id="detail-date"></dd></div><div><dt><label for="detail-version" data-i18n="version">Version history</label></dt><dd><select id="detail-version"></select></dd></div></dl>
+        <p id="detail-license-note" class="license-note"></p>
+        <section id="attribution-section" class="attribution-section" hidden><h3 data-i18n="attribution">Made with these designs</h3><ul id="detail-attributions"></ul></section>
+        <section id="owner-section" class="owner-section" hidden><p class="eyebrow" data-i18n="yourDesign">YOUR DESIGN</p><div class="owner-actions"><button id="owner-update" type="button" class="button outline" data-i18n="update">Publish a new version</button><button id="owner-key" type="button" class="text-button" data-i18n="saveKey">Save editing key</button><button id="owner-withdraw" type="button" class="text-button danger" data-i18n="withdraw">Withdraw from gallery</button></div><p id="owner-note" class="identity-note"></p></section>
+        <p id="detail-status" class="status-message" role="status"></p>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="publish-dialog" class="publish-dialog" aria-labelledby="publish-heading">
+    <button type="button" class="close-button" data-close="publish-dialog" aria-label="Close" data-i18n-aria="close">×</button>
+    <div class="publish-heading"><p class="eyebrow" data-i18n="shareEyebrow">PASS THE INSPIRATION ON</p><h2 id="publish-heading" data-i18n="publishHeading">Share something you made.</h2><p data-i18n="publishIntro">Your design and its editable source will be public. Choose a license so others know how to use it.</p></div>
+    <form id="publish-form" class="publish-form">
+      <div class="publish-project"><div id="publish-preview" class="publish-preview"><span data-i18n="chooseProject">Choose an editable project</span></div><div><strong id="publish-document-name" data-i18n="noProject">No project selected</strong><p id="publish-document-meta"></p><label class="button outline file-label" for="publish-file" data-i18n="chooseFile">Choose project JSON</label><input id="publish-file" type="file" accept="application/json,.json" /></div></div>
+      <label id="publish-target-label" hidden><span data-i18n="publishAs">Publish as</span><select id="publish-target"><option value="new" data-i18n="newDesign">A new design</option><option value="update" data-i18n="newVersion">A new version of my design</option></select></label>
+      <div class="form-columns"><label><span data-i18n="title">Design title</span><input id="publish-title" required maxlength="120" autocomplete="off" /></label><label><span data-i18n="creator">Creator name</span><input id="publish-author" required maxlength="80" autocomplete="nickname" /></label></div>
+      <label><span data-i18n="designDescription">Tell us about the design</span><textarea id="publish-description" rows="3" maxlength="2000"></textarea></label>
+      <label><span data-i18n="tags">Tags</span><input id="publish-tags" maxlength="250" placeholder="minimal, profile, dark" /><small data-i18n="tagsHint">Separate tags with commas.</small></label>
+      <label><span data-i18n="license">License</span><select id="publish-license"><option value="CC-BY-4.0">CC BY 4.0 — Attribution</option><option value="CC0-1.0">CC0 1.0 — Public domain dedication</option></select></label>
+      <p id="publish-attribution" class="license-note" hidden></p>
+      <label id="publish-key-label" hidden><span data-i18n="publishKey">Server publishing key</span><input id="publish-server-key" type="password" autocomplete="off" /><small data-i18n="publishKeyHint">This server requires a publishing key from its operator.</small></label>
+      <label class="consent"><input id="publish-consent" type="checkbox" required /><span data-i18n="consent">I can share this design and its included assets under the selected license. I understand that published versions remain available even if I withdraw the gallery listing.</span></label>
+      <p id="publish-status" class="status-message" role="status"></p>
+      <button id="publish-submit" type="submit" class="button primary full-width" data-i18n="publish">Publish design ↗</button>
+    </form>
+    <section id="publish-success" class="publish-success" hidden><span class="success-mark" aria-hidden="true">✓</span><h3 data-i18n="success">Your design is out in the world.</h3><p data-i18n="keyNotice">Save your editing key. It lets you publish updates or withdraw your listing, even in another browser. Keep it private.</p><button id="success-save-key" type="button" class="button primary full-width" data-i18n="downloadKey">Download editing key ↓</button><button id="success-open" type="button" class="button outline full-width" data-i18n="viewDesign">View your design →</button><p id="key-storage-status" class="identity-note"></p></section>
+  </dialog>
+  <script src="/card-schema.js"></script>
+  <script src="/card-decoration.js"></script>
+  <script src="/editor-model.js"></script>
+  <script src="/project-transfer.js"></script>
+  <script src="/gallery.js"></script>
+</body>
+</html>

@@ -21,7 +21,7 @@ const path = require("node:path");
 
 const { CARDS } = require("./src/endpoints/catalog");
 
-const ALLOWED = new Set([...Object.keys(CARDS), "catalog", "health", "design"]);
+const ALLOWED = new Set([...Object.keys(CARDS), "catalog", "health", "design", "gallery", "ai"]);
 
 const PORT = Number(process.env.PORT || 3000);
 // INSTANCE_ID lets a load balancer demo / multi-replica deploy reveal

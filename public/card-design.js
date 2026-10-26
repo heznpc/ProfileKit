@@ -131,7 +131,7 @@
   }
   function directCard(doc) {
     const card = doc.elements[0];
-    return doc.background === "transparent" && doc.elements.length === 1 && card.type === "card"
+    return !doc.provenance && doc.background === "transparent" && doc.elements.length === 1 && card.type === "card"
       && card.x === 0 && card.y === 0 && card.width === doc.width && card.height === doc.height
       && card.rotation === 0 && card.opacity === 1
       && !card.parts && !card.effect && !card.overflow
@@ -164,20 +164,30 @@
   }
   function readme(document, origin) {
     const doc = Model.normalizeDocument(document);
-    return composedImage(doc, designUrl(doc, origin));
+    return composedImage(doc, designUrl(doc, origin)) + readmeCredits(doc);
+  }
+  function readmeCredits(doc) {
+    if (!doc.provenance) return "";
+    const credits = doc.provenance.credits.map((credit) => {
+      const url = `${doc.provenance.origin}/gallery.html#design=${credit.id}&version=${credit.version}`;
+      const licenseURL = credit.license === "CC-BY-4.0" ? "https://creativecommons.org/licenses/by/4.0/" : "https://creativecommons.org/publicdomain/zero/1.0/";
+      return `<a href="${escape(url)}">${escape(credit.title)}</a> by ${escape(credit.author)} (<a href="${licenseURL}">${credit.license}</a>)`;
+    });
+    return `\n<sub>Design adapted from ${credits.join("; ")}. Layout and content may have been modified.</sub>`;
   }
   function readmeAsset(document, path) {
     if (typeof path !== "string") throw new Error("Use a repository-relative asset path");
     path = path.trim();
     if (!path || /^(?:[a-z][a-z0-9+.-]*:|\/|\\)/i.test(path) || /[\u0000-\u001f\\?#]/.test(path) || path.split("/").includes("..")) throw new Error("Use a repository-relative asset path");
-    return composedImage(Model.normalizeDocument(document), path);
+    const doc = Model.normalizeDocument(document);
+    return composedImage(doc, path) + readmeCredits(doc);
   }
   function readmeCards(document, origin) {
     const doc = Model.normalizeDocument(document);
     if (!doc.elements.length || doc.elements.some((element) => element.type !== "card" || element.rotation !== 0 || element.opacity !== 1 || element.parts || element.effect || element.overflow)) {
       throw new Error("Separate card embeds require only unrotated, fully opaque live cards without part edits or layer effects. Use the composed design for this document.");
     }
-    return doc.elements.map((card) => linkedImage(`<img src="${escape(cardUrl(card, origin))}" alt="${escape(card.alt ?? (doc.name || "Profile card"))}" width="${escape(card.displayWidth ?? card.width)}" />`, card)).join("\n");
+    return doc.elements.map((card) => linkedImage(`<img src="${escape(cardUrl(card, origin))}" alt="${escape(card.alt ?? (doc.name || "Profile card"))}" width="${escape(card.displayWidth ?? card.width)}" />`, card)).join("\n") + readmeCredits(doc);
   }
 
   return { DEFAULT_ORIGIN, MAX_DESIGN_URL_LENGTH, ENDPOINTS, parseCardInput, parseDesignInput, cardUrl, encodeDocument, decodeDocument, designUrl, readme, readmeAsset, readmeCards };
