@@ -1,7 +1,7 @@
 const {chromium}=require(process.env.PROFILEKIT_PLAYWRIGHT_PATH || 'playwright');
 const assert=require('node:assert/strict');
 (async()=>{
- const browser=await chromium.launch({channel:process.env.PROFILEKIT_BROWSER_CHANNEL || 'chrome',headless:true});let page=await browser.newPage({viewport:{width:1512,height:1100}});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ const browser=await chromium.launch({channel:process.env.PROFILEKIT_BROWSER_CHANNEL || undefined,headless:true});let page=await browser.newPage({viewport:{width:1512,height:1100},locale:'en-US'});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
  const base=process.env.PROFILEKIT_TEST_ORIGIN,original='# Profile\n\n<a href="https://example.com"><img src="'+base+'/api/hero?name=Ren" alt="Keep" width="49%" /></a>\n\nKeep this.';
  try{
  await page.goto(base+'/readme.html');await page.locator('.advanced-options > summary').click();await page.locator('#readme-origin').fill(base);await page.locator('#readme-origin').press('Tab');await page.locator('#readme-show-import').click();await page.locator('#readme-source').fill(original);await page.locator('#readme-import').click();
@@ -12,7 +12,18 @@ const assert=require('node:assert/strict');
  await page.waitForFunction(()=>document.querySelectorAll('#canvas-host [data-element-id]').length===2);
  await page.locator('#image-file').setInputFiles({name:'second-texture.png',mimeType:'image/png',buffer:Buffer.from(data,'base64')});
  await page.waitForFunction(()=>document.querySelectorAll('#canvas-host [data-element-id]').length===3);
- await page.waitForFunction(()=>document.querySelector('#status-message').textContent.includes('저장됨'));
+ // Wait for the latest draft to reach storage; status text depends on the locale.
+ let savedLayers=0;
+ const saveDeadline=Date.now()+30000;
+ while(savedLayers!==3 && Date.now()<saveDeadline){
+  savedLayers=await page.evaluate(async()=>{
+   const token=new URLSearchParams(location.hash.slice(1)).get('readme-edit');
+   const saved=await window.ProfileKitProjectTransfer.get('profilekit.readme-studio.v2.'+token);
+   return saved?.elements.length || 0;
+  });
+  if(savedLayers!==3) await page.waitForTimeout(100);
+ }
+ assert.equal(savedLayers,3,'all image layers must be committed before reload');
  await page.reload();await page.waitForFunction(()=>!document.querySelector('#readme-return').disabled);
  assert.equal(await page.locator('#canvas-host [data-element-id]').count(),3);
  await page.locator('#readme-return').click();await page.locator('#asset-return').waitFor({state:'visible'});await page.locator('#asset-path').fill('assets/custom-profile.svg');
@@ -31,7 +42,7 @@ const assert=require('node:assert/strict');
  const dl2=page.waitForEvent('download');await page.locator('#asset-return').click();await dl2;await page.waitForURL(u=>u.pathname==='/readme.html');await page.waitForFunction(()=>!location.hash);
  const projectDownload=page.waitForEvent('download');await page.locator('#readme-project-save').click();await (await projectDownload).saveAs(process.env.PROFILEKIT_TEST_OUTPUT+'/readme-project.json');
  await page.close();
- page=await browser.newPage({viewport:{width:1512,height:1100}});
+ page=await browser.newPage({viewport:{width:1512,height:1100},locale:'ko-KR'});
  page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
  await page.goto(base+'/readme.html');await page.locator('#readme-project-file').setInputFiles(process.env.PROFILEKIT_TEST_OUTPUT+'/readme-project.json');
  await page.waitForFunction(()=>document.querySelector('#readme-source').value.includes('assets/custom-profile.svg'));

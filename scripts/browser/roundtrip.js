@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const base=process.env.PROFILEKIT_TEST_ORIGIN;
 (async()=>{
- const browser=await chromium.launch({channel:process.env.PROFILEKIT_BROWSER_CHANNEL || 'chrome',headless:true});
+ const browser=await chromium.launch({channel:process.env.PROFILEKIT_BROWSER_CHANNEL || undefined,headless:true});
  const page=await browser.newPage({viewport:{width:1512,height:1100}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
  const prefix='# My existing profile\n\n<a href="https://github.com/octocat"><img width="49%" alt="Keep my label" src="';

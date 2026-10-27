@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 
 async function main() {
-  const browser = await chromium.launch({ channel: process.env.PROFILEKIT_BROWSER_CHANNEL || "chrome", headless: true });
+  const browser = await chromium.launch({ channel: process.env.PROFILEKIT_BROWSER_CHANNEL || undefined, headless: true });
   const base = process.env.PROFILEKIT_TEST_ORIGIN;
   const output = process.env.PROFILEKIT_TEST_OUTPUT;
   const errors = [];

@@ -7,7 +7,7 @@ const snap = page => page.evaluate(() => ProfileKitEditor.snapshot());
 const ready = page => page.waitForFunction(() => window.ProfileKitEditor && !document.body.inert);
 
 (async () => {
-  const browser = await chromium.launch({channel: process.env.PROFILEKIT_BROWSER_CHANNEL || 'chrome', headless: true});
+  const browser = await chromium.launch({channel: process.env.PROFILEKIT_BROWSER_CHANNEL || undefined, headless: true});
   const owner = await browser.newPage({viewport:{width:1512,height:1100}});
   const errors = [], consoleErrors = [];
   const observe = page => {
