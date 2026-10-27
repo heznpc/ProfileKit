@@ -13,11 +13,17 @@ const assert=require('node:assert/strict');
  await page.locator('#image-file').setInputFiles({name:'second-texture.png',mimeType:'image/png',buffer:Buffer.from(data,'base64')});
  await page.waitForFunction(()=>document.querySelectorAll('#canvas-host [data-element-id]').length===3);
  // Wait for the latest draft to reach storage; status text depends on the locale.
- await page.waitForFunction(async()=>{
-  const token=new URLSearchParams(location.hash.slice(1)).get('readme-edit');
-  const saved=await window.ProfileKitProjectTransfer.get('profilekit.readme-studio.v2.'+token);
-  return saved?.elements.length===3;
- });
+ let savedLayers=0;
+ const saveDeadline=Date.now()+30000;
+ while(savedLayers!==3 && Date.now()<saveDeadline){
+  savedLayers=await page.evaluate(async()=>{
+   const token=new URLSearchParams(location.hash.slice(1)).get('readme-edit');
+   const saved=await window.ProfileKitProjectTransfer.get('profilekit.readme-studio.v2.'+token);
+   return saved?.elements.length || 0;
+  });
+  if(savedLayers!==3) await page.waitForTimeout(100);
+ }
+ assert.equal(savedLayers,3,'all image layers must be committed before reload');
  await page.reload();await page.waitForFunction(()=>!document.querySelector('#readme-return').disabled);
  assert.equal(await page.locator('#canvas-host [data-element-id]').count(),3);
  await page.locator('#readme-return').click();await page.locator('#asset-return').waitFor({state:'visible'});await page.locator('#asset-path').fill('assets/custom-profile.svg');
