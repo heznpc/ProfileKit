@@ -6,3 +6,9 @@ node_modules/
 .idea/
 .vercel
 output/playwright/
+
+# Internal planning and research artifacts stay out of the public repository.
+/review.md
+/docs/launch-essay.md
+/docs/v3-cas-spec.md
+/docs/design/
