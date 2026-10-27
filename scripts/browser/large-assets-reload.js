@@ -1,7 +1,7 @@
 const {chromium}=require(process.env.PROFILEKIT_PLAYWRIGHT_PATH || 'playwright');
 const assert=require('node:assert/strict');
 (async()=>{
- const browser=await chromium.launch({channel:process.env.PROFILEKIT_BROWSER_CHANNEL || 'chrome',headless:true});let page=await browser.newPage({viewport:{width:1512,height:1100}});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ const browser=await chromium.launch({channel:process.env.PROFILEKIT_BROWSER_CHANNEL || undefined,headless:true});let page=await browser.newPage({viewport:{width:1512,height:1100}});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
  const base=process.env.PROFILEKIT_TEST_ORIGIN,original='# Profile\n\n<a href="https://example.com"><img src="'+base+'/api/hero?name=Ren" alt="Keep" width="49%" /></a>\n\nKeep this.';
  try{
  await page.goto(base+'/readme.html');await page.locator('.advanced-options > summary').click();await page.locator('#readme-origin').fill(base);await page.locator('#readme-origin').press('Tab');await page.locator('#readme-show-import').click();await page.locator('#readme-source').fill(original);await page.locator('#readme-import').click();

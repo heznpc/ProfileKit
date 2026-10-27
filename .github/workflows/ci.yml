@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # engines is ">=22 <25". Node 22 is Maintenance LTS (EOL 2027-04-30);
+        # engines is ">=22.9 <25". Node 22 is Maintenance LTS (EOL 2027-04-30);
         # Node 24 is Active LTS. Self-hosters on either should get CI signal.
         node-version: ['22', '24']
 
@@ -129,8 +129,22 @@ jobs:
           docker logs pkit
           docker rm -f pkit
 
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run browser:install -- --with-deps
+      - run: npm run smoke:server
+      - run: npm run test:browser
+
   ci:
-    needs: [static-checks, test, docker]
+    needs: [static-checks, test, docker, browser]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -138,8 +152,9 @@ jobs:
         run: |
           if [ "${{ needs.static-checks.result }}" != "success" ] || \
              [ "${{ needs.test.result }}" != "success" ] || \
-             [ "${{ needs.docker.result }}" != "success" ]; then
-            echo "::error::CI failed (static-checks=${{ needs.static-checks.result }}, test=${{ needs.test.result }}, docker=${{ needs.docker.result }})"
+             [ "${{ needs.docker.result }}" != "success" ] || \
+             [ "${{ needs.browser.result }}" != "success" ]; then
+            echo "::error::CI failed (static-checks=${{ needs.static-checks.result }}, test=${{ needs.test.result }}, docker=${{ needs.docker.result }}, browser=${{ needs.browser.result }})"
             exit 1
           fi
           echo "All checks passed."

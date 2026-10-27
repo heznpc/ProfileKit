@@ -1,6 +1,6 @@
 const {chromium}=require(process.env.PROFILEKIT_PLAYWRIGHT_PATH || 'playwright');
 const fs=require('node:fs/promises');const assert=require('node:assert/strict');
-(async()=>{const browser=await chromium.launch({channel:process.env.PROFILEKIT_BROWSER_CHANNEL || 'chrome',headless:true});const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+(async()=>{const browser=await chromium.launch({channel:process.env.PROFILEKIT_BROWSER_CHANNEL || undefined,headless:true});const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try {await page.goto(process.env.PROFILEKIT_TEST_ORIGIN+'/editor.html');
 await page.locator('#import-card-input').fill(process.env.PROFILEKIT_TEST_ORIGIN+'/api/typing?lines=Hello&width=700&height=120&frame=true');await page.locator('#import-card-button').click();await page.waitForFunction(()=>document.querySelector('#card-endpoint-label').textContent==='/typing');
 await page.locator('#embed-open').click();await page.locator('.asset-export summary').click();

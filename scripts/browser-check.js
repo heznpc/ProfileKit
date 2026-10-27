@@ -1,6 +1,6 @@
-// Optional browser checks: install Playwright locally or set
-// PROFILEKIT_PLAYWRIGHT_PATH to an existing Playwright module directory.
-// Chrome is used by default; PROFILEKIT_BROWSER_CHANNEL overrides it.
+// Run npm ci and npm run browser:install before npm run test:browser.
+// The locked Playwright version and its bundled Chromium are the default.
+// PROFILEKIT_PLAYWRIGHT_PATH and PROFILEKIT_BROWSER_CHANNEL are optional overrides.
 const { spawn } = require("node:child_process");
 const { mkdtemp, rm } = require("node:fs/promises");
 const os = require("node:os");
